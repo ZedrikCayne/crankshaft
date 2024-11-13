@@ -1,0 +1,11 @@
+crankshaft
+crankshaft-test
+obj/
+lib/
+build/
+.idea/
+*.swp
+.ccls*
+root
+keys
+test/autogen-test.*

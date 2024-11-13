@@ -1,0 +1,28 @@
+#!/bin/sh
+
+echo Stubbing out files for ${1}
+BASENAME="test-${1}"
+echo $BASENAME
+
+echo "#include <stdlib.h>"            >  test/${BASENAME}.c
+echo "#include <stdio.h>"             >> test/${BASENAME}.c
+echo "#include <stdbool.h>"           >> test/${BASENAME}.c
+echo ""                               >> test/${BASENAME}.c
+echo "#include \"crankshaftalloc.h\"" >> test/${BASENAME}.c
+echo "#include \"logger.h\""          >> test/${BASENAME}.c
+echo "#include \"crankshafttest.h\""  >> test/${BASENAME}.c
+echo ""                               >> test/${BASENAME}.c
+echo "extern bool test_${1}(void);"   >> test/${BASENAME}.c
+echo ""                               >> test/${BASENAME}.c
+echo "static int testCount = 0;"      >> test/${BASENAME}.c
+echo "static int testSucceeded = 0;"  >> test/${BASENAME}.c
+echo ""                               >> test/${BASENAME}.c
+echo "bool test_${1}(void) {"         >> test/${BASENAME}.c
+echo "    //Tests go here:"           >> test/${BASENAME}.c
+echo ""                               >> test/${BASENAME}.c
+echo ""                               >> test/${BASENAME}.c
+echo "    return testCount !="        >> test/${BASENAME}.c
+echo "           testSucceeded;"      >> test/${BASENAME}.c
+echo "}"                              >> test/${BASENAME}.c
+echo ""                               >> test/${BASENAME}.c
+echo ""                               >> test/${BASENAME}.c

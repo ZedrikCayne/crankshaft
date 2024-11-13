@@ -1,0 +1,35 @@
+#!/bin/sh
+
+
+
+echo Generating test test/autogen-test.c
+OUT="test/autogen-test.cpp"
+
+FILES=`find test -mindepth 1 -name "test-*" | sort`
+
+BASES=`echo "${FILES}" | sed 's/^test\///' | sed 's/\.c$//' | sed 's/\.cpp$//' | sed 's/-/_/g' `
+
+echo "#include <stdlib.h>"                                >  ${OUT}
+echo "#include <stdio.h>"                                 >> ${OUT}
+echo ""                                                   >> ${OUT}
+echo "#include \"crankshaftalloc.h\""                     >> ${OUT}
+echo "#include \"crankshaftlogger.h\""                    >> ${OUT}
+echo "#include \"crankshafttest.h\""                      >> ${OUT}
+echo ""                                                   >> ${OUT}
+echo "extern \"C\" bool TEST_AUTO();"                     >> ${OUT}
+for I in ${BASES}; do
+    echo "extern \"C\" bool ${I}();"                      >> ${OUT}
+done
+echo ""                                                   >> ${OUT}
+echo "bool TEST_AUTO() {"                                 >> ${OUT}
+echo "    bool returnValue = false;"                      >> ${OUT}
+echo "    bool temp = false;"                             >> ${OUT}
+for I in ${BASES}; do
+    echo "    CS_testResetGlobalRandSeed();"              >> ${OUT}
+    echo "    temp = ${I}();"                             >> ${OUT} 
+    echo "    if(temp)CS_LOG_LOUD(\"*X* fail in ${I}\");" >> ${OUT}
+    echo "    returnValue |= temp;"                       >> ${OUT}
+done
+echo "    return returnValue;"                            >> ${OUT}
+echo "}"                                                  >> ${OUT}
+

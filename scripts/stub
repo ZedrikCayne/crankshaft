@@ -1,0 +1,30 @@
+#!/bin/sh
+
+echo Stubbing out files for ${1}
+BASENAME="crankshaft${1}"
+echo $BASENAME
+
+echo "#ifndef __${BASENAME}doth__" >  include/${BASENAME}.h
+echo "#define __${BASENAME}doth__" >> include/${BASENAME}.h
+echo "#include <stdbool.h>"        >> include/${BASENAME}.h
+echo ""                            >> include/${BASENAME}.h
+echo "#ifdef __cplusplus"          >> include/${BASENAME}.h
+echo "extern \"C\" {"              >> include/${BASENAME}.h
+echo "#endif"                      >> include/${BASENAME}.h
+echo ""                            >> include/${BASENAME}.h
+echo ""                            >> include/${BASENAME}.h
+echo ""                            >> include/${BASENAME}.h
+echo "#ifdef __cplusplus"          >> include/${BASENAME}.h
+echo "}"                           >> include/${BASENAME}.h
+echo "#endif"                      >> include/${BASENAME}.h
+echo "#endif"                      >> include/${BASENAME}.h
+
+echo "#include <stdlib.h>"            >  src/${BASENAME}.c
+echo "#include <stdio.h>"             >> src/${BASENAME}.c
+echo ""                               >> src/${BASENAME}.c
+echo "#include \"crankshaftalloc.h\"" >> src/${BASENAME}.c
+echo "#include \"logger.h\""          >> src/${BASENAME}.c
+echo "#include \"${BASENAME}.h\""     >> src/${BASENAME}.c
+echo ""                               >> src/${BASENAME}.c
+echo ""                               >> src/${BASENAME}.c
+echo ""                               >> src/${BASENAME}.c
