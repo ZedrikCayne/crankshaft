@@ -1,4 +1,4 @@
-Thing around which the world turns.
+Crankshaft: The thing around which the world turns.
 
 <code>
 Step 0: Makefile
@@ -10,8 +10,4 @@ Step 3: WEBRTC plumbing for connectionless sockets.
 Step 4: Game goes here.
 </code>
 
-On OSX...you may have to:
-
-<code>
-export CFLAGS="-I/opt/homebrew/Cellar/openssl@3/3.3.1/include -L/opt/homebrew/Cellar/openssl@3/3.3.1/lib"
-</code>
+Building a web server from the ground up because I can. Building it up the way I think it should be done. Hopefully not making too too many mistakes along the way. The entire thing is very opinionated.
