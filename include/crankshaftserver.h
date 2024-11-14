@@ -60,6 +60,8 @@ enum CrankshaftMIMETypes {
     MIME_WOFF,
     MIME_WOFF2,
     MIME_XML,
+    MIME_FORM_URLENCODED,
+    MIME_FORM_MULTIPART,
     MAX_MIME_TYPES
 };
 

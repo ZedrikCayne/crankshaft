@@ -11,6 +11,7 @@
 #include <poll.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <time.h>
 
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
@@ -138,12 +139,62 @@ struct ExtensionToMIME extensions[] = {
     {"webp", "image/webp"},
     {"woff", "font/woff"},
     {"woff2", "font/woff2"},
-    {"xml", "applicatoin/xml"}
+    {"xml", "applicatoin/xml"},
+    {"xxx", "application/x-www-form-urlencoded" },
+    {"xxy", "multipart/form-data" }
 };
 
+static const char *dayOfWeek[ 7 ] = {
+    "Sun","Mon","Tue","Wed","Thu","Fri","Sat"
+};
+
+static const char *month[ 12 ] = {
+    "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"
+};
+
+static const char *timeString(time_t currentTime) {
+    char *returnValue = CS_tempBuff(256);
+    struct tm resultTime;
+    struct tm *rt = gmtime_r(&currentTime,&resultTime);
+    if( rt ) {
+        int realYear = rt->tm_year + 1900;
+        returnValue[ 0 ] = dayOfWeek[ rt->tm_wday ][0];
+        returnValue[ 1 ] = dayOfWeek[ rt->tm_wday ][1];
+        returnValue[ 2 ] = dayOfWeek[ rt->tm_wday ][2];
+        returnValue[ 3 ] = ',';
+        returnValue[ 4 ] = ' ';
+        returnValue[ 5 ] = (char)('0' + (rt->tm_mday / 10));
+        returnValue[ 6 ] = (char)('0' + (rt->tm_mday % 10));
+        returnValue[ 7 ] = ' ';
+        returnValue[ 8 ] = month[ rt->tm_mon ][ 0 ];
+        returnValue[ 9 ] = month[ rt->tm_mon ][ 1 ];
+        returnValue[ 10 ] = month[ rt->tm_mon ][ 2 ];
+        returnValue[ 11 ] = ' ';
+        returnValue[ 12 ] = (char)('0' + ((realYear/1000) % 10));
+        returnValue[ 13 ] = (char)('0' + ((realYear/100) % 10));
+        returnValue[ 14 ] = (char)('0' + ((realYear/10) % 10));
+        returnValue[ 15 ] = (char)('0' + ((realYear/1) % 10));
+        returnValue[ 16 ] = ' ';
+        returnValue[ 17 ] = (char)('0' + ((rt->tm_hour) / 10));
+        returnValue[ 18 ] = (char)('0' + ((rt->tm_hour) % 10));
+        returnValue[ 19 ] = ':';
+        returnValue[ 20 ] = (char)('0' + ((rt->tm_min) / 10));
+        returnValue[ 21 ] = (char)('0' + ((rt->tm_min) % 10));
+        returnValue[ 22 ] = ':';
+        returnValue[ 23 ] = (char)('0' + ((rt->tm_sec) / 10));
+        returnValue[ 24 ] = (char)('0' + ((rt->tm_sec) % 10));
+        returnValue[ 25 ] = ' ';
+        returnValue[ 26 ] = 'G';
+        returnValue[ 27 ] = 'M';
+        returnValue[ 28 ] = 'T';
+        returnValue[ 29 ] = 0;
+    }
+    return returnValue;
+}
+
 #define MAX_QUEUE 64
-#define CLIENT_RECEIVE_BUFFER 4096
-#define CLIENT_SEND_BUFFER 4096
+#define CLIENT_RECEIVE_BUFFER 8192 
+#define CLIENT_SEND_BUFFER 8192
 static void *clientThread(void *var);
 
 static struct CrankshaftClientInfo *createClientInfoWithThread( int socket,
@@ -808,30 +859,36 @@ bool CS_FileServer( struct CrankshaftClientInfo *info ) {
     }
     
     long fileSize = statBuff.st_size;
-    //long lastModified = statBuff.st_mtim.tv_sec;
-    
-    void *fileBuffer = CS_alloc(fileSize);
-    if(fileBuffer == NULL) {
-        char *tBuff = CS_tempBuff(256);
-        snprintf(tBuff, 256, "OOM allocating %ld bytes for a file.", fileSize);
-        ERR(info, RESPONSE_500, tBuff );
-        goto ERR_FILE_OPENED;
-    }
+    long lastModified = statBuff.st_mtim.tv_sec;
 
-    int numBytesRead = 1;
-    int numBytesToRead = fileSize;
-    while( numBytesRead > 0 && numBytesToRead > 0 ) {
-        numBytesRead = read( inputFile, fileBuffer + (fileSize - numBytesToRead), numBytesToRead );
-        numBytesToRead -= numBytesRead;
-    }
-    if( numBytesToRead > 0 ) {
-        ERR(info, RESPONSE_500, "Could not read whole file.");
-        goto ERR_BUFF_FAILED;
+    void *fileBuffer = NULL;
+
+    if( request->requestMethodEnum == METHOD_GET ) {
+        fileBuffer = CS_alloc(fileSize);
+        if(fileBuffer == NULL) {
+            char *tBuff = CS_tempBuff(256);
+            snprintf(tBuff, 256, "OOM allocating %ld bytes for a file.", fileSize);
+            ERR(info, RESPONSE_500, tBuff );
+            goto ERR_FILE_OPENED;
+        }
+
+        int numBytesRead = 1;
+        int numBytesToRead = fileSize;
+        while( numBytesRead > 0 && numBytesToRead > 0 ) {
+            numBytesRead = read( inputFile, fileBuffer + (fileSize - numBytesToRead), numBytesToRead );
+            numBytesToRead -= numBytesRead;
+        }
+        if( numBytesToRead > 0 ) {
+            ERR(info, RESPONSE_500, "Could not read whole file.");
+            goto ERR_BUFF_FAILED;
+        }
+        close( inputFile );
     }
 
     //Doing this the long way so we have a default set.
     const char *mimeType = extensionToMimeType(extension);
     struct CrankshaftReply *reply = CS_Reply( info, RESPONSE_200, MIME_DO_NOT_SET, fileBuffer, fileSize );
+    CS_SetReplyHeader(reply, "Last-Modified", timeString( lastModified ) );
     CS_SetReplyHeader(reply, "Content-Type", mimeType);
     CS_SetReplyHeader(reply, "Connection", "close" );
     CS_DoReply(info,reply);
@@ -915,7 +972,7 @@ static bool PrivateSetReplyHeaderInt( struct CrankshaftReply *reply, bool overwr
     return PrivateSetReplyHeader( reply, overwrite, header, temp );
 }
 
-    struct CrankshaftReply *CS_Reply(struct CrankshaftClientInfo *info, int responseEnum, int mimeEnum, void *outputBuffer, int outputLength ) {
+struct CrankshaftReply *CS_Reply(struct CrankshaftClientInfo *info, int responseEnum, int mimeEnum, void *outputBuffer, int outputLength ) {
         struct CrankshaftReply *returnValue = CS_takeOne(info->server->replyStack);
     returnValue->returnStatusEnum = responseEnum;
     returnValue->contentTypeEnum = mimeEnum;
@@ -942,6 +999,7 @@ bool CS_SetReplyHeaderIntIfMissing( struct CrankshaftReply *reply, const char *h
     return PrivateSetReplyHeaderInt( reply, false, header, value );
 }
 
+
 bool CS_DoReply( struct CrankshaftClientInfo *info, struct CrankshaftReply *reply ) {
     if( info == NULL || reply == NULL || reply->returnStatusEnum < 0 || reply->returnStatusEnum >= MAX_NUM_RESPONSE_ENUMS ) {
         CS_LOG_ERROR("Bad arguments.");
@@ -955,6 +1013,8 @@ bool CS_DoReply( struct CrankshaftClientInfo *info, struct CrankshaftReply *repl
     if( reply->outputBuffer != NULL ) {
         CS_SetReplyHeaderIntIfMissing(reply, "Content-Length", reply->outputLength );
     }
+    CS_SetReplyHeaderIfMissing(reply, "Date", timeString(time(NULL)));
+    CS_SetReplyHeaderIfMissing(reply, "Cache-Control", "no-cache" );
     CS_PP_printf( info->output, "%s %d %s\r\n", HTTP_VERSION, replyNumber, replyString );
     for( int i = 0; i < reply->numHeaders; ++i ) {
         CS_PP_printf( info->output, "%s: %s\r\n", reply->replyHeaders[i].header, reply->replyHeaders[i].value );

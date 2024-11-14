@@ -133,11 +133,12 @@ bool doQuit( struct CrankshaftClientInfo *info ) {
 }
 
 struct CrankshaftRoute serverRoutes[] = {
-    { METHOD_GET, ROUTE_TYPE_PREFIX, 0, "/Prefix/Match/Me", CS_Diagnostic200 },
-    { METHOD_GET, ROUTE_TYPE_EXACT, 0, "/Very/Match/Me", CS_Diagnostic200 },
-    { METHOD_GET, ROUTE_TYPE_PREFIX, 0, "/api", fudge },
-    { METHOD_GET, ROUTE_TYPE_EXACT, 0, "/quit", doQuit },
-    { METHOD_GET, ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer }
+    { METHOD_GET,  ROUTE_TYPE_PREFIX, 0, "/Prefix/Match/Me", CS_Diagnostic200 },
+    { METHOD_GET,  ROUTE_TYPE_EXACT, 0, "/Very/Match/Me", CS_Diagnostic200 },
+    { METHOD_GET,  ROUTE_TYPE_PREFIX, 0, "/api", fudge },
+    { METHOD_GET,  ROUTE_TYPE_EXACT, 0, "/quit", doQuit },
+    { METHOD_GET,  ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer },
+    { METHOD_HEAD, ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer }
 };
 
 int main(int argc, char *argv[] ) {
