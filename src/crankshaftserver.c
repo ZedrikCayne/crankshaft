@@ -859,7 +859,7 @@ bool CS_FileServer( struct CrankshaftClientInfo *info ) {
     }
     
     long fileSize = statBuff.st_size;
-    long lastModified = statBuff.st_mtim.tv_sec;
+    long lastModified = statBuff.st_mtime;
 
     void *fileBuffer = NULL;
 

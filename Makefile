@@ -26,7 +26,7 @@ LIBS:=-lssl -lcrypto -lstdc++ -lpthread -lm -lz
 
 OBJECTS_DIR=obj
 LIB_DIR=lib
-LIBOUT=$(LIB_DIR)/crankshaft.a
+LIBOUT=$(LIB_DIR)/libcrankshaft.a
 BUILD_DIR=build
 TAROUT=$(BUILD_DIR)/crankshaft-$(VERSION).tgz
 
