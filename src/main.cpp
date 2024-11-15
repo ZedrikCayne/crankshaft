@@ -21,6 +21,7 @@ static bool suppressErrors = false;
 static bool wantHelp = false;
 static bool noWarn = false;
 static bool quiet = false;
+static bool info = false;
 static bool verbose = false;
 static bool trace = false;
 static bool runAsDaemon = false;
@@ -40,6 +41,7 @@ CS_ARG_DEF(testSeed,CS_ARG_CMP("--seed"), "Seed for test RNG.");
 CS_ARG_DEF(onlyFails,CS_ARG_CMP("--only-fails"), "Only print fails during unit testing.");
 CS_ARG_DEF(noWarn,CS_ARG_CMP("-w","--no-warn"),"No warning logs.");
 CS_ARG_DEF(quiet,CS_ARG_CMP("-q","--quiet"),"Quiet logs (Warnings, errors and 'loud logs' only.)");
+CS_ARG_DEF(info,CS_ARG_CMP("-i","--info"),"Info logs.");
 CS_ARG_DEF(verbose,CS_ARG_CMP("-v", "--verbose"),"Verbose logs");
 CS_ARG_DEF(trace,CS_ARG_CMP("-t", "--trace"),"Trace logs");
 CS_ARG_DEF(suppressErrors,CS_ARG_CMP("--suppress-errors"),"Supress error logs (useful during --test)");
@@ -59,6 +61,7 @@ const struct ArgElement myArgs[] =
       CS_ARG_ELEMENT(onlyFails,BOOL_ARG),
       CS_ARG_ELEMENT(noWarn,BOOL_ARG),
       CS_ARG_ELEMENT(quiet,BOOL_ARG),
+      CS_ARG_ELEMENT(info,BOOL_ARG),
       CS_ARG_ELEMENT(verbose,BOOL_ARG),
       CS_ARG_ELEMENT(trace,BOOL_ARG),
       CS_ARG_ELEMENT(suppressErrors,BOOL_ARG),
@@ -157,10 +160,11 @@ int main(int argc, char *argv[] ) {
 
     if( countLogMods > 1 ) CS_LOG_WARN("More than one of trace, quiet, noWarn or verbose specified. The loudest one will rule");
 
-    if( noWarn ) { CS_LOG_VERBOSE_BOOL = false, CS_LOG_QUIET_BOOL=true, CS_LOG_TRACE_BOOL=false; CS_LOG_WARN_BOOL=false; }
-    if( quiet ) { CS_LOG_VERBOSE_BOOL = false; CS_LOG_QUIET_BOOL=true; CS_LOG_TRACE_BOOL=false; CS_LOG_WARN_BOOL=true;}
-    if( verbose ) { CS_LOG_VERBOSE_BOOL = true; CS_LOG_QUIET_BOOL=false; CS_LOG_TRACE_BOOL=false; CS_LOG_WARN_BOOL=true; }
-    if( trace ) { CS_LOG_VERBOSE_BOOL = true; CS_LOG_QUIET_BOOL=false; CS_LOG_TRACE_BOOL=true; CS_LOG_WARN_BOOL=true; }
+    if( noWarn )  { CS_LOG_VERBOSE_BOOL=false; CS_LOG_INFO_BOOL=false; CS_LOG_QUIET_BOOL=true ; CS_LOG_TRACE_BOOL=false; CS_LOG_WARN_BOOL=false; }
+    if( quiet )   { CS_LOG_VERBOSE_BOOL=false; CS_LOG_INFO_BOOL=false; CS_LOG_QUIET_BOOL=true ; CS_LOG_TRACE_BOOL=false; CS_LOG_WARN_BOOL=true;}
+    if( verbose ) { CS_LOG_VERBOSE_BOOL=true ; CS_LOG_INFO_BOOL=false; CS_LOG_QUIET_BOOL=false; CS_LOG_TRACE_BOOL=false; CS_LOG_WARN_BOOL=true; }
+    if( info )    { CS_LOG_VERBOSE_BOOL=true ; CS_LOG_INFO_BOOL=true ; CS_LOG_QUIET_BOOL=false; CS_LOG_TRACE_BOOL=false; CS_LOG_WARN_BOOL=true; }
+    if( trace )   { CS_LOG_VERBOSE_BOOL=true ; CS_LOG_INFO_BOOL=true ; CS_LOG_QUIET_BOOL=false; CS_LOG_TRACE_BOOL=true ; CS_LOG_WARN_BOOL=true; }
     if( suppressErrors ) { CS_LOG_ERROR_BOOL = false; }
 
     CS_LOG_VERBOSE("Server Name: %s", serverName);
@@ -171,9 +175,9 @@ int main(int argc, char *argv[] ) {
         if( testSeed != 0 ) {
             CS_testSetRandomSeed(testSeed);
         }
-        
         exit(CS_testMain()?255:0);
     }
+
     signal(SIGINT, interruptHandler);
     signal(SIGHUP, hupHandler);
     signal(SIGTERM, terminateHandler);

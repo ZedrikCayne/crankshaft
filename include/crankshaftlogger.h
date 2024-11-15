@@ -10,6 +10,7 @@ extern bool CS_LOG_ERROR_BOOL;
 extern bool CS_LOG_QUIET_BOOL;
 extern bool CS_LOG_WARN_BOOL;
 extern bool CS_LOG_TRACE_BOOL;
+extern bool CS_LOG_INFO_BOOL;
 extern bool CS_LOG_VERBOSE_BOOL;
 
 #if defined(CRANKSHAFT_NOLOGS)
@@ -39,9 +40,13 @@ extern bool CS_LOG_VERBOSE_BOOL;
 #if defined(CRANKSHAFT_NOLOGS) || defined(CRANSHAFT_ERROR_LOGS_ONLY) || defined(CRANSHAFT_NO_VERBOSE_LOGS)
 #define CS_LOG_VERBOSE(...) {}
 #define CS_LOG_VERBOSE_IF(...)
+#define CS_LOG_INFO(...) {}
+#define CS_LOG_INFO_IF(...)
 #else
 #define CS_LOG_VERBOSE(...) if(CS_LOG_VERBOSE_BOOL){printf(__VA_ARGS__);printf("\n");}
 #define CS_LOG_VERBOSE_IF(_PREDICATE,...) if(CS_LOG_VERBOSE_BOOL&&(_PREDICATE)){printf(__VA_ARGS__);printf("\n");}
+#define CS_LOG_INFO(...) if(CS_LOG_INFO_BOOL){printf(__VA_ARGS__);printf("\n");}
+#define CS_LOG_INFO_IF(_PREDICATE,...) if(CS_LOG_INFO_BOOL&&(_PREDICATE)){printf(__VA_ARGS__);printf("\n");}
 #endif
 
 #if defined(CRANKSHAFT_NOLOGS) || defined(CRANSHAFT_ERROR_LOGS_ONLY) || defined(CRANSHAFT_NO_VERBOSE_LOGS) || defined(CRANKSHAFT_NO_TRACE_LOGS)

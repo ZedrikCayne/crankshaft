@@ -197,6 +197,38 @@ static const char *timeString(time_t currentTime) {
 #define CLIENT_SEND_BUFFER 8192
 static void *clientThread(void *var);
 
+static int hexDigitToInt( const char *u ) {
+    if( *u < '0' ) return -1;
+    if( *u > 'f' ) return -1;
+    if( *u <= '9' ) return (int)( *u - '0' );
+    if( *u > 'a' ) return (int)( *u - 'a' ) + 10;
+    if( *u > 'F' ) return -1;
+    if( *u >= 'A' ) return (int)( *u - 'A' ) + 10;
+    return -1;
+}
+
+static bool privateUrlDecodeInPlace( char *encoded ) {
+    char *in = encoded;
+    char *out = encoded;
+
+    while( *in ) {
+        if( *in == '%' ) {
+            ++in;
+            int highByte = hexDigitToInt( in );
+            if( highByte < 0 ) return true;
+            ++in;
+            int lowByte = hexDigitToInt( in );
+            if( lowByte < 0 ) return true;
+            *out = (char)((highByte << 4) + lowByte);
+        } else {
+            if( out != in ) *out = *in;
+        }
+        ++in;++out;
+    }
+    *out = 0;
+    return false;
+}
+
 static struct CrankshaftClientInfo *createClientInfoWithThread( int socket,
                                                       struct CrankshaftWebServer *server,
                                                       struct sockaddr_in *clientSocketAddress ) {
@@ -642,8 +674,9 @@ static int parseRequest(struct CrankshaftClientInfo *info) {
                     if( info->requestInfo.uri[0] != '/' ) {
                         return -1;
                     }
-                    startOfToken = NULL;
                     *currentPoint = 0;
+                    privateUrlDecodeInPlace( startOfToken );
+                    startOfToken = NULL;
                 }
                 break;
             case HEADER_STATE_QUERY_PARAM:
@@ -764,7 +797,7 @@ static bool HTTP_STATE_MACHINE(struct CrankshaftClientInfo *info) {
     if( bytesRequiredForHeaders < 0 ) return true;
     //If there's anything left after the headers, set the internal file pointer ahead.
     if( bytesRequiredForHeaders < bytesAvailable ) CS_PP_write(info->buffer,bytesRequiredForHeaders);
-    CS_LOG("Request: %s %s",info->requestInfo.method,info->requestInfo.uri);
+    CS_LOG_INFO("Request: %s %s",info->requestInfo.method,info->requestInfo.uri);
     int requestEnum = info->requestInfo.requestMethodEnum;
     int nRoutes = info->server->routeNumbers[ requestEnum ];
     struct CrankshaftRoute *routes = info->server->routes[ requestEnum ];
