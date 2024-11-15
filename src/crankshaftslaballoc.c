@@ -31,8 +31,8 @@ static bool freeSlab( struct CrankshaftSlabAlloc *slab ) {
         nextSlab = slabToFree->nextSlab;
         slabToFree->nextSlab = NULL;
         CS_free( slabToFree->buffer );
-        CS_free( slabToFree );
         slabToFree->buffer = NULL;
+        CS_free( slabToFree );
         slabToFree = nextSlab;
     }
     return false;
@@ -64,7 +64,7 @@ static struct CrankshaftSlabAlloc *initSlabAlloc( int size, int count, int align
         if( (char*)next < returnValue->bufferEnd ) {
             current->next = next;
         } else {
-            current = NULL;
+            current->next = NULL;
         }
     }
 

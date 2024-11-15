@@ -256,6 +256,7 @@ bool test_json() {
     for( int i = 0; i < TEMP_BUFF_SIZE; ++i ) {
         t1[ i ] = (i % 126) + 1;
     }
+    t1[TEMP_BUFF_SIZE-1] = 0;
     js = CS_jsonNodeAppendUnquotedString( js, NULL, t1 );
     CS_FAIL_ON_FALSE( js != NULL && js->typeEnum == CS_JSON_STRING_QUOTED_ALLOCATED, "Adding a very long string should allocate it.", "%s", wantedButGot( CS_JSON_STRING_QUOTED_ALLOCATED, js ) );
     if( root ) CS_freeJson( root );

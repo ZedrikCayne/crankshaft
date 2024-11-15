@@ -219,13 +219,13 @@ static struct CrankshaftClientInfo *createClientInfoWithThread( int socket,
     ci->clientSocket = socket;
     memcpy( &ci->clientSocketAddress, clientSocketAddress, sizeof(struct sockaddr_in) );
     pthread_t newThread;
+    ci->disconnectCallback = NULL;
+    ci->persistentData = NULL;
     int result = pthread_create( &newThread, NULL, clientThread, ci );
     if( result < 0 ) {
         CS_LOG_ERROR( "Failed to create client thread." );
         goto CLIENT_ERR_PTHREAD;
     }
-    ci->disconnectCallback = NULL;
-    ci->persistentData = NULL;
     pthread_detach( newThread );
     return ci;
 CLIENT_ERR_PTHREAD:
@@ -242,6 +242,7 @@ static bool HTTP_STATE_MACHINE(struct CrankshaftClientInfo *info);
 
 static void *clientThread(void *var) {
     struct CrankshaftClientInfo *clientInfo = (struct CrankshaftClientInfo *)var;
+    CS_LOG_TRACE("ClientInfo %p starting.", clientInfo );
     if( clientInfo->server->sslctx ) { 
         clientInfo->ssl = SSL_new( clientInfo->server->sslctx );
         if( clientInfo->ssl == NULL ) {
@@ -286,6 +287,7 @@ CLIENT_BAIL_NOSSL:
     CS_PP_defaultFree(clientInfo->buffer);
     CS_PP_defaultFree(clientInfo->output);
     CS_free(clientInfo);
+    CS_LOG_TRACE("ClientInfo stopping %p", clientInfo);
     pthread_exit(NULL);
     return NULL;
 }
@@ -326,11 +328,13 @@ static bool DestroySSL(struct CrankshaftWebServer *server) {
 static void *serverThreadProc(void *var) {
     struct CrankshaftWebServer *server = (struct CrankshaftWebServer *)var;
     server->threadRunning = true;
+    server->killMe = false;
     while(server->threadRunning && !server->killMe ) {
         struct pollfd pollMe = {server->listenSocket, POLLIN, 0};
+        pollMe.revents = 0;
         int pollVal = poll(&pollMe, 1, 500);
         if( pollVal < 0 ) break;
-        if( pollMe.revents == POLLIN ) {
+        if( pollVal == 1 && pollMe.revents == POLLIN ) {
             struct sockaddr_in clientSocketAddress = {0};
             socklen_t addrSize = sizeof(clientSocketAddress);
             int newSock = accept(server->listenSocket, (struct sockaddr *)&clientSocketAddress, &addrSize);
@@ -370,6 +374,8 @@ struct CrankshaftWebServer *CS_StartWebServer(int portNum,
 
     returnValue->defaultFileServingPath = fileServingPath;
     returnValue->defaultFileServingFile = fileServingFile;
+    returnValue->killMe = false;
+    returnValue->threadRunning = false;
     
     int i = 0;
     for( i = 0; i < CRANKSHAFT_MAX_METHODS; ++i ) {
@@ -472,7 +478,9 @@ bool CS_KillWebServer( struct CrankshaftWebServer *server ) {
     while( server->threadRunning ) {
         sleep(1);
     }
-    CS_LOG_TRACE("%s", CS_descSlabAlloc(server->replyStack));
+    const char *slabAllocDesc = CS_descSlabAlloc(server->replyStack);
+    CS_LOG_TRACE("%s", slabAllocDesc);
+    CS_free( (void*)slabAllocDesc );
     CS_freeSlabAlloc(server->replyStack);
     CS_free(server);
     return false;
