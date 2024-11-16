@@ -167,8 +167,8 @@ int main(int argc, char *argv[] ) {
     if( trace )   { CS_LOG_VERBOSE_BOOL=true ; CS_LOG_INFO_BOOL=true ; CS_LOG_QUIET_BOOL=false; CS_LOG_TRACE_BOOL=true ; CS_LOG_WARN_BOOL=true; }
     if( suppressErrors ) { CS_LOG_ERROR_BOOL = false; }
 
-    CS_LOG_VERBOSE("Server Name: %s", serverName);
-    CS_LOG_VERBOSE("Port Number is %d", portNum);
+    CS_LOG_INFO("Server Name: %s", serverName);
+    CS_LOG_INFO("Port Number is %d", portNum);
 
     if( doTest ) {
         CS_TEST_PRINT_ONLY_ERRORS = onlyFails;
@@ -184,7 +184,7 @@ int main(int argc, char *argv[] ) {
 
     CS_allocateTempBuffs();
 
-    CS_LOG_TRACE("Starting web server.");
+    CS_LOG_INFO("Starting web server.");
 
     struct CrankshaftWebServer *server = CS_StartWebServer( portNum, certFile, keyFile, fileServingDir, fileServingFile, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
     if( server == NULL )
