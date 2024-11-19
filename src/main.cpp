@@ -167,6 +167,8 @@ int main(int argc, char *argv[] ) {
     if( trace )   { CS_LOG_VERBOSE_BOOL=true ; CS_LOG_INFO_BOOL=true ; CS_LOG_QUIET_BOOL=false; CS_LOG_TRACE_BOOL=true ; CS_LOG_WARN_BOOL=true; }
     if( suppressErrors ) { CS_LOG_ERROR_BOOL = false; }
 
+    if( logFile != NULL ) CS_logInit( logFile, 4096, 1024 );
+
     CS_LOG_INFO("Server Name: %s", serverName);
     CS_LOG_INFO("Port Number is %d", portNum);
 
@@ -175,7 +177,9 @@ int main(int argc, char *argv[] ) {
         if( testSeed != 0 ) {
             CS_testSetRandomSeed(testSeed);
         }
-        exit(CS_testMain()?255:0);
+        bool testMain = CS_testMain();
+        if( logFile != NULL ) CS_logKill();
+        exit(testMain?255:0);
     }
 
     signal(SIGINT, interruptHandler);
@@ -195,6 +199,7 @@ int main(int argc, char *argv[] ) {
     }
 
     CS_KillWebServer(server);
+    if( logFile != NULL ) CS_logKill();
     CS_freeAllTempBuffs();
     return 0;
 }

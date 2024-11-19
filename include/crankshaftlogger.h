@@ -61,6 +61,9 @@ void CS_log(const char *file, int line, const char *fmt, ... );
 void CS_logRotate(int maxHistory);
 void CS_logFile(char *fileName);
 
+bool CS_logInit( const char *fileName, int maxLineLength, int initialBuffer );
+bool CS_logKill(void);
+
 #ifdef __cplusplus
 }
 #endif

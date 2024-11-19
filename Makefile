@@ -64,7 +64,7 @@ test: $(OBJECTS_DIR) $(BINOUT)-test
 	./$(BINOUT)-test --test --suppress-errors --only-fails
 
 valgrind:
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=$(BINOUT)-test-valgrind.txt ./$(BINOUT)-test --test --suppress-errors --only-fails
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=$(BINOUT)-test-valgrind.txt ./$(BINOUT)-test --test --trace > ~/a.out
 
 valgrindServer:
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=$(BINOUT)-valgrind.txt ./$(BINOUT) --trace
