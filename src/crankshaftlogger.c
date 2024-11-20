@@ -22,6 +22,8 @@ bool CS_LOG_QUIET_BOOL = false;
 
 static bool loggingInitialized = false;
 
+static pthread_mutex_t logMutex = PTHREAD_MUTEX_INITIALIZER;
+
 static FILE *outputFile;
 
 #define BUFF_FOR_PREFIX 512
@@ -75,11 +77,13 @@ bool CS_logKill(void) {
 
 void CS_log(const char *file, int line, const char *fmt, ... ) {
     if( loggingInitialized ) {
+        pthread_mutex_lock(&logMutex);
         va_list ap;
         va_start(ap, fmt);
         vfprintf( outputFile, fmt, ap );
         va_end(ap);
         fprintf( outputFile, "\n");
+        pthread_mutex_unlock(&logMutex);
     } else {
         va_list ap;
         va_start(ap,fmt);
