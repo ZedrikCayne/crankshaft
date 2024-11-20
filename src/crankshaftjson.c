@@ -1584,13 +1584,12 @@ struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *pa
                 CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index into the negatives.");
                 return NULL;
             }
-            if( index > source->nItemsOrLength ) {
-                CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index beyond the end of the array.");
-                return NULL;
-            }
             current = current->container;
-            for( int i = 0; i < index; ++i ) {
+            for( int i = 0; i < index && current != NULL; ++i ) {
                 current = current->next;
+            }
+            if( current == NULL ) {
+                CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index beyond the end of an array.");
             }
         } else if( current->typeEnum == CS_JSON_OBJECT ) {
             current = current->container;

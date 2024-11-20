@@ -120,29 +120,31 @@ void hupOnMainThread() {
     GotHup = false;
 }
 
-void dcCallback( struct CrankshaftClientInfo *info ) {
+void dcCallback( struct CS_ClientInfo *info ) {
     CS_LOG_TRACE("Disconnecting.");
 }
 
-bool fudge( struct CrankshaftClientInfo *info ) {
+bool fudge( struct CS_ClientInfo *info ) {
     if( info->disconnectCallback == NULL ) {
         info->disconnectCallback = dcCallback;
     }
     return CS_Diagnostic200(info);
 }
 
-bool doQuit( struct CrankshaftClientInfo *info ) {
+bool doQuit( struct CS_ClientInfo *info ) {
     GotInterrupt = true;
     return CS_Diagnostic200(info);
 }
 
-struct CrankshaftRoute serverRoutes[] = {
-    { METHOD_GET,  ROUTE_TYPE_PREFIX, 0, "/Prefix/Match/Me", CS_Diagnostic200 },
-    { METHOD_GET,  ROUTE_TYPE_EXACT, 0, "/Very/Match/Me", CS_Diagnostic200 },
-    { METHOD_GET,  ROUTE_TYPE_PREFIX, 0, "/api", fudge },
-    { METHOD_GET,  ROUTE_TYPE_EXACT, 0, "/quit", doQuit },
-    { METHOD_GET,  ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer },
-    { METHOD_HEAD, ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer }
+struct CS_Route serverRoutes[] = {
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/Prefix/Match/Me", CS_Diagnostic200 },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, 0, "/Very/Match/Me", CS_Diagnostic200 },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", CS_Diagnostic200 },
+    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", CS_Diagnostic200 },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/api", fudge },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, 0, "/quit", doQuit },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer },
+    { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer }
 };
 
 int main(int argc, char *argv[] ) {
@@ -191,7 +193,7 @@ int main(int argc, char *argv[] ) {
 
     CS_LOG_INFO("Starting web server.");
 
-    struct CrankshaftWebServer *server = CS_StartWebServer( portNum, certFile, keyFile, fileServingDir, fileServingFile, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
+    struct CS_WebServer *server = CS_StartWebServer( portNum, certFile, keyFile, fileServingDir, fileServingFile, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
     if( server == NULL )
         return -1;
     while(!GotInterrupt) {

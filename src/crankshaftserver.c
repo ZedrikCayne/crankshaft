@@ -229,10 +229,10 @@ static bool privateUrlDecodeInPlace( char *encoded ) {
     return false;
 }
 
-static struct CrankshaftClientInfo *createClientInfoWithThread( int socket,
-                                                      struct CrankshaftWebServer *server,
+static struct CS_ClientInfo *createClientInfoWithThread( int socket,
+                                                      struct CS_WebServer *server,
                                                       struct sockaddr_in *clientSocketAddress ) {
-    struct CrankshaftClientInfo *ci = CS_alloc(sizeof(struct CrankshaftClientInfo));
+    struct CS_ClientInfo *ci = CS_alloc(sizeof(struct CS_ClientInfo));
     if( ci == NULL ) {
         CS_LOG_ERROR( "Out of memory allocating a new client info." );
         goto CLIENT_ERR_OOM;
@@ -270,10 +270,10 @@ CLIENT_ERR_OOM:
     return NULL;
 }
 
-static bool HTTP_STATE_MACHINE(struct CrankshaftClientInfo *info);
+static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info);
 
 static void *clientThread(void *var) {
-    struct CrankshaftClientInfo *clientInfo = (struct CrankshaftClientInfo *)var;
+    struct CS_ClientInfo *clientInfo = (struct CS_ClientInfo *)var;
     CS_LOG_TRACE("ClientInfo %p starting.", clientInfo );
     if( clientInfo->server->sslctx ) { 
         clientInfo->ssl = SSL_new( clientInfo->server->sslctx );
@@ -324,15 +324,15 @@ CLIENT_BAIL_NOSSL:
     return NULL;
 }
 
-static void freeRoutes(struct CrankshaftWebServer *server) {
-    for( int i = 0; i < CRANKSHAFT_MAX_METHODS; ++i ) {
+static void freeRoutes(struct CS_WebServer *server) {
+    for( int i = 0; i < CS_MAX_HTTP_METHODS; ++i ) {
         if( server->routes[ i ] != NULL )
             CS_free( server->routes[ i ] );
         server->routes[ i ] = NULL;
     }
 }
 
-static bool InitSSL(struct CrankshaftWebServer *server, const char *certFile,const char *keyFile ) {
+static bool InitSSL(struct CS_WebServer *server, const char *certFile,const char *keyFile ) {
     const SSL_METHOD *method;
     method = TLS_server_method();
     server->sslctx = SSL_CTX_new(method);
@@ -349,7 +349,7 @@ static bool InitSSL(struct CrankshaftWebServer *server, const char *certFile,con
     return server->sslctx == NULL;
 }
 
-static bool DestroySSL(struct CrankshaftWebServer *server) {
+static bool DestroySSL(struct CS_WebServer *server) {
     if( server->sslctx ) { 
         SSL_CTX_free(server->sslctx);
         server->sslctx = NULL;
@@ -358,7 +358,7 @@ static bool DestroySSL(struct CrankshaftWebServer *server) {
 }
 
 static void *serverThreadProc(void *var) {
-    struct CrankshaftWebServer *server = (struct CrankshaftWebServer *)var;
+    struct CS_WebServer *server = (struct CS_WebServer *)var;
     server->threadRunning = true;
     server->killMe = false;
     while(server->threadRunning && !server->killMe ) {
@@ -391,14 +391,14 @@ static void *serverThreadProc(void *var) {
 
 static const char ReplyStackName[] = "Reply Stack";
 
-struct CrankshaftWebServer *CS_StartWebServer(int portNum, 
+struct CS_WebServer *CS_StartWebServer(int portNum, 
                                            const char *certFile,
                                            const char *keyFile,
                                            const char *fileServingPath,
                                            const char *fileServingFile,
-                                           struct CrankshaftRoute *routes,
+                                           struct CS_Route *routes,
                                            int numberOfRoutes ) {
-    struct CrankshaftWebServer *returnValue = CS_alloc( sizeof( struct CrankshaftWebServer ) );
+    struct CS_WebServer *returnValue = CS_alloc( sizeof( struct CS_WebServer ) );
     if( returnValue == NULL ) {
         CS_LOG_ERROR("Could not allocate enough for a web server.");
         return NULL;
@@ -410,14 +410,14 @@ struct CrankshaftWebServer *CS_StartWebServer(int portNum,
     returnValue->threadRunning = false;
     
     int i = 0;
-    for( i = 0; i < CRANKSHAFT_MAX_METHODS; ++i ) {
+    for( i = 0; i < CS_MAX_HTTP_METHODS; ++i ) {
         returnValue->routeNumbers[ i ] = 0;
         returnValue->routes[ i ] = NULL;
     }
 
     for( i = 0; i < numberOfRoutes; ++i ) {
         int currentIndex = routes[ i ].method;
-        if( currentIndex < 0 || currentIndex >= CRANKSHAFT_MAX_METHODS ) {
+        if( currentIndex < 0 || currentIndex >= CS_MAX_HTTP_METHODS ) {
             CS_LOG_ERROR("Method defined in routes for web server is outside of allowed range.");
             goto ERR_ALLOC;
         }
@@ -426,27 +426,27 @@ struct CrankshaftWebServer *CS_StartWebServer(int portNum,
         routes[ i ].routeLength = routeLength;
     }
 
-    for( i = 0; i < CRANKSHAFT_MAX_METHODS; ++i ) {
-        returnValue->routes[ i ] = CS_alloc( sizeof( struct CrankshaftRoute ) * returnValue->routeNumbers[ i ] );
+    for( i = 0; i < CS_MAX_HTTP_METHODS; ++i ) {
+        returnValue->routes[ i ] = CS_alloc( sizeof( struct CS_Route ) * returnValue->routeNumbers[ i ] );
         if( returnValue->routes[ i ] == NULL ) {
             CS_LOG_ERROR("OOM creating routes table.");
             goto ERR_ALLOC_TABLES;
         }
     }
 
-    int routeCount[ CRANKSHAFT_MAX_METHODS ] = {0};
+    int routeCount[ CS_MAX_HTTP_METHODS ] = {0};
     for( i = 0; i < numberOfRoutes; ++i ) {
         int neededRoute = routes[ i ].method;
         int currentWriteIndex = routeCount[ neededRoute ];
 
         memcpy( returnValue->routes[ neededRoute ] + currentWriteIndex,
                 routes + i,
-                sizeof( struct CrankshaftRoute ) );
+                sizeof( struct CS_Route ) );
 
         ++routeCount[ neededRoute ];
     }
 
-    returnValue->replyStack = CS_initSlabAlloc( ReplyStackName, sizeof( struct CrankshaftReply ), 256, 4 );
+    returnValue->replyStack = CS_initSlabAlloc( ReplyStackName, sizeof( struct CS_Reply ), 256, 4 );
 
 
     returnValue->listenSocket = socket(AF_INET, SOCK_STREAM,0);
@@ -504,7 +504,7 @@ ERR_ALLOC:
     return NULL;
 }
 
-bool CS_KillWebServer( struct CrankshaftWebServer *server ) {
+bool CS_KillWebServer( struct CS_WebServer *server ) {
     CS_LOG("Webserver shutdown requested.");
     server->killMe = true;
     while( server->threadRunning ) {
@@ -521,19 +521,19 @@ bool CS_KillWebServer( struct CrankshaftWebServer *server ) {
 #define HTTP_VERSION "HTTP/1.1"
 
 #define STACK_BUFFER_SIZE 1024
-static void ERR(struct CrankshaftClientInfo *info, int errorEnum, const char *details) {
+static void ERR(struct CS_ClientInfo *info, int errorEnum, const char *details) {
     char *tempBuff = CS_tempBuff(STACK_BUFFER_SIZE);
     int error = codeToString[errorEnum].code;
     const char *errorString = codeToString[errorEnum].value;
 
     int contentLength = snprintf(tempBuff, STACK_BUFFER_SIZE, "{\"error\":\"%s\",\"status\":%d,\"details\":\"%s\"}",errorString,error,errorString);
-    struct CrankshaftReply *reply = CS_Reply( info, errorEnum, MIME_JS, tempBuff, contentLength );
+    struct CS_Reply *reply = CS_Reply( info, errorEnum, CS_MIME_JS, tempBuff, contentLength );
     if( reply == NULL ) return;
     CS_DoReply( info, reply );
 }
 
 #define TEMP_OUTPUT_BUFF_SIZE 8192 
-static bool BASIC_OK(struct CrankshaftClientInfo *info, const char *what) {
+static bool BASIC_OK(struct CS_ClientInfo *info, const char *what) {
     struct CS_PushPullBuffer tempToWriteBase;
     struct CS_PushPullBuffer *tempToWrite = &tempToWriteBase;
     CS_PP_init(tempToWrite,TEMP_OUTPUT_BUFF_SIZE,CS_tempBuff(TEMP_OUTPUT_BUFF_SIZE));
@@ -560,7 +560,7 @@ static bool BASIC_OK(struct CrankshaftClientInfo *info, const char *what) {
     CS_quoteStringToStringBuilder(info->requestInfo.uri,1024,scratch);
     CS_PP_printf( tempToWrite, "],\"dataLeftInBuffer\":%d,\"uri\":\"%s\"}", CS_PP_dataSize( info->buffer ), scratch->buffer );
     CS_SB_free( scratch );
-    struct CrankshaftReply *reply = CS_Reply( info, RESPONSE_200, MIME_JS, CS_PP_startOfData( tempToWrite ), CS_PP_dataSize( tempToWrite ) );
+    struct CS_Reply *reply = CS_Reply( info, CS_RESPONSE_200, CS_MIME_JS, CS_PP_startOfData( tempToWrite ), CS_PP_dataSize( tempToWrite ) );
     return CS_DoReply( info, reply );
 }
 
@@ -613,34 +613,34 @@ enum HeaderState {
 #define REQUIRE_CHAR_NO_EAT(X) if( currentPoint<endOfData && *currentPoint!=X)return -1;
 #define REQUIRE_CRLF() REQUIRE_CHAR(CR);REQUIRE_CHAR_NO_EAT(LF)
 
-static int parseRequest(struct CrankshaftClientInfo *info) {
+static int parseRequest(struct CS_ClientInfo *info) {
     char *startOfData = CS_PP_startOfData(info->buffer);
     //Find first space, that's the end of the 'method'
     int command = *(int*)startOfData;
     switch(command) {
         case _CONNECT:
-            info->requestInfo.requestMethodEnum = METHOD_CONNECT;
+            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_CONNECT;
             break;
         case _DELETE:
-            info->requestInfo.requestMethodEnum = METHOD_DELETE;
+            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_DELETE;
             break;
         case _GET:
-            info->requestInfo.requestMethodEnum = METHOD_GET;
+            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_GET;
             break;
         case _HEAD:
-            info->requestInfo.requestMethodEnum = METHOD_HEAD;
+            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_HEAD;
             break;
         case _POST:
-            info->requestInfo.requestMethodEnum = METHOD_POST;
+            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_POST;
             break;
         case _PUT:
-            info->requestInfo.requestMethodEnum = METHOD_PUT;
+            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_PUT;
             break;
         case _TRACE:
-            info->requestInfo.requestMethodEnum = METHOD_TRACE;
+            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_TRACE;
             break;
         default:
-            info->requestInfo.requestMethodEnum = METHOD_UNKNOWN;
+            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_UNKNOWN;
             return -1;
     }
 
@@ -790,7 +790,7 @@ static int parseRequest(struct CrankshaftClientInfo *info) {
     return -1;
 }
 
-static bool HTTP_STATE_MACHINE(struct CrankshaftClientInfo *info) {
+static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     //Message starts:
     size_t bytesAvailable = CS_PP_dataSize(info->buffer);
     int bytesRequiredForHeaders = parseRequest(info);
@@ -800,29 +800,29 @@ static bool HTTP_STATE_MACHINE(struct CrankshaftClientInfo *info) {
     CS_LOG_INFO("Request: %s %s",info->requestInfo.method,info->requestInfo.uri);
     int requestEnum = info->requestInfo.requestMethodEnum;
     int nRoutes = info->server->routeNumbers[ requestEnum ];
-    struct CrankshaftRoute *routes = info->server->routes[ requestEnum ];
+    struct CS_Route *routes = info->server->routes[ requestEnum ];
 
     for( int i = 0; i < nRoutes; ++i ) {
         switch( routes[ i ].routeType ) {
-            case ROUTE_TYPE_WILDCARD:
+            case CS_ROUTE_TYPE_WILDCARD:
                 return routes[ i ].handler( info );
                 break;
-            case ROUTE_TYPE_PREFIX:
+            case CS_ROUTE_TYPE_PREFIX:
                 if( strncmp(info->requestInfo.uri,routes[ i ].route, routes[ i ].routeLength) == 0 )
                     return routes[ i ].handler( info );
                 break;
-            case ROUTE_TYPE_EXACT:
+            case CS_ROUTE_TYPE_EXACT:
                 if( strcmp(info->requestInfo.uri, routes[ i ].route ) == 0 )
                     return routes[ i ].handler( info );
                 break;
         }
     }
     
-    ERR(info, RESPONSE_404,"URI not available on this server");
+    ERR(info, CS_RESPONSE_404,"URI not available on this server");
     return true;
 }
 
-bool CS_Diagnostic200( struct CrankshaftClientInfo *info ) {
+bool CS_Diagnostic200( struct CS_ClientInfo *info ) {
     return BASIC_OK(info, info->requestInfo.method);
 }
 
@@ -832,7 +832,7 @@ static const int extensionToMimeEnum(const char *extension ) {
             return i;
         }
     }
-    return MIME_BIN;
+    return CS_MIME_BIN;
  }
 
 const char *extensionToMimeType(const char *extension) {
@@ -841,8 +841,8 @@ const char *extensionToMimeType(const char *extension) {
 }
 
 #define MAX_FILE_PATH 2048
-bool CS_FileServer( struct CrankshaftClientInfo *info ) {
-    struct CrankshaftRequestInfo *request = &info->requestInfo;
+bool CS_FileServer( struct CS_ClientInfo *info ) {
+    struct CS_RequestInfo *request = &info->requestInfo;
     int lengthOfUri = strlen( request->uri );
     char *tempBuff = CS_tempBuff( lengthOfUri );
     strncpy( tempBuff, request->uri, lengthOfUri + 1 );
@@ -852,7 +852,7 @@ bool CS_FileServer( struct CrankshaftClientInfo *info ) {
     //Check for anyone being sneaky about ..
     for( int i = 1; i < lengthOfUri - 1; ++i ) {
         if( tempBuff[i] == '.' && tempBuff[ i - 1 ] == '.' ) {
-            ERR(info,RESPONSE_403,"Relative paths not allowed.");
+            ERR(info,CS_RESPONSE_403,"Relative paths not allowed.");
             goto ERR_SETUP;
         }
     }
@@ -883,19 +883,19 @@ bool CS_FileServer( struct CrankshaftClientInfo *info ) {
 
     int printed = snprintf( fileToOpen, MAX_FILE_PATH, "%s%s/%s", info->server->defaultFileServingPath, path, filename );
     if( printed == MAX_FILE_PATH ) {
-        ERR(info, RESPONSE_403,"Requested file path length too long.");
+        ERR(info, CS_RESPONSE_403,"Requested file path length too long.");
         goto ERR_SETUP;
     }
 
     int inputFile = open( fileToOpen, O_RDONLY );
     if( inputFile < 0 ) {
-        ERR(info, RESPONSE_404,"File Not Found");
+        ERR(info, CS_RESPONSE_404,"File Not Found");
         goto ERR_SETUP;
     }
 
     struct stat statBuff;
     if( fstat( inputFile, &statBuff ) < 0 ) {
-        ERR(info, RESPONSE_500,"Cannot stat file. What the heck?");
+        ERR(info, CS_RESPONSE_500,"Cannot stat file. What the heck?");
         goto ERR_FILE_OPENED;
     }
     
@@ -904,12 +904,12 @@ bool CS_FileServer( struct CrankshaftClientInfo *info ) {
 
     void *fileBuffer = NULL;
 
-    if( request->requestMethodEnum == METHOD_GET ) {
+    if( request->requestMethodEnum == CS_HTTP_METHOD_GET ) {
         fileBuffer = CS_alloc(fileSize);
         if(fileBuffer == NULL) {
             char *tBuff = CS_tempBuff(256);
             snprintf(tBuff, 256, "OOM allocating %ld bytes for a file.", fileSize);
-            ERR(info, RESPONSE_500, tBuff );
+            ERR(info, CS_RESPONSE_500, tBuff );
             goto ERR_FILE_OPENED;
         }
 
@@ -920,7 +920,7 @@ bool CS_FileServer( struct CrankshaftClientInfo *info ) {
             numBytesToRead -= numBytesRead;
         }
         if( numBytesToRead > 0 ) {
-            ERR(info, RESPONSE_500, "Could not read whole file.");
+            ERR(info, CS_RESPONSE_500, "Could not read whole file.");
             goto ERR_BUFF_FAILED;
         }
         close( inputFile );
@@ -928,7 +928,7 @@ bool CS_FileServer( struct CrankshaftClientInfo *info ) {
 
     //Doing this the long way so we have a default set.
     const char *mimeType = extensionToMimeType(extension);
-    struct CrankshaftReply *reply = CS_Reply( info, RESPONSE_200, MIME_DO_NOT_SET, fileBuffer, fileSize );
+    struct CS_Reply *reply = CS_Reply( info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, fileBuffer, fileSize );
     CS_SetReplyHeader(reply, "Last-Modified", timeString( lastModified ) );
     CS_SetReplyHeader(reply, "Content-Type", mimeType);
     CS_SetReplyHeader(reply, "Connection", "close" );
@@ -944,8 +944,8 @@ ERR_SETUP:
     return true;
 }
 
-const char *CS_GetRequestHeader( struct CrankshaftClientInfo *info, const char *header ) {
-    struct CrankshaftRequestInfo *request = &info->requestInfo;
+const char *CS_GetRequestHeader( struct CS_ClientInfo *info, const char *header ) {
+    struct CS_RequestInfo *request = &info->requestInfo;
     for( int i = 0; i < request->numHeaders; ++i ) {
         if( strncmp(header,request->headers[i].header,HEADER_MAX) == 0 ) {
             return request->headers[i].values;
@@ -954,8 +954,8 @@ const char *CS_GetRequestHeader( struct CrankshaftClientInfo *info, const char *
     return NULL;
 }
 
-const char *GetQueryParameter( struct CrankshaftClientInfo *info, const char *name ) {
-    struct CrankshaftRequestInfo *request = &info->requestInfo;
+const char *GetQueryParameter( struct CS_ClientInfo *info, const char *name ) {
+    struct CS_RequestInfo *request = &info->requestInfo;
     for( int i = 0; i < request->numHeaders; ++i ) {
         if( strncmp(name,request->parameters[i].name,HEADER_MAX) == 0 ) {
             return request->parameters[i].value;
@@ -964,7 +964,7 @@ const char *GetQueryParameter( struct CrankshaftClientInfo *info, const char *na
     return NULL;
 }
 
-static bool PrivateSetReplyHeader( struct CrankshaftReply *reply,
+static bool PrivateSetReplyHeader( struct CS_Reply *reply,
                                    bool overwrite,
                                    const char *header, 
                                    const char *value ) {
@@ -1007,14 +1007,14 @@ static bool PrivateSetReplyHeader( struct CrankshaftReply *reply,
     return true;
 }
 
-static bool PrivateSetReplyHeaderInt( struct CrankshaftReply *reply, bool overwrite, const char *header, int value ) {
+static bool PrivateSetReplyHeaderInt( struct CS_Reply *reply, bool overwrite, const char *header, int value ) {
     char *temp = (char*)CS_tempBuff( 64 );
     snprintf( temp, 64, "%d", value );
     return PrivateSetReplyHeader( reply, overwrite, header, temp );
 }
 
-struct CrankshaftReply *CS_Reply(struct CrankshaftClientInfo *info, int responseEnum, int mimeEnum, void *outputBuffer, int outputLength ) {
-        struct CrankshaftReply *returnValue = CS_takeOne(info->server->replyStack);
+struct CS_Reply *CS_Reply(struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *outputBuffer, int outputLength ) {
+        struct CS_Reply *returnValue = CS_takeOne(info->server->replyStack);
     returnValue->returnStatusEnum = responseEnum;
     returnValue->contentTypeEnum = mimeEnum;
     returnValue->numHeaders = 0;
@@ -1023,32 +1023,32 @@ struct CrankshaftReply *CS_Reply(struct CrankshaftClientInfo *info, int response
     return returnValue;
 }
 
-void CS_ReturnReply(struct CrankshaftClientInfo *info, struct CrankshaftReply *reply) {
+void CS_ReturnReply(struct CS_ClientInfo *info, struct CS_Reply *reply) {
     CS_returnOne(info->server->replyStack, reply);
 }
 
-bool CS_SetReplyHeader( struct CrankshaftReply *reply, const char *header, const char *value ) {
+bool CS_SetReplyHeader( struct CS_Reply *reply, const char *header, const char *value ) {
     return PrivateSetReplyHeader(reply,true,header,value);
 }
-bool CS_SetReplyHeaderIfMissing( struct CrankshaftReply *reply, const char *header, const char *value ) {
+bool CS_SetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value ) {
     return PrivateSetReplyHeader(reply,false,header,value);
 }
-bool CS_SetReplyHeaderInt( struct CrankshaftReply *reply, const char *header, int value ) {
+bool CS_SetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value ) {
     return PrivateSetReplyHeaderInt( reply, true, header, value );
 }
-bool CS_SetReplyHeaderIntIfMissing( struct CrankshaftReply *reply, const char *header, int value ) {
+bool CS_SetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value ) {
     return PrivateSetReplyHeaderInt( reply, false, header, value );
 }
 
 
-bool CS_DoReply( struct CrankshaftClientInfo *info, struct CrankshaftReply *reply ) {
-    if( info == NULL || reply == NULL || reply->returnStatusEnum < 0 || reply->returnStatusEnum >= MAX_NUM_RESPONSE_ENUMS ) {
+bool CS_DoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
+    if( info == NULL || reply == NULL || reply->returnStatusEnum < 0 || reply->returnStatusEnum >= MAX_NUM_CS_RESPONSE_ENUMS ) {
         CS_LOG_ERROR("Bad arguments.");
         return true;
     }
     int replyNumber = codeToString[ reply->returnStatusEnum ].code;
     const char *replyString = codeToString[ reply->returnStatusEnum ].value;
-    if( reply->contentTypeEnum != MIME_DO_NOT_SET ) {
+    if( reply->contentTypeEnum != CS_MIME_DO_NOT_SET ) {
         CS_SetReplyHeaderIfMissing(reply, "Content-Type", extensions[ reply->contentTypeEnum ].filetype );
     }
     if( reply->outputBuffer != NULL ) {

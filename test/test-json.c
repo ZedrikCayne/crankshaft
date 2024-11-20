@@ -16,6 +16,7 @@ static int testSucceeded = 0;
 
 static const char *testsource1 = "[\"foo\",\"bar\",\"baz\"]";
 static const char *testsource2 = "{\"a\":\"1\",\"b\":2,\"c\":3.3}";
+static const char *testsource3 = "{\"a\":[{\"1\":\"a\",\"b\":2,\"3\":\"c\"},[\"aba\",\"bba\",\"cca\"],\"Funk\"],\"b\":[1,2,3]}";
 
 #define ARRAY_LENGTH(X) (sizeof(X)/(sizeof(X[0])))
 
@@ -339,6 +340,13 @@ bool test_json() {
         CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_FLOAT_AS_STRING), "Expecting the float as string here.", "%s", wantedButGot(CS_JSON_FLOAT_AS_STRING, js2) );
         CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_FLOAT_AS_STRING && strcmp(js2->stringValue,"3.3") == 0), "Expecting to get a string with value '3.3'", "That ain't right." );
         CS_freeJson(js);
+    }
+
+    js = CS_parseJsonCopy( testsource3, strlen(testsource3), TEMP_JSON_ALLOC_SIZE );
+    CS_FAIL_ON_NULL( js, "Parse object {\"a\":[{\"1\":\"a\",\"b\":2,\"3\":\"c\"},[\"aba\",\"bba\",\"cca\"],\"Funk\"],\"b\":[1,2,3]}", "Got an unexpected null." );
+    if( js ) {
+        js2 = CS_jsonNodeByPath(js, "a/2");
+        CS_FAIL_ON_FALSE( (js2 && js2->typeEnum == CS_JSON_STRING_QUOTED && strcmp(js2->stringValue,"Funk") == 0), "a/3 should be Funk", "Was not funk." );
     }
 
     CS_freeManualTempBuff( myTempBuffer );

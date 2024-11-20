@@ -9,129 +9,129 @@
 extern "C" {
 #endif
 
-enum CrankshaftHttpMethods {
-    METHOD_CONNECT = 0,
-    METHOD_DELETE,
-    METHOD_GET,
-    METHOD_HEAD,
-    METHOD_POST,
-    METHOD_PUT,
-    METHOD_TRACE,
-    METHOD_UNKNOWN,
-    CRANKSHAFT_MAX_METHODS = METHOD_UNKNOWN
+enum CS_HttpMethods {
+    CS_HTTP_METHOD_CONNECT = 0,
+    CS_HTTP_METHOD_DELETE,
+    CS_HTTP_METHOD_GET,
+    CS_HTTP_METHOD_HEAD,
+    CS_HTTP_METHOD_POST,
+    CS_HTTP_METHOD_PUT,
+    CS_HTTP_METHOD_TRACE,
+    CS_HTTP_METHOD_UNKNOWN,
+    CS_MAX_HTTP_METHODS = CS_HTTP_METHOD_UNKNOWN
 };
 
-enum CrankshaftMIMETypes {
-    MIME_DO_NOT_SET = -1,
-    MIME_AAC,
-    MIME_APNG,
-    MIME_AVI,
-    MIME_AZW,
-    MIME_BIN,
-    MIME_BMP,
-    MIME_BZ,
-    MIME_BZ2,
-    MIME_CSS,
-    MIME_GIF,
-    MIME_HTM,
-    MIME_HTML,
-    MIME_ICO,
-    MIME_JPG,
-    MIME_JPEG,
-    MIME_JS,
-    MIME_MP3,
-    MIME_MP4,
-    MIME_OGA,
-    MIME_OGV,
-    MIME_OGX,
-    MIME_OTF,
-    MIME_PNG,
-    MIME_PDF,
-    MIME_RAR,
-    MIME_RTF,
-    MIME_SVG,
-    MIME_TAR,
-    MIME_TTF,
-    MIME_TXT,
-    MIME_WAV,
-    MIME_WEBA,
-    MIME_WEBM,
-    MIME_WEBP,
-    MIME_WOFF,
-    MIME_WOFF2,
-    MIME_XML,
-    MIME_FORM_URLENCODED,
-    MIME_FORM_MULTIPART,
-    MAX_MIME_TYPES
+enum CS_MIMETypes {
+    CS_MIME_DO_NOT_SET = -1,
+    CS_MIME_AAC,
+    CS_MIME_APNG,
+    CS_MIME_AVI,
+    CS_MIME_AZW,
+    CS_MIME_BIN,
+    CS_MIME_BMP,
+    CS_MIME_BZ,
+    CS_MIME_BZ2,
+    CS_MIME_CSS,
+    CS_MIME_GIF,
+    CS_MIME_HTM,
+    CS_MIME_HTML,
+    CS_MIME_ICO,
+    CS_MIME_JPG,
+    CS_MIME_JPEG,
+    CS_MIME_JS,
+    CS_MIME_MP3,
+    CS_MIME_MP4,
+    CS_MIME_OGA,
+    CS_MIME_OGV,
+    CS_MIME_OGX,
+    CS_MIME_OTF,
+    CS_MIME_PNG,
+    CS_MIME_PDF,
+    CS_MIME_RAR,
+    CS_MIME_RTF,
+    CS_MIME_SVG,
+    CS_MIME_TAR,
+    CS_MIME_TTF,
+    CS_MIME_TXT,
+    CS_MIME_WAV,
+    CS_MIME_WEBA,
+    CS_MIME_WEBM,
+    CS_MIME_WEBP,
+    CS_MIME_WOFF,
+    CS_MIME_WOFF2,
+    CS_MIME_XML,
+    CS_MIME_FORM_URLENCODED,
+    CS_MIME_FORM_MULTIPART,
+    MAX_CS_MIME_TYPES
 };
 
-enum CrankshaftHTTPResponseCodes {
-    RESPONSE_100,
-    RESPONSE_101,
-    RESPONSE_102,
-    RESPONSE_103,
-    RESPONSE_200,
-    RESPONSE_201,
-    RESPONSE_202,
-    RESPONSE_203,
-    RESPONSE_204,
-    RESPONSE_205,
-    RESPONSE_206,
-    RESPONSE_207,
-    RESPONSE_208,
-    RESPONSE_226,
-    RESPONSE_300,
-    RESPONSE_301,
-    RESPONSE_302,
-    RESPONSE_303,
-    RESPONSE_304,
-    RESPONSE_305,
-    RESPONSE_306,
-    RESPONSE_307,
-    RESPONSE_308,
-    RESPONSE_400,
-    RESPONSE_401,
-    RESPONSE_402,
-    RESPONSE_403,
-    RESPONSE_404,
-    RESPONSE_405,
-    RESPONSE_406,
-    RESPONSE_407,
-    RESPONSE_408,
-    RESPONSE_409,
-    RESPONSE_410,
-    RESPONSE_411,
-    RESPONSE_412,
-    RESPONSE_413,
-    RESPONSE_414,
-    RESPONSE_415,
-    RESPONSE_416,
-    RESPONSE_417,
-    RESPONSE_418,
-    RESPONSE_421,
-    RESPONSE_422,
-    RESPONSE_423,
-    RESPONSE_424,
-    RESPONSE_425,
-    RESPONSE_426,
-    RESPONSE_428,
-    RESPONSE_429,
-    RESPONSE_431,
-    RESPONSE_451,
-    RESPONSE_500,
-    RESPONSE_501,
-    RESPONSE_502,
-    RESPONSE_503,
-    RESPONSE_504,
-    RESPONSE_507,
-    RESPONSE_508,
-    RESPONSE_510,
-    RESPONSE_511,
-    MAX_NUM_RESPONSE_ENUMS
+enum CS_HTTPResponseCodes {
+    CS_RESPONSE_100,
+    CS_RESPONSE_101,
+    CS_RESPONSE_102,
+    CS_RESPONSE_103,
+    CS_RESPONSE_200,
+    CS_RESPONSE_201,
+    CS_RESPONSE_202,
+    CS_RESPONSE_203,
+    CS_RESPONSE_204,
+    CS_RESPONSE_205,
+    CS_RESPONSE_206,
+    CS_RESPONSE_207,
+    CS_RESPONSE_208,
+    CS_RESPONSE_226,
+    CS_RESPONSE_300,
+    CS_RESPONSE_301,
+    CS_RESPONSE_302,
+    CS_RESPONSE_303,
+    CS_RESPONSE_304,
+    CS_RESPONSE_305,
+    CS_RESPONSE_306,
+    CS_RESPONSE_307,
+    CS_RESPONSE_308,
+    CS_RESPONSE_400,
+    CS_RESPONSE_401,
+    CS_RESPONSE_402,
+    CS_RESPONSE_403,
+    CS_RESPONSE_404,
+    CS_RESPONSE_405,
+    CS_RESPONSE_406,
+    CS_RESPONSE_407,
+    CS_RESPONSE_408,
+    CS_RESPONSE_409,
+    CS_RESPONSE_410,
+    CS_RESPONSE_411,
+    CS_RESPONSE_412,
+    CS_RESPONSE_413,
+    CS_RESPONSE_414,
+    CS_RESPONSE_415,
+    CS_RESPONSE_416,
+    CS_RESPONSE_417,
+    CS_RESPONSE_418,
+    CS_RESPONSE_421,
+    CS_RESPONSE_422,
+    CS_RESPONSE_423,
+    CS_RESPONSE_424,
+    CS_RESPONSE_425,
+    CS_RESPONSE_426,
+    CS_RESPONSE_428,
+    CS_RESPONSE_429,
+    CS_RESPONSE_431,
+    CS_RESPONSE_451,
+    CS_RESPONSE_500,
+    CS_RESPONSE_501,
+    CS_RESPONSE_502,
+    CS_RESPONSE_503,
+    CS_RESPONSE_504,
+    CS_RESPONSE_507,
+    CS_RESPONSE_508,
+    CS_RESPONSE_510,
+    CS_RESPONSE_511,
+    MAX_NUM_CS_RESPONSE_ENUMS
 };
 
 
-struct CrankshaftWebServer {
+struct CS_WebServer {
     int listenSocket;
     pthread_t serverThread;
     bool killMe;
@@ -141,32 +141,39 @@ struct CrankshaftWebServer {
     const char *defaultFileServingPath;
     const char *defaultFileServingFile;
     void *replyStack;
-    int routeNumbers[CRANKSHAFT_MAX_METHODS];
-    struct CrankshaftRoute *routes[CRANKSHAFT_MAX_METHODS];
+    int routeNumbers[CS_MAX_HTTP_METHODS];
+    struct CS_Route *routes[CS_MAX_HTTP_METHODS];
     SSL_CTX *sslctx;
 };
 
-struct RequestHeader {
+struct CS_RequestHeader {
     const char *header;
     const char *values;
 };
 
 #define HEADER_MAX 64
 #define HEADER_VALUE_MAX 256
-struct ReplyHeader {
+struct CS_ReplyHeader {
     char header[ HEADER_MAX ];
     char value[ HEADER_VALUE_MAX ];
 };
 
-struct QueryParameter {
+struct CS_QueryParameter {
     const char *name;
     const char *value;
 };
 
+struct CS_FormParameters {
+    int count;
+    const char *buffer;
+    const char *queryParameters;
+};
+
 #define MAX_REQUEST_HEADERS 64
 #define MAX_QUERY_PARAMETERS 64
+#define MAX_FORM_PARAMETERS 64
 
-struct CrankshaftRequestInfo {
+struct CS_RequestInfo {
     bool valid;
     int numHeaders;
     int numParameters;
@@ -174,67 +181,67 @@ struct CrankshaftRequestInfo {
     const char *method;
     const char *httpVersion;
     int requestMethodEnum;
-    struct RequestHeader headers[ MAX_REQUEST_HEADERS ];
-    struct QueryParameter parameters[ MAX_QUERY_PARAMETERS ];
+    struct CS_RequestHeader headers[ MAX_REQUEST_HEADERS ];
+    struct CS_QueryParameter parameters[ MAX_QUERY_PARAMETERS ];
 };
 
-struct CrankshaftClientInfo {
+struct CS_ClientInfo {
     int clientSocket;
-    struct CrankshaftWebServer *server;
+    struct CS_WebServer *server;
     struct sockaddr_in clientSocketAddress;
     struct CS_PushPullBuffer *buffer;
     struct CS_PushPullBuffer *output;
-    void (*disconnectCallback)(struct CrankshaftClientInfo *info);
+    void (*disconnectCallback)(struct CS_ClientInfo *info);
     void *persistentData;
     SSL *ssl;
-    struct CrankshaftRequestInfo requestInfo;
+    struct CS_RequestInfo requestInfo;
 };
 
 enum {
-    ROUTE_TYPE_WILDCARD,
-    ROUTE_TYPE_PREFIX,
-    ROUTE_TYPE_EXACT
+    CS_ROUTE_TYPE_WILDCARD,
+    CS_ROUTE_TYPE_PREFIX,
+    CS_ROUTE_TYPE_EXACT
 };
 
-struct CrankshaftRoute {
+struct CS_Route {
     int method;
     int routeType;
     int routeLength;
     const char *route;
-    bool (*handler)(struct CrankshaftClientInfo *);
+    bool (*handler)(struct CS_ClientInfo *);
 };
 
-struct CrankshaftReply {
+struct CS_Reply {
     int returnStatusEnum;
     int contentTypeEnum;
     int numHeaders;
-    struct ReplyHeader replyHeaders[MAX_REQUEST_HEADERS];
+    struct CS_ReplyHeader replyHeaders[MAX_REQUEST_HEADERS];
     const void *outputBuffer;
     int outputLength;
 };
 
-struct CrankshaftWebServer *CS_StartWebServer(int portNum,
+struct CS_WebServer *CS_StartWebServer(int portNum,
                                            const char *certfile,
                                            const char *keyFile,
                                            const char *fileServingPath,
                                            const char *fileServingFile,
-                                           struct CrankshaftRoute *routes,
+                                           struct CS_Route *routes,
                                            int nRoutes);
-bool CS_KillWebServer(struct CrankshaftWebServer *server);
+bool CS_KillWebServer(struct CS_WebServer *server);
 
-bool CS_Diagnostic200( struct CrankshaftClientInfo *info );
-bool CS_FileServer( struct CrankshaftClientInfo *info );
+bool CS_Diagnostic200( struct CS_ClientInfo *info );
+bool CS_FileServer( struct CS_ClientInfo *info );
 
-const char *CS_GetRequestHeader( struct CrankshaftClientInfo *info, const char *header );
-const char *CS_GetQueryParameter( struct CrankshaftClientInfo *info, const char *name );
-bool CS_SetReplyHeader( struct CrankshaftReply *reply, const char *header, const char *value );
-bool CS_SetReplyHeaderInt( struct CrankshaftReply *reply, const char *header, int value );
-bool CS_SetReplyHeaderIfMissing( struct CrankshaftReply *reply, const char *header, const char *value );
-bool CS_SetReplyHeaderIntIfMissing( struct CrankshaftReply *reply, const char *header, int value );
+const char *CS_GetRequestHeader( struct CS_ClientInfo *info, const char *header );
+const char *CS_GetQueryParameter( struct CS_ClientInfo *info, const char *name );
+bool CS_SetReplyHeader( struct CS_Reply *reply, const char *header, const char *value );
+bool CS_SetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value );
+bool CS_SetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value );
+bool CS_SetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value );
 
-struct CrankshaftReply *CS_Reply( struct CrankshaftClientInfo *info, int responseEnum, int mimeEnum, void *replyBuffer, int replyLength );
-void CS_ReturnReply( struct CrankshaftClientInfo *info, struct CrankshaftReply *reply );
-bool CS_DoReply( struct CrankshaftClientInfo *info, struct CrankshaftReply *reply );
+struct CS_Reply *CS_Reply( struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *replyBuffer, int replyLength );
+void CS_ReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
+bool CS_DoReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
 
 #ifdef __cplusplus
 }
