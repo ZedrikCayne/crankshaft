@@ -53,7 +53,7 @@ run: all
 	./$(BINOUT) --trace
 
 debug: all
-	gdb --args $(BINOUT) --trace
+	gdb --args $(BINOUT) --test --suppress-errors --only-fails
 
 testWithMalloc: CFLAGS:=-DCS_ALLOC_USE_MALLOC $(CFLAGS)
 testWithMalloc: test

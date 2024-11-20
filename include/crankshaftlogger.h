@@ -13,10 +13,13 @@ extern bool CS_LOG_TRACE_BOOL;
 extern bool CS_LOG_INFO_BOOL;
 extern bool CS_LOG_VERBOSE_BOOL;
 
+
 #if defined(CRANKSHAFT_NOLOGS)
+#define CS_LOG_STDERR(...) {}
 #define CS_LOG_ERROR(...) {}
 #define CS_LOG_ERROR_IF(...)
 #else
+#define CS_LOG_STDERR(...) if(CS_LOG_ERROR_BOOL){fprintf(stderr,__VA_ARGS__);}
 #define CS_LOG_ERROR(...) if(CS_LOG_ERROR_BOOL){CS_log(__FILE__,__LINE__,__VA_ARGS__);}
 #define CS_LOG_ERROR_IF(_PREDICATE,...) if(CS_LOG_ERROR_BOOL&&(_PREDICATE)){CS_log(__FILE__,__LINE__,__VA_ARGS__);}
 #endif
@@ -61,7 +64,7 @@ void CS_log(const char *file, int line, const char *fmt, ... );
 void CS_logRotate(int maxHistory);
 void CS_logFile(char *fileName);
 
-bool CS_logInit( const char *fileName, int maxLineLength, int initialBuffer );
+bool CS_logInit( const char *fileName );
 bool CS_logKill(void);
 
 #ifdef __cplusplus

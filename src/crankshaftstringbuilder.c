@@ -54,22 +54,38 @@ struct CS_StringBuilder *CS_SB_append( struct CS_StringBuilder *buffer, const ch
     return buffer;
 }
 
-struct CS_StringBuilder *CS_SB_printf( struct CS_StringBuilder *buffer, const char *fmt, ... ) {
-    int bytesNeeded = 0;
-    va_list ap;
+struct CS_StringBuilder *CS_SB_vsnprintf( struct CS_StringBuilder *buffer, int maxAppend, const char *fmt, va_list ap ) {
+    int remain;
+    int currentMax;
+    va_list apCpy;
+    int bytesNeeded;
 
 ONCE_MORE_UNTO_THE_BREACH:
-    va_start(ap,fmt);
-    bytesNeeded = vsnprintf(buffer->buffer + buffer->currentHead, buffer->currentSize - buffer->currentHead, fmt, ap );
-    va_end(ap);
-    if( bytesNeeded >= buffer->currentSize - buffer->currentHead ) {
+    va_copy(apCpy,ap);
+    currentMax = remain = CS_SB_remain(buffer);
+    if( maxAppend > 0 && currentMax > maxAppend ) currentMax = maxAppend;
+    bytesNeeded = vsnprintf(buffer->buffer + buffer->currentHead, currentMax, fmt, apCpy );
+    if( (maxAppend > remain )  && (bytesNeeded >= remain) ) {
         if( expandIfNeeded(buffer, bytesNeeded) ) return NULL;
         goto ONCE_MORE_UNTO_THE_BREACH;
+    }
+    if( maxAppend > 0 && bytesNeeded > maxAppend ) {
+        //-1 here because the printf above will have terminated the string one byte earlier
+        bytesNeeded = maxAppend - 1;
     }
 
     buffer->currentHead += bytesNeeded;
     buffer->buffer[ buffer->currentHead ] = 0;
     return buffer;
+}
+
+struct CS_StringBuilder *CS_SB_snprintf( struct CS_StringBuilder *buffer, int maxAppend, const char *fmt, ... ) {
+    struct CS_StringBuilder *returnValue;
+    va_list ap;
+    va_start(ap,fmt);
+    returnValue = CS_SB_vsnprintf( buffer, maxAppend, fmt, ap );
+    va_end(ap);
+    return returnValue;
 }
 
 void CS_SB_free( struct CS_StringBuilder *buffer ) {
@@ -93,7 +109,7 @@ const char *CS_SB_desc( struct CS_StringBuilder *buffer ) {
         if( buffer == NULL ) {
             snprintf(tbuff, MAX_PRINT_LENGTH, "StringBuffer: NULL");
         } else {
-            snprintf(tbuff, MAX_PRINT_LENGTH, "StringBuffer: %d %d %d 0x%p", buffer->originalSize, buffer->currentSize, buffer->currentHead, buffer->buffer );
+            snprintf(tbuff, MAX_PRINT_LENGTH, "StringBuffer: %d %d %d %p", buffer->originalSize, buffer->currentSize, buffer->currentHead, buffer->buffer );
         }
     }
     return tbuff;
