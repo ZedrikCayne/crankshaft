@@ -3,6 +3,7 @@ crankshaft-test
 obj/
 lib/
 build/
+secrets/
 .idea/
 *.swp
 .ccls*
