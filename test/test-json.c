@@ -310,8 +310,36 @@ bool test_json() {
         CS_freeJson( js2 );
         CS_freeJson( root );
     }
-    
 
+    js = CS_parseJsonCopy( testsource1, strlen(testsource1), TEMP_JSON_ALLOC_SIZE );
+    CS_FAIL_ON_NULL( js, "Parse array [\"foo\",\"bar\",\"baz\"]","Got null?!?!");
+    if( js ) {
+        js2 = CS_jsonNodeByPath( js, "0" );
+        CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_STRING_QUOTED), "Should be a string.", "%s", wantedButGot(CS_JSON_STRING_UNQUOTED, js2));
+        CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_STRING_QUOTED && strcmp(js2->stringValue,"foo") == 0), "Value should be foo.", "That ain't right." );
+        
+        CS_FAIL_ON_NOT_NULL( js2 = CS_jsonNodeByPath( js, "notanumber" ), "Expecting null on index that isn't a number.", "%s", nullButGot( js2 ) );
+
+        js2 = CS_jsonNodeByPath( js, "2" );
+        CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_STRING_QUOTED), "Should be a string.", "%s", wantedButGot(CS_JSON_STRING_QUOTED, js2));
+        CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_STRING_QUOTED && strcmp(js2->stringValue,"baz") == 0), "Value should be baz.", "That ain't right." );
+
+        CS_FAIL_ON_NOT_NULL( js2 = CS_jsonNodeByPath( js, "-1" ), "Expecting null on negative index.", "%s", nullButGot( js ) );
+        CS_freeJson(js);
+    }
+
+    js = CS_parseJsonCopy( testsource2, strlen(testsource2), TEMP_JSON_ALLOC_SIZE );
+    CS_FAIL_ON_NULL( js, "Parse object {\"a\":\"1\",\"b\":2,\"c\":3.3}","Got null?!?!");
+    if( js ) {
+        js2 = CS_jsonNodeByPath(js, "a");
+        CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_STRING_QUOTED), "Expecting to get a string with key 'a'", "%s", wantedButGot(CS_JSON_STRING_UNQUOTED, js2) );
+        CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_STRING_QUOTED && strcmp(js2->stringValue,"1") == 0), "Expecting to get a string with value '1'", "%s",  js2->stringValue );
+        CS_FAIL_ON_NOT_NULL( js2 = CS_jsonNodeByPath(js,"1"), "Expecting a null by asking for a string that is not a key.", "%s", nullButGot( js2 ) );
+        js2 = CS_jsonNodeByPath(js,"c");
+        CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_FLOAT_AS_STRING), "Expecting the float as string here.", "%s", wantedButGot(CS_JSON_FLOAT_AS_STRING, js2) );
+        CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_FLOAT_AS_STRING && strcmp(js2->stringValue,"3.3") == 0), "Expecting to get a string with value '3.3'", "That ain't right." );
+        CS_freeJson(js);
+    }
 
     CS_freeManualTempBuff( myTempBuffer );
 

@@ -72,6 +72,15 @@ void *CS_tempBuff(int size) {
     return returnValue;
 }
 
+char *CS_tempStringCopy(const char *copyFrom) {
+    int nLen = strlen(copyFrom);
+    char *returnValue = CS_tempBuff( nLen + 1 );
+    if( returnValue ) {
+        memcpy( returnValue, copyFrom, nLen + 1 );
+    }
+    return returnValue;
+}
+
 bool CS_allocateTempBuffs() {
     if( _TempBuffStorage.size == 0 ) {
         int sizeThing = CS_MIN_TEMP_BUFF_SIZE;

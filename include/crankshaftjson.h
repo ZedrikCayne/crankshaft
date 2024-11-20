@@ -147,6 +147,8 @@ void CS_freeJson( struct CS_JsonNode *any );
 bool CS_jsonNodesEquivalent(struct CS_JsonNode *a, struct CS_JsonNode *b);
 struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTree );
 
+struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *path);
+
 struct CS_StringBuilder *CS_jsonNodePrintable(const struct CS_JsonNode *printMe);
 
 bool CS_unquoteInPlace(char *inputString, int len);

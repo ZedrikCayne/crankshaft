@@ -50,6 +50,7 @@ extern "C" {
 #define CS_TEMP_BUFF_ALIGNMENT 4
 
 void *CS_tempBuff(int size);
+char *CS_tempStringCopy(const char *copyMe);
 bool CS_allocateTempBuffs(void);
 bool CS_freeAllTempBuffs(void);
 

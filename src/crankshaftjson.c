@@ -1563,3 +1563,49 @@ struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTr
     }
     return in;
 }
+
+
+struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *path) {
+    char *tmpPath = CS_tempStringCopy( path );
+    if( tmpPath == NULL ) return NULL;
+    char *savePtr = NULL;
+    char *currToken = NULL;
+    struct CS_JsonNode *current = source;
+    while( (currToken = strtok_r(tmpPath,"/",&savePtr)) ) {
+        tmpPath = NULL;
+        if( current->typeEnum == CS_JSON_ARRAY ) {
+            char *endPtr;
+            int index=strtol( currToken, &endPtr, 10);
+            if( endPtr == currToken ) {
+                CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index into an array with a non numerical value");
+                return NULL;
+            }
+            if( index < 0 ) {
+                CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index into the negatives.");
+                return NULL;
+            }
+            if( index > source->nItemsOrLength ) {
+                CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index beyond the end of the array.");
+                return NULL;
+            }
+            current = current->container;
+            for( int i = 0; i < index; ++i ) {
+                current = current->next;
+            }
+        } else if( current->typeEnum == CS_JSON_OBJECT ) {
+            current = current->container;
+            while( current ) {
+                if( strcmp(current->name,currToken) == 0 ) break;
+                current = current->next;
+            }
+            if( current == NULL ) {
+                CS_LOG_ERROR("CS_jsonNodeByPath: Could not find key %s", currToken);
+                return NULL;
+            }
+        } else {
+            CS_LOG_ERROR("Trying to index off something which isn't an array or object.");
+            return NULL;
+        }
+    }
+    return current;
+}
