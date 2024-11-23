@@ -26,123 +26,8 @@
 #include "crankshaftjson.h"
 #include "crankshafttempbuff.h"
 #include "crankshaftslaballoc.h"
-
-struct CodeToReturnString {
-    int code;
-    const char *value;
-};
-
-//Keep this in line with the enum in the header
-struct CodeToReturnString codeToString[] = {
-    { 100, "Continue" },
-    { 101, "Switching Protocols" },
-    { 102, "Processing" },
-    { 103, "Early Hints" },
-    { 200, "OK" },
-    { 201, "Created" },
-    { 202, "Accepted" },
-    { 203, "Non-Authoritative Information" },
-    { 204, "No Content" },
-    { 205, "Reset Content" },
-    { 206, "Partial Content" },
-    { 207, "Multi-Status" },
-    { 208, "Already Reported" },
-    { 226, "IM Used" },
-    { 300, "Multiple Choices" },
-    { 301, "Moved Permanently" },
-    { 302, "Found" },
-    { 303, "See Other" },
-    { 304, "Not Modified" },
-    { 305, "Use Proxy" },
-    { 306, "unusued" },
-    { 307, "Temporary Redirect" },
-    { 308, "Permanent Redirect" },
-    { 400, "Bad Request" },
-    { 401, "Unauthorized" },
-    { 402, "Payment Required" },
-    { 403, "Forbidden" },
-    { 404, "Not Found" },
-    { 405, "Method Not Allowed" },
-    { 406, "Not Acceptable" },
-    { 407, "Proxy Authentication Required" },
-    { 408, "Request Timeout" },
-    { 409, "Conflict" },
-    { 410, "Gone" },
-    { 411, "Length Required" },
-    { 412, "Precondition Failed" },
-    { 413, "Payload Too Large" },
-    { 414, "URI Too Long" },
-    { 415, "Unsupported Media Type" },
-    { 416, "Range Not Satisfiable" },
-    { 417, "Expectation Failed" },
-    { 418, "I'm a teapot" },
-    { 421, "Misdirected Request" },
-    { 422, "Unprocessable Content" },
-    { 423, "Locked" },
-    { 424, "Failed Dependency" },
-    { 425, "Too Early" },
-    { 426, "Upgrade Required" },
-    { 428, "Precondition Required" },
-    { 429, "Too Many Requests" },
-    { 431, "Request Header Fields Too Large" },
-    { 451, "Unavailable For Legal Reasons" },
-    { 500, "Internal Server Error" },
-    { 501, "Not Implemented" },
-    { 502, "Bad Gateway" },
-    { 503, "Service Unavailable" }, 
-    { 504, "Gateway Timeout" },
-    { 507, "Insufficient Storage" },
-    { 508, "Loop Detected" },
-    { 510, "Not Extended" },
-    { 511, "Network Authentication Required" }
-};
-
-struct ExtensionToMIME {
-    char *extension;
-    char *filetype;
-};
-
-struct ExtensionToMIME extensions[] = {
-    {"aac", "audio/aac"},
-    {"apng", "image/apng"},
-    {"avi", "video/x-msvideo"},
-    {"azw", "applicatoin/vnd.amazon.ebook"},
-    {"bin", "application/octet-stream"},
-    {"bmp", "image/bmp"},
-    {"bz", "application/x-bzip"},
-    {"bz2", "application/x-bzip2"},
-    {"css", "text/css"},
-    {"gif", "image/gif"},
-    {"htm", "text/html"},
-    {"html", "text/html"},
-    {"ico", "image/vnd.microsoft.icon"},
-    {"jpg", "image/jpg"},
-    {"jpeg", "image/jpeg"},
-    {"js", "text/javascript"},
-    {"mp3", "audio/mpeg"},
-    {"mp4", "video/mp4"},
-    {"oga", "audio/ogg"},
-    {"ogv", "video/ogg"},
-    {"ogx", "application/ogg"},
-    {"otf", "font/otf"},
-    {"png", "image/png"},
-    {"pdf", "application/pdf"},
-    {"rar", "application/vnd.rar"},
-    {"rtf", "application/rtf"},
-    {"svg", "image/svg+xml"},
-    {"tar", "application/x-tar"},
-    {"ttf", "font/ttf"},
-    {"txt", "text/plain"},
-    {"wav", "audio/wav"},
-    {"weba", "audio/webm"},
-    {"webm", "video/webm"},
-    {"webp", "image/webp"},
-    {"woff", "font/woff"},
-    {"woff2", "font/woff2"},
-    {"xml", "applicatoin/xml"},
-    {"xxx", "application/x-www-form-urlencoded" },
-    {"xxy", "multipart/form-data" }
-};
+#include "crankshafthttp.h"
+#include "crankshaftmime.h"
 
 static const char *dayOfWeek[ 7 ] = {
     "Sun","Mon","Tue","Wed","Thu","Fri","Sat"
@@ -196,38 +81,6 @@ static const char *timeString(time_t currentTime) {
 #define CLIENT_RECEIVE_BUFFER 8192 
 #define CLIENT_SEND_BUFFER 8192
 static void *clientThread(void *var);
-
-static int hexDigitToInt( const char *u ) {
-    if( *u < '0' ) return -1;
-    if( *u > 'f' ) return -1;
-    if( *u <= '9' ) return (int)( *u - '0' );
-    if( *u > 'a' ) return (int)( *u - 'a' ) + 10;
-    if( *u > 'F' ) return -1;
-    if( *u >= 'A' ) return (int)( *u - 'A' ) + 10;
-    return -1;
-}
-
-static bool privateUrlDecodeInPlace( char *encoded ) {
-    char *in = encoded;
-    char *out = encoded;
-
-    while( *in ) {
-        if( *in == '%' ) {
-            ++in;
-            int highByte = hexDigitToInt( in );
-            if( highByte < 0 ) return true;
-            ++in;
-            int lowByte = hexDigitToInt( in );
-            if( lowByte < 0 ) return true;
-            *out = (char)((highByte << 4) + lowByte);
-        } else {
-            if( out != in ) *out = *in;
-        }
-        ++in;++out;
-    }
-    *out = 0;
-    return false;
-}
 
 static struct CS_ClientInfo *createClientInfoWithThread( int socket,
                                                       struct CS_WebServer *server,
@@ -471,6 +324,14 @@ struct CS_WebServer *CS_StartWebServer(int portNum,
         goto ERR_SOCK;
     }
 
+    struct sockaddr_in serverAddressPostBind = {0};
+    socklen_t addrLen = sizeof(serverAddressPostBind);
+    if( getsockname( returnValue->listenSocket, (struct sockaddr *)&serverAddressPostBind, &addrLen ) < 0 ) {
+        CS_LOG_ERROR("Failed to get socket address.");
+        goto ERR_SOCK;
+    }
+    returnValue->serverPort = ntohs(serverAddressPostBind.sin_port);
+
     if( listen(returnValue->listenSocket,MAX_QUEUE) < 0 ) {
         CS_LOG_ERROR("Failed to listen.");
         goto ERR_SOCK;
@@ -523,8 +384,8 @@ bool CS_KillWebServer( struct CS_WebServer *server ) {
 #define STACK_BUFFER_SIZE 1024
 static void ERR(struct CS_ClientInfo *info, int errorEnum, const char *details) {
     char *tempBuff = CS_tempBuff(STACK_BUFFER_SIZE);
-    int error = codeToString[errorEnum].code;
-    const char *errorString = codeToString[errorEnum].value;
+    int error = CS_httpResponseEnumToCode( errorEnum );
+    const char *errorString = CS_httpResponseEnumToString( errorEnum );
 
     int contentLength = snprintf(tempBuff, STACK_BUFFER_SIZE, "{\"error\":\"%s\",\"status\":%d,\"details\":\"%s\"}",errorString,error,errorString);
     struct CS_Reply *reply = CS_Reply( info, errorEnum, CS_MIME_JS, tempBuff, contentLength );
@@ -675,7 +536,7 @@ static int parseRequest(struct CS_ClientInfo *info) {
                         return -1;
                     }
                     *currentPoint = 0;
-                    privateUrlDecodeInPlace( startOfToken );
+                    if( CS_httpUrlDecodeInPlace( startOfToken ) ) return -1;
                     startOfToken = NULL;
                 }
                 break;
@@ -826,20 +687,6 @@ bool CS_Diagnostic200( struct CS_ClientInfo *info ) {
     return BASIC_OK(info, info->requestInfo.method);
 }
 
-static const int extensionToMimeEnum(const char *extension ) {
-    for( int i = 0; i < sizeof(extensions)/sizeof(extensions[0]); ++i ) {
-        if( strcmp( extension, extensions[ i ].extension ) == 0 ) {
-            return i;
-        }
-    }
-    return CS_MIME_BIN;
- }
-
-const char *extensionToMimeType(const char *extension) {
-    int mimeEnum = extensionToMimeEnum( extension );
-    return extensions[ mimeEnum ].filetype;
-}
-
 #define MAX_FILE_PATH 2048
 bool CS_FileServer( struct CS_ClientInfo *info ) {
     struct CS_RequestInfo *request = &info->requestInfo;
@@ -927,11 +774,12 @@ bool CS_FileServer( struct CS_ClientInfo *info ) {
     }
 
     //Doing this the long way so we have a default set.
-    const char *mimeType = extensionToMimeType(extension);
+    const char *mimeType = CS_mimeFileExtensionToString(extension);
     struct CS_Reply *reply = CS_Reply( info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, fileBuffer, fileSize );
     CS_SetReplyHeader(reply, "Last-Modified", timeString( lastModified ) );
     CS_SetReplyHeader(reply, "Content-Type", mimeType);
     CS_SetReplyHeader(reply, "Connection", "close" );
+    CS_SetReplyHeader(reply, "Cache-Control", "max-age=604800");
     CS_DoReply(info,reply);
     CS_free(fileBuffer);
     return true;
@@ -1046,10 +894,10 @@ bool CS_DoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         CS_LOG_ERROR("Bad arguments.");
         return true;
     }
-    int replyNumber = codeToString[ reply->returnStatusEnum ].code;
-    const char *replyString = codeToString[ reply->returnStatusEnum ].value;
+    int replyNumber = CS_httpResponseEnumToCode( reply->returnStatusEnum );
+    const char *replyString = CS_httpResponseEnumToString( reply->returnStatusEnum );
     if( reply->contentTypeEnum != CS_MIME_DO_NOT_SET ) {
-        CS_SetReplyHeaderIfMissing(reply, "Content-Type", extensions[ reply->contentTypeEnum ].filetype );
+        CS_SetReplyHeaderIfMissing(reply, "Content-Type", CS_mimeEnumToString( reply->contentTypeEnum ) );
     }
     if( reply->outputBuffer != NULL ) {
         CS_SetReplyHeaderIntIfMissing(reply, "Content-Length", reply->outputLength );

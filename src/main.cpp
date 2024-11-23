@@ -170,10 +170,12 @@ int main(int argc, char *argv[] ) {
     if( trace )   { CS_LOG_VERBOSE_BOOL=true ; CS_LOG_INFO_BOOL=true ; CS_LOG_QUIET_BOOL=false; CS_LOG_TRACE_BOOL=true ; CS_LOG_WARN_BOOL=true; }
     if( suppressErrors ) { CS_LOG_ERROR_BOOL = false; }
 
-    if( logFile != NULL ) CS_logInit( logFile );
-
-    CS_LOG_INFO("Server Name: %s", serverName);
-    CS_LOG_INFO("Port Number is %d", portNum);
+    if( logFile != NULL ) {
+        if( CS_logInit( logFile ) ) {
+            CS_LOG_ERROR("Logging subsystem failed to init. Bailing!");
+            return -1;
+        }
+    }
 
     if( doTest ) {
         CS_TEST_PRINT_ONLY_ERRORS = onlyFails;
@@ -185,6 +187,9 @@ int main(int argc, char *argv[] ) {
         exit(testMain?255:0);
     }
 
+    CS_LOG_INFO("Server Name: %s", serverName);
+    CS_LOG_INFO("Port Number is %d", portNum);
+
     signal(SIGINT, interruptHandler);
     signal(SIGHUP, hupHandler);
     signal(SIGTERM, terminateHandler);
@@ -194,14 +199,17 @@ int main(int argc, char *argv[] ) {
     CS_LOG_INFO("Starting web server.");
 
     struct CS_WebServer *server = CS_StartWebServer( portNum, certFile, keyFile, fileServingDir, fileServingFile, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
-    if( server == NULL )
-        return -1;
-    while(!GotInterrupt) {
-        if( GotHup ) hupOnMainThread();
-        sleep(1);
+    if( server != NULL ) {
+        CS_LOG_INFO("Server started at port %d", server->serverPort);
+        while(!GotInterrupt) {
+            if( GotHup ) hupOnMainThread();
+            sleep(1);
+        }
+        CS_KillWebServer(server);
+    } else {
+        CS_LOG_ERROR("Server failed to start...");
     }
 
-    CS_KillWebServer(server);
     if( logFile != NULL ) CS_logKill();
     CS_freeAllTempBuffs();
     return 0;

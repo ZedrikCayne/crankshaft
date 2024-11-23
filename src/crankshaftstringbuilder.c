@@ -54,6 +54,10 @@ struct CS_StringBuilder *CS_SB_append( struct CS_StringBuilder *buffer, const ch
     return buffer;
 }
 
+bool CS_SB_expandBy( struct CS_StringBuilder *buffer, int minimumNewCapacity ) {
+    return expandIfNeeded( buffer, minimumNewCapacity );
+}
+
 struct CS_StringBuilder *CS_SB_vsnprintf( struct CS_StringBuilder *buffer, int maxAppend, const char *fmt, va_list ap ) {
     int remain;
     int currentMax;
