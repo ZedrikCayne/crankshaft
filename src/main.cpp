@@ -143,8 +143,8 @@ struct CS_Route serverRoutes[] = {
     { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", CS_Diagnostic200 },
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/api", fudge },
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, 0, "/quit", doQuit },
+    { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer },
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer },
-    { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer }
 };
 
 int main(int argc, char *argv[] ) {
