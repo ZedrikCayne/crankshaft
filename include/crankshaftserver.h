@@ -23,6 +23,7 @@ struct CS_WebServer {
     const char *certificatePath;
     const char *defaultFileServingPath;
     const char *defaultFileServingFile;
+    int defaultFileServingCacheControlMaxAge;
     void *replyStack;
     int routeNumbers[CS_MAX_HTTP_METHODS];
     struct CS_Route *routes[CS_MAX_HTTP_METHODS];
@@ -108,6 +109,7 @@ struct CS_WebServer *CS_StartWebServer(int portNum,
                                            const char *keyFile,
                                            const char *fileServingPath,
                                            const char *fileServingFile,
+                                           int fileCacheControlTimeInSeconds,
                                            struct CS_Route *routes,
                                            int nRoutes);
 bool CS_KillWebServer(struct CS_WebServer *server);

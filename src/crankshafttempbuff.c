@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include "crankshaftalloc.h"
 #include "crankshafttempbuff.h"
 #include "crankshaftlogger.h"
@@ -134,6 +135,18 @@ bool CS_freeAllTempBuffs() {
         CS_free( _TempBuffStorage.bufferStorage );
     }
     return false;
+}
+
+char *CS_tempBuffSnprintf(int max, char *fmt, ...) {
+    char *tBuff = CS_tempBuff(max);
+    if( tBuff ) {
+        va_list ap;
+        va_start( ap, fmt );
+        int endy = vsnprintf( (char*)tBuff, max, fmt, ap );
+        va_end( ap );
+        if( endy > max ) tBuff[max - 1] = 0;
+    }
+    return tBuff;
 }
 
 void *CS_allocManualTempBuff(const char *name,

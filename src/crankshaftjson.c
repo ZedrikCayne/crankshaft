@@ -316,7 +316,6 @@ struct JsonToken {
 static int privateParseQuotedString( struct JsonToken *out, const char *input, int inputLength ) {
     const char *current = input;
     const char *end = input + inputLength;
-    char *temp;
     if( *input != QUOTE )
         return JSON_TOKEN_ERROR;
     out->start = current;
@@ -374,9 +373,7 @@ static int privateParseQuotedString( struct JsonToken *out, const char *input, i
                     ++current;
                     break;
                 default:
-                    temp = CS_tempBuff( 1024 );
-                    snprintf( temp, 1024, "Invalid quote character %c", *current );
-                    out->err = temp;
+                    out->err = CS_tempBuffSnprintf( 256, "Invalid quote character %c", *current );
                     return JSON_TOKEN_ERROR;
             }
             continue;
@@ -403,15 +400,11 @@ static int privateParseString( struct JsonToken *out,
                                int cmpLength,
                                int returnValue ) {
     if( inputLength < cmpLength ) {
-        char *temp = CS_tempBuff( 256 );
-        snprintf( temp, 256, "Not enough characters left in buffer to parse %s", cmpTo );
-        out->err = temp;
+        out->err = CS_tempBuffSnprintf( 256, "Not enough characters left in buffer to parse %s", cmpTo );
         return JSON_TOKEN_ERROR;
     }
     for( int i = 1; i < cmpLength; ++i ) if( input[i] != cmpTo[i] ) {
-        char *temp = CS_tempBuff( 256 );
-        snprintf( temp, 256, "Error parsing %s", cmpTo );
-        out->err = temp;
+        out->err = CS_tempBuffSnprintf( 256, "Error parsing %s", cmpTo );
         return JSON_TOKEN_ERROR;
     }
     out->start = input;

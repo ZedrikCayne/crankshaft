@@ -35,6 +35,7 @@ static char defaultFileServingFile[] = "index.html";
 static char *fileServingFile = defaultFileServingFile;
 static char *certFile = NULL;
 static char *keyFile = NULL;
+static int cacheTimeInSeconds = 0;
 
 CS_ARG_DEF(wantHelp,CS_ARG_CMP("-?","-help","--help"),"Prints this help");
 CS_ARG_DEF(doTest,CS_ARG_CMP("--test"), "Unit testing.");
@@ -48,6 +49,7 @@ CS_ARG_DEF(trace,CS_ARG_CMP("-t", "--trace"),"Trace logs");
 CS_ARG_DEF(suppressErrors,CS_ARG_CMP("--suppress-errors"),"Supress error logs (useful during --test)");
 CS_ARG_DEF(portNum,CS_ARG_CMP("-p", "--port"),"Port Number");
 CS_ARG_DEF(serverName,CS_ARG_CMP("-n","--name"),"Name of server");
+CS_ARG_DEF(cacheTimeInSeconds, CS_ARG_CMP("--cache"),"Cache time of default file server (0 is no cache)");
 CS_ARG_DEF(runAsDaemon,CS_ARG_CMP("-d","--daemon"),"Run as daemon");
 CS_ARG_DEF(logFile,CS_ARG_CMP("-l","--log"),"Log to file");
 CS_ARG_DEF(fileServingFile,CS_ARG_CMP("-f","--default-file"), "Default file when using GET on a directory.");
@@ -72,6 +74,7 @@ const struct ArgElement myArgs[] =
       CS_ARG_ELEMENT(logFile,STRING_ARG),
       CS_ARG_ELEMENT(fileServingFile,STRING_ARG),
       CS_ARG_ELEMENT(fileServingDir,STRING_ARG),
+      CS_ARG_ELEMENT(cacheTimeInSeconds,INT_ARG),
       CS_ARG_ELEMENT(keyFile,STRING_ARG),
       CS_ARG_ELEMENT(certFile,STRING_ARG)
     };
@@ -198,7 +201,7 @@ int main(int argc, char *argv[] ) {
 
     CS_LOG_INFO("Starting web server.");
 
-    struct CS_WebServer *server = CS_StartWebServer( portNum, certFile, keyFile, fileServingDir, fileServingFile, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
+    struct CS_WebServer *server = CS_StartWebServer( portNum, certFile, keyFile, fileServingDir, fileServingFile, cacheTimeInSeconds, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
     if( server != NULL ) {
         CS_LOG_INFO("Server started at port %d", server->serverPort);
         while(!GotInterrupt) {

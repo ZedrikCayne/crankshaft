@@ -38,7 +38,7 @@ static const char *month[ 12 ] = {
 };
 
 static const char *timeString(time_t currentTime) {
-    char *returnValue = CS_tempBuff(256);
+    char *returnValue = CS_tempBuff(64);
     struct tm resultTime;
     struct tm *rt = gmtime_r(&currentTime,&resultTime);
     if( rt ) {
@@ -249,6 +249,7 @@ struct CS_WebServer *CS_StartWebServer(int portNum,
                                            const char *keyFile,
                                            const char *fileServingPath,
                                            const char *fileServingFile,
+                                           int fileServingCacheControlMaxAge,
                                            struct CS_Route *routes,
                                            int numberOfRoutes ) {
     struct CS_WebServer *returnValue = CS_alloc( sizeof( struct CS_WebServer ) );
@@ -261,6 +262,7 @@ struct CS_WebServer *CS_StartWebServer(int portNum,
     returnValue->defaultFileServingFile = fileServingFile;
     returnValue->killMe = false;
     returnValue->threadRunning = false;
+    returnValue->defaultFileServingCacheControlMaxAge = fileServingCacheControlMaxAge;
     
     int i = 0;
     for( i = 0; i < CS_MAX_HTTP_METHODS; ++i ) {
@@ -779,7 +781,11 @@ bool CS_FileServer( struct CS_ClientInfo *info ) {
     CS_SetReplyHeader(reply, "Last-Modified", timeString( lastModified ) );
     CS_SetReplyHeader(reply, "Content-Type", mimeType);
     CS_SetReplyHeader(reply, "Connection", "close" );
-    CS_SetReplyHeader(reply, "Cache-Control", "max-age=604800");
+    if( info->server->defaultFileServingCacheControlMaxAge != 0 ) {
+        CS_SetReplyHeader(reply, "Cache-Control", CS_tempBuffSnprintf(256,"max-age=%d", info->server->defaultFileServingCacheControlMaxAge) );
+    } else {
+        CS_SetReplyHeader(reply, "Cache-Control", "no-cache" );
+    }
     CS_DoReply(info,reply);
     CS_free(fileBuffer);
     return true;

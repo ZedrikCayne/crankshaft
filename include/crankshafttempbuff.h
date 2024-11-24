@@ -8,7 +8,7 @@
  * Temp Buffer system.
  *
  * Sets a default number of temporary
- * buffers. (Sizes from 256 bytes to
+ * buffers. (Sizes from 32 bytes to
  * 16384). Growing in powers of 2.
  *
  * Ask for a buffer of size, get a buffer.
@@ -44,7 +44,7 @@
 extern "C" {
 #endif
 
-#define CS_MIN_TEMP_BUFF_SIZE 256
+#define CS_MIN_TEMP_BUFF_SIZE 32
 #define CS_MAX_TEMP_BUFF_SIZE 16384
 #define CS_TEMP_BUFF_ALLOC_SIZE (1024 * 1024)
 #define CS_TEMP_BUFF_ALIGNMENT 4
@@ -53,6 +53,7 @@ void *CS_tempBuff(int size);
 char *CS_tempStringCopy(const char *copyMe);
 bool CS_allocateTempBuffs(void);
 bool CS_freeAllTempBuffs(void);
+char *CS_tempBuffSnprintf(int max, char *fmt, ...);
 
 #define CS_MAX_TEMP_BUFF_TEMP_NAME 64
 
