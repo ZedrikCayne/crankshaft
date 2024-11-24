@@ -466,7 +466,6 @@ enum HeaderState {
     HEADER_STATE_HEADER_NAME,
     HEADER_STATE_HEADER_SEPARATOR,
     HEADER_STATE_HEADER_VALUE,
-    HEADER_STATE_FORM_PARAMETERS,
     HEADER_STATE_FORM_NAME,
     HEADER_STATE_FORM_VALUE,
     HEADER_STATE_DONE,
@@ -487,7 +486,10 @@ enum HeaderState {
 #define REQUIRE_CHAR_NO_EAT(X) if( currentPoint<endOfData && *currentPoint!=X)return -1;
 #define REQUIRE_CRLF() REQUIRE_CHAR(CR);REQUIRE_CHAR_NO_EAT(LF)
 
+#define CS_ClearRequestInfo(X) memset(&((X)->requestInfo),0,sizeof(struct CS_RequestInfo))
+
 static int parseRequest(struct CS_ClientInfo *info) {
+    CS_ClearRequestInfo(info);
     char *startOfData = CS_PP_startOfData(info->buffer);
     //Find first space, that's the end of the 'method'
     int command = *(int*)startOfData;
@@ -622,7 +624,24 @@ static int parseRequest(struct CS_ClientInfo *info) {
                     currentPoint += 2;
                     startOfToken = currentPoint;
                     info->requestInfo.numHeaders = currentHeaderIndex;
-                    currentHeaderState = HEADER_STATE_FORM_PARAMETERS;
+                    if( info->requestInfo.requestMethodEnum != CS_HTTP_METHOD_POST ) {
+                        return currentPoint - startOfData;
+                    }
+                    contentType = CS_GetRequestHeader( info, "Content-Type" );
+                    if( contentType == NULL || strcmp( contentType, "application/x-www-form-urlencoded" ) != 0 ) {
+                        return currentPoint - startOfData;
+                    }
+                    contentLength = CS_GetRequestHeader( info, "Content-Length" );
+                    if( contentLength == NULL ) {
+                        return currentPoint - startOfData;
+                    }
+                    char *endOfValue;
+                    length = strtoll( contentLength, &endOfValue, 10 );
+                    if( endOfValue == contentLength ) {
+                        return currentPoint - startOfData;
+                    }
+                    endOfContent = startOfToken + length;
+                    currentHeaderState = HEADER_STATE_FORM_NAME;
                     break;
                 }
                 if( currentHeaderIndex >= MAX_REQUEST_HEADERS ) return -1;
@@ -666,34 +685,7 @@ static int parseRequest(struct CS_ClientInfo *info) {
                     }
                 }
                 break;
-            case HEADER_STATE_FORM_PARAMETERS:
-                if( info->requestInfo.requestMethodEnum != CS_HTTP_METHOD_POST ) {
-                    --currentPoint;
-                    currentHeaderState = HEADER_STATE_DONE;
-                    break;
-                }
-                contentType = CS_GetRequestHeader( info, "Content-Type" );
-                if( contentType == NULL || strcmp( contentType, "application/x-www-form-urlencoded" ) != 0 ) {
-                    --currentPoint;
-                    currentHeaderState = HEADER_STATE_DONE;
-                    break;
-                }
-                contentLength = CS_GetRequestHeader( info, "Content-Length" );
-                if( contentLength == NULL ) {
-                    --currentPoint;
-                    currentHeaderState = HEADER_STATE_DONE;
-                    break;
-                }
-                char *endOfValue;
-                length = strtoll( contentLength, &endOfValue, 10 );
-                if( endOfValue == contentLength ) {
-                    --currentPoint;
-                    currentHeaderState = HEADER_STATE_DONE;
-                    break;
-                }
-                endOfContent = startOfToken + length;
-                currentHeaderState = HEADER_STATE_FORM_NAME;
-            case HEADER_STATE_FORM_NAME:
+           case HEADER_STATE_FORM_NAME:
                 if( *currentPoint == EQUAL || currentPoint >= endOfContent ) {
                     *currentPoint = 0;
                     info->requestInfo.formParameters[ currentFormParameterIndex ].name = startOfToken;
@@ -714,14 +706,13 @@ static int parseRequest(struct CS_ClientInfo *info) {
                     info->requestInfo.numFormParameters = currentFormParameterIndex;
                     startOfToken = NULL;
                     if( currentPoint + 1 >= endOfContent ) {
-                        return currentPoint - startOfData;
+                        return currentPoint + 1 - startOfData;
                     } else {
                         currentHeaderState = HEADER_STATE_FORM_NAME;
                     }
                 }
                 break;
             case HEADER_STATE_DONE:
-                return currentPoint - startOfData;
                 break;
         }
     }
