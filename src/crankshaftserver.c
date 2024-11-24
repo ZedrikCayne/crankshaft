@@ -421,7 +421,15 @@ static bool BASIC_OK(struct CS_ClientInfo *info, const char *what) {
     }
     CS_SB_reset( scratch );
     CS_quoteStringToStringBuilder(info->requestInfo.uri,1024,scratch);
-    CS_PP_printf( tempToWrite, "],\"dataLeftInBuffer\":%d,\"uri\":\"%s\"}", CS_PP_dataSize( info->buffer ), scratch->buffer );
+    CS_PP_printf( tempToWrite, "],\"dataLeftInBuffer\":%d,\"uri\":\"%s\",\"formParams\":[", CS_PP_dataSize( info->buffer ), scratch->buffer );
+    for( int i = 0; i < info->requestInfo.numFormParameters; ++i ) {
+        if( i != 0 ) CS_PP_printf( tempToWrite, "," );
+        CS_SB_reset( scratch );
+        CS_quoteStringToStringBuilder(info->requestInfo.formParameters[i].value,1024,scratch);
+        CS_PP_printf( tempToWrite, "{\"name\":\"%s\",\"value\":\"%s\"}",
+                info->requestInfo.formParameters[i].name, scratch->buffer );
+    }
+    CS_PP_printf( tempToWrite, "]}" );
     CS_SB_free( scratch );
     struct CS_Reply *reply = CS_Reply( info, CS_RESPONSE_200, CS_MIME_JS, CS_PP_startOfData( tempToWrite ), CS_PP_dataSize( tempToWrite ) );
     return CS_DoReply( info, reply );
@@ -458,7 +466,10 @@ enum HeaderState {
     HEADER_STATE_HEADER_NAME,
     HEADER_STATE_HEADER_SEPARATOR,
     HEADER_STATE_HEADER_VALUE,
-    HEADER_STATE_DONE
+    HEADER_STATE_FORM_PARAMETERS,
+    HEADER_STATE_FORM_NAME,
+    HEADER_STATE_FORM_VALUE,
+    HEADER_STATE_DONE,
 };
 
 #define LF ((char)10)
@@ -513,6 +524,12 @@ static int parseRequest(struct CS_ClientInfo *info) {
     int currentHeaderState = HEADER_STATE_POSSIBLE_WHITE_SPACE;
     int currentHeaderIndex = 0;
     int currentParameterIndex = 0;
+    int currentFormParameterIndex = 0;
+    const char *contentType = NULL;
+    const char *contentLength = NULL;
+    const char *endOfContent = NULL;
+    int length = 0;
+
     for( currentPoint = startOfData; currentPoint < endOfData; ++currentPoint) {
         if( startOfToken == NULL ) startOfToken = currentPoint;
         switch( currentHeaderState ) {
@@ -576,6 +593,7 @@ static int parseRequest(struct CS_ClientInfo *info) {
                 if( *currentPoint == AMPERSAND || *currentPoint == POUND || *currentPoint == SP ) {
                     info->requestInfo.parameters[ currentParameterIndex ].value = startOfToken;
                     ++currentParameterIndex;
+                    info->requestInfo.numParameters = currentParameterIndex;
                     startOfToken = NULL;
                     currentHeaderState = (*currentPoint==AMPERSAND)
                         ?HEADER_STATE_QUERY_PARAM
@@ -602,10 +620,10 @@ static int parseRequest(struct CS_ClientInfo *info) {
             case HEADER_STATE_HEADERS:
                 if( currentPoint + 1 < endOfData && *currentPoint == CR && *(currentPoint + 1) == LF ) {
                     currentPoint += 2;
-                    currentHeaderState = HEADER_STATE_DONE;
+                    startOfToken = currentPoint;
                     info->requestInfo.numHeaders = currentHeaderIndex;
-                    info->requestInfo.numParameters = currentParameterIndex;
-                    return currentPoint - startOfData;
+                    currentHeaderState = HEADER_STATE_FORM_PARAMETERS;
+                    break;
                 }
                 if( currentHeaderIndex >= MAX_REQUEST_HEADERS ) return -1;
                 currentHeaderState = HEADER_STATE_HEADER_NAME;
@@ -635,6 +653,7 @@ static int parseRequest(struct CS_ClientInfo *info) {
                                 *currentPoint = 0;
                                 info->requestInfo.headers[ currentHeaderIndex ].values = startOfToken;
                                 ++currentHeaderIndex;
+                                info->requestInfo.numHeaders = currentHeaderIndex;
                                 startOfToken = NULL;
                                 ++currentPoint;
                                 currentHeaderState = HEADER_STATE_HEADERS;
@@ -646,6 +665,63 @@ static int parseRequest(struct CS_ClientInfo *info) {
                         return -1;
                     }
                 }
+                break;
+            case HEADER_STATE_FORM_PARAMETERS:
+                if( info->requestInfo.requestMethodEnum != CS_HTTP_METHOD_POST ) {
+                    --currentPoint;
+                    currentHeaderState = HEADER_STATE_DONE;
+                    break;
+                }
+                contentType = CS_GetRequestHeader( info, "Content-Type" );
+                if( contentType == NULL || strcmp( contentType, "application/x-www-form-urlencoded" ) != 0 ) {
+                    --currentPoint;
+                    currentHeaderState = HEADER_STATE_DONE;
+                    break;
+                }
+                contentLength = CS_GetRequestHeader( info, "Content-Length" );
+                if( contentLength == NULL ) {
+                    --currentPoint;
+                    currentHeaderState = HEADER_STATE_DONE;
+                    break;
+                }
+                char *endOfValue;
+                length = strtoll( contentLength, &endOfValue, 10 );
+                if( endOfValue == contentLength ) {
+                    --currentPoint;
+                    currentHeaderState = HEADER_STATE_DONE;
+                    break;
+                }
+                endOfContent = startOfToken + length;
+                currentHeaderState = HEADER_STATE_FORM_NAME;
+            case HEADER_STATE_FORM_NAME:
+                if( *currentPoint == EQUAL || currentPoint >= endOfContent ) {
+                    *currentPoint = 0;
+                    info->requestInfo.formParameters[ currentFormParameterIndex ].name = startOfToken;
+                    currentHeaderState = HEADER_STATE_FORM_VALUE;
+                    startOfToken = NULL;
+                }
+                break;
+            case HEADER_STATE_FORM_VALUE:
+                if( *currentPoint == AMPERSAND || currentPoint + 1 >= endOfContent ) {
+                    if( currentPoint + 1 >= endOfContent ) {
+                        currentPoint[ 1 ] = 0;
+                    } else {
+                        *currentPoint = 0;
+                    }
+                    info->requestInfo.formParameters[ currentFormParameterIndex ].value = startOfToken;
+                    CS_httpUrlDecodeInPlace( startOfToken );
+                    ++currentFormParameterIndex;
+                    info->requestInfo.numFormParameters = currentFormParameterIndex;
+                    startOfToken = NULL;
+                    if( currentPoint + 1 >= endOfContent ) {
+                        return currentPoint - startOfData;
+                    } else {
+                        currentHeaderState = HEADER_STATE_FORM_NAME;
+                    }
+                }
+                break;
+            case HEADER_STATE_DONE:
+                return currentPoint - startOfData;
                 break;
         }
     }
@@ -808,10 +884,20 @@ const char *CS_GetRequestHeader( struct CS_ClientInfo *info, const char *header 
     return NULL;
 }
 
-const char *GetQueryParameter( struct CS_ClientInfo *info, const char *name ) {
+const char *CS_GetQueryParameter( struct CS_ClientInfo *info, const char *name ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int i = 0; i < request->numHeaders; ++i ) {
         if( strncmp(name,request->parameters[i].name,HEADER_MAX) == 0 ) {
+            return request->parameters[i].value;
+        }
+    }
+    return NULL;
+}
+
+const char *CS_GetFormParameter( struct CS_ClientInfo *info, const char *name ) {
+    struct CS_RequestInfo *request = &info->requestInfo;
+    for( int i = 0; i < request->numFormParameters; ++i ) {
+        if( strncmp(name,request->formParameters[i].name,HEADER_MAX) == 0 ) {
             return request->parameters[i].value;
         }
     }

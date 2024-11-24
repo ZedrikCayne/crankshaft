@@ -48,9 +48,8 @@ struct CS_QueryParameter {
 };
 
 struct CS_FormParameters {
-    int count;
-    const char *buffer;
-    const char *queryParameters;
+    const char *name;
+    const char *value;
 };
 
 #define MAX_REQUEST_HEADERS 64
@@ -61,12 +60,14 @@ struct CS_RequestInfo {
     bool valid;
     int numHeaders;
     int numParameters;
+    int numFormParameters;
     const char *uri;
     const char *method;
     const char *httpVersion;
     int requestMethodEnum;
     struct CS_RequestHeader headers[ MAX_REQUEST_HEADERS ];
     struct CS_QueryParameter parameters[ MAX_QUERY_PARAMETERS ];
+    struct CS_FormParameters formParameters[ MAX_FORM_PARAMETERS ];
 };
 
 struct CS_ClientInfo {
@@ -117,6 +118,7 @@ bool CS_KillWebServer(struct CS_WebServer *server);
 bool CS_Diagnostic200( struct CS_ClientInfo *info );
 bool CS_FileServer( struct CS_ClientInfo *info );
 
+const char *CS_GetFormParameter( struct CS_ClientInfo *info, const char *name );
 const char *CS_GetRequestHeader( struct CS_ClientInfo *info, const char *header );
 const char *CS_GetQueryParameter( struct CS_ClientInfo *info, const char *name );
 bool CS_SetReplyHeader( struct CS_Reply *reply, const char *header, const char *value );
