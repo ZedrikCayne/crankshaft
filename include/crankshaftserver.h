@@ -30,10 +30,6 @@ struct CS_WebServer {
     SSL_CTX *sslctx;
 };
 
-struct CS_RequestHeader {
-    const char *header;
-    const char *values;
-};
 
 #define HEADER_MAX 64
 #define HEADER_VALUE_MAX 256
@@ -47,10 +43,6 @@ struct CS_QueryParameter {
     const char *value;
 };
 
-struct CS_FormParameters {
-    const char *name;
-    const char *value;
-};
 
 #define MAX_REQUEST_HEADERS 64
 #define MAX_QUERY_PARAMETERS 64
@@ -100,7 +92,7 @@ struct CS_Reply {
     int returnStatusEnum;
     int contentTypeEnum;
     int numHeaders;
-    struct CS_ReplyHeader replyHeaders[MAX_REQUEST_HEADERS];
+    struct CS_ReplyHeader *replyHeaders;
     const void *outputBuffer;
     int outputLength;
 };

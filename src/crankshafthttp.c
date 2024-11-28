@@ -1,11 +1,77 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <openssl/ssl.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <pthread.h>
 
 #include "crankshafttempbuff.h"
 #include "crankshaftalloc.h"
 #include "crankshaftlogger.h"
 #include "crankshaftmime.h"
 #include "crankshafthttp.h"
+#include "crankshaftslaballoc.h"
+
+static SSL_CTX *globalClientCTX = NULL;
+static pthread_mutex_t sslCTXMutex = PTHREAD_MUTEX_INITIALIZER;
+static void *requestSlabAlloc = NULL;
+static pthread_mutex_t slabAllocMutex = PTHREAD_MUTEX_INITIALIZER;
+
+static struct CS_RequestReply *privateGetReply() {
+    if( requestSlabAlloc == NULL ) {
+        pthread_mutex_lock( &slabAllocMutex );
+        if( requestSlabAlloc == NULL ) requestSlabAlloc = CS_initSlabAlloc( "Request Reply Slab", sizeof(struct CS_RequestReply), 100, 4 );
+        pthread_mutex_unlock( &slabAllocMutex );
+        if( requestSlabAlloc == NULL ) return NULL;
+    }
+    struct CS_RequestReply *returnValue =  CS_takeOne(requestSlabAlloc);
+    memset(returnValue,0,sizeof(struct CS_RequestReply));
+    return returnValue;
+}
+
+static void privateReturnReply( struct CS_RequestReply *toReturn ) {
+    if( requestSlabAlloc == NULL ) return;
+    CS_returnOne(requestSlabAlloc, toReturn);
+}
+
+static bool InitSSL() {
+    pthread_mutex_lock(&sslCTXMutex);
+    if( globalClientCTX ) {
+        pthread_mutex_unlock(&sslCTXMutex);
+        return false;
+    }
+    const SSL_METHOD *method = TLS_client_method();
+    globalClientCTX = SSL_CTX_new(method);
+    pthread_mutex_unlock(&sslCTXMutex);
+    return globalClientCTX == NULL;
+}
+
+static void KillSSL() {
+    pthread_mutex_lock(&sslCTXMutex);
+    if( globalClientCTX ) {
+        SSL_CTX_free( globalClientCTX );
+        globalClientCTX = NULL;
+    }
+    pthread_mutex_unlock(&sslCTXMutex);
+}
+
+static SSL *newSSL( int socket ) {
+    if( !globalClientCTX && InitSSL() ) return NULL;
+    SSL *returnValue = SSL_new( globalClientCTX );
+    if( returnValue ) {
+        SSL_set_fd( returnValue, socket );
+        if( SSL_connect( returnValue ) <= 0 ) {
+            CS_LOG_ERROR("Failed negotiate SSL.");
+            SSL_free( returnValue );
+            returnValue = NULL;
+        }
+    }
+    return returnValue;
+}
 
 struct CodeToReturnString {
     int code;
@@ -77,6 +143,16 @@ struct CodeToReturnString codeToString[] = {
     { 511, "Network Authentication Required" }
 };
 
+static const char *methodEnumToName[] = {
+    "CONNECT",
+    "DELETE",
+    "GET",
+    "HEAD",
+    "POST",
+    "PUT",
+    "TRACE",
+};
+
 const char *CS_httpResponseEnumToString( int responseEnum ) {
     if( responseEnum < 0 || responseEnum >= MAX_NUM_CS_RESPONSE_ENUMS ) return NULL;
     return codeToString[ responseEnum ].value;
@@ -85,6 +161,11 @@ const char *CS_httpResponseEnumToString( int responseEnum ) {
 int CS_httpResponseEnumToCode( int responseEnum ) {
     if( responseEnum < 0 || responseEnum >= MAX_NUM_CS_RESPONSE_ENUMS ) return -1;
     return codeToString[ responseEnum ].code;
+}
+
+const char *CS_httpMethodEnumToString( int methodEnum ) {
+    if( methodEnum < 0 || methodEnum >= CS_MAX_HTTP_METHODS ) return NULL;
+    return methodEnumToName[ methodEnum ];
 }
 
 static int hexDigitToInt( const char *u ) {
@@ -258,4 +339,315 @@ int CS_httpUrlDecodeBinary( const void *toDecode, int decodeBufferLength, void *
 }
 int CS_httpUrlEncodeBinary( const void *toEncode, int encodeBufferLength, void *output, int outputBufferLength ) {
     return privateEncode( (const char *)toEncode, encodeBufferLength, output, outputBufferLength );
+}
+
+#define LF ((char)10)
+#define CR ((char)13)
+#define HT ((char)9)
+#define SP ((char)32)
+#define AMPERSAND '&'
+#define QUESTION '?'
+#define POUND '#'
+#define COLON ':'
+#define EQUAL '='
+
+#define EAT_CRLF() if(*currentPoint==CR){++currentPoint;REQUIRE_CHAR(LF);}
+#define REQUIRE_CHAR(X) if( currentPoint<endOfData && *currentPoint==X)++currentPoint;else return -1;
+#define REQUIRE_CHAR_NO_EAT(X) if( currentPoint<endOfData && *currentPoint!=X)return -1;
+#define REQUIRE_CRLF() REQUIRE_CHAR(CR);REQUIRE_CHAR_NO_EAT(LF)
+
+int privateParseUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
+    int len = strlen(uri);
+    char *tempUri = CS_tempStringCopy( uri );
+    char *currentPoint = tempUri;
+    char *endOfData = tempUri + len;
+    bool wantSSL = false;
+    char *portChar = NULL;
+
+    if( uri == NULL ) return -1;
+
+    REQUIRE_CHAR('h');
+    REQUIRE_CHAR('t');
+    REQUIRE_CHAR('t');
+    REQUIRE_CHAR('p');
+    if( *currentPoint == 's' ) {
+        wantSSL = true;
+        ++currentPoint;
+    }
+    REQUIRE_CHAR(':');
+    REQUIRE_CHAR('/');
+    REQUIRE_CHAR('/');
+    *address = currentPoint;
+    while( currentPoint < endOfData && (*currentPoint != ':' || *currentPoint != '/') ) ++currentPoint;
+    if( *currentPoint == ':' ) {
+        *currentPoint = 0;
+        ++currentPoint;
+        portChar = currentPoint;
+        while( currentPoint < endOfData && (*currentPoint != '/') ) ++currentPoint;
+        *currentPoint = 0;
+    } else if ( *currentPoint == '/' ) {
+        *currentPoint = 0;
+        ++currentPoint;
+    }
+    if( portChar != NULL ) *port = atoi( portChar ); else *port = wantSSL?443:80;
+    if( currentPoint >= endOfData ) {
+        *rest = NULL;
+    } else {
+        *rest = uri + (currentPoint - tempUri);
+    }
+    return 0;
+}
+
+struct addrinfo *CS_httpLookupAddress( const char *address ) {
+    struct addrinfo hints = { 0 };
+    hints.ai_flags = AI_PASSIVE|AI_ADDRCONFIG;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    struct addrinfo *addrInfos;
+    if( getaddrinfo(address,NULL,&hints,&addrInfos) != 0 ) {
+        CS_LOG_WARN("CS_httpLookupAddress() Address lookup fail: %s", address);
+        return NULL;
+    }
+    return addrInfos;
+}
+
+void CS_httpReleaseAddressInfos( struct addrinfo *infos ) {
+    freeaddrinfo( infos );
+}
+
+static const char *headerHas( struct CS_RequestHeader *headers, int numHeaders, const char *which ) {
+    for( int i = 0; i < numHeaders; ++i ) {
+        if( strcmp( headers[ i ].header, which ) == 0 ) {
+            return headers[ i ].values;
+        }
+    }
+    return NULL;
+}
+
+static const bool alreadySent( const char **alreadySent, int numAlreadySent, const char *which ) {
+    for( int i = 0; i < numAlreadySent; ++i ) {
+        if( strcmp( alreadySent[ i ], which ) ) return true;
+    }
+    return false;
+}
+
+static void privateForceAppendHeader( struct CS_StringBuilder *appendTo, 
+                               const char *header,
+                               const char *value ) {
+    CS_SB_printf(appendTo, "%s: %s%c%c", header, value, CR, LF);
+}
+
+static void privateAppendHeader( struct CS_StringBuilder *appendTo, 
+                          struct CS_RequestHeader *headers,
+                          int numHeaders,
+                          const char *header, 
+                          const char *defaultValue ) {
+    const char *userHeaderValue = headerHas( headers, numHeaders, header );
+    const char *headerValue = userHeaderValue?userHeaderValue:defaultValue;
+    privateForceAppendHeader( appendTo, header, headerValue );
+}
+
+static void privateAppendOthers( struct CS_StringBuilder *appendTo,
+                         struct CS_RequestHeader *headers,
+                         int numHeaders,
+                         const char **headersIHaveAlreadySent,
+                         int numHeadersAlreadySent ) {
+    for( int i = 0; i < numHeaders; ++i ) {
+        if( !alreadySent( headersIHaveAlreadySent, numHeadersAlreadySent, headers[ i ].header ) ) {
+            privateForceAppendHeader( appendTo, headers[ i ].header, headers[ i ].values );
+        }
+    }
+}
+
+static const char *defaultHeaders[] = {
+    "User-Agent",
+    "Connection",
+    "Accept",
+    "Accept-Encoding"
+};
+
+static const char *defaultHeadersValue[] = {
+    "Crankshaft",
+    "close",
+    "*/*",
+    "identity"
+};
+
+#define INITIAL_STRING_BUILDER_SIZE 4096
+#define PP_BUFFER_SIZE_FOR_RETURN 8192
+struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
+                                            const char *uri,
+                                            struct CS_RequestHeader *headers,
+                                            int numHeaders,
+                                            struct CS_FormParameters *formParameters,
+                                            int numFormParameters,
+                                            void *data,
+                                            int dataLength,
+                                            struct CS_RequestReply *reuse ) {
+    char address[ 128 ];
+    const char *rest;
+    int portNum;
+    char *tempAddress;
+    bool wantSSL;
+    const char *method = CS_httpMethodEnumToString( methodEnum );
+
+    if( headerHas( headers, numHeaders, "Content-Length" ) ) {
+        CS_LOG_ERROR("User has also set a Content-Length.");
+        return NULL;
+    }
+    if( data && formParameters ) {
+        CS_LOG_ERROR( "Cannot have both data and form parameters at the same time." );
+        return NULL;
+    }
+    if( method == NULL ) {
+        CS_LOG_ERROR("CS_httpMakeRequest() Bad methodEnum %d", methodEnum );
+        return NULL;
+    }
+    if( formParameters ) {
+        const char *currentlySet = headerHas( headers, numHeaders, "Content-Type" );
+        if( currentlySet != NULL && strcmp(currentlySet, "application/x-www-form-urlencoded" ) != 0 ) {
+            CS_LOG_ERROR("Form parameters set but user has set a content type other than form-urlencoded.");
+            return NULL;
+        }
+        
+    }
+    if( privateParseUri(uri, &tempAddress, &portNum, &wantSSL, &rest) < 0 ) {
+        CS_LOG_ERROR("CS_httpMakeRequest() Badly formatted URI %s", uri?uri:"NULL");
+        return NULL;
+    }
+    struct CS_RequestReply *returnValue = privateGetReply();
+    if( returnValue == NULL ) {
+        CS_LOG_ERROR("CS_httpMakeRequest() OOM getting a reply" );
+        return NULL;
+    }
+    strncpy( address, tempAddress, 128 );
+    struct addrinfo *addrInfos = CS_httpLookupAddress( address );
+    //Lookup already has a log with it.
+    if( addrInfos == NULL ) return NULL;
+    //Fill in the port numbers in the address infos.
+    struct addrinfo *addrInfoIter = addrInfos;
+    while( addrInfoIter ) {
+        if( addrInfoIter->ai_family == AF_INET ) {
+            struct sockaddr_in *in1 = (struct sockaddr_in *)addrInfoIter->ai_addr;
+            in1->sin_port = portNum;
+        } else if( addrInfoIter->ai_family == AF_INET6 ) {
+            struct sockaddr_in6 *in1 = (struct sockaddr_in6 *)addrInfoIter->ai_addr;
+            in1->sin6_port = portNum;
+        }
+        addrInfoIter = addrInfoIter->ai_next;
+    }
+
+    struct CS_StringBuilder *sb = CS_SB_create( INITIAL_STRING_BUILDER_SIZE );
+    if( sb == NULL ) {
+        CS_LOG_ERROR("CS_httpMakeRequest() OOM.");
+        goto CLEANUP;
+    }
+
+    CS_SB_printf(sb, "%s /%s %s%c%c", method, rest?rest:"", "HTTP1.1", CR, LF);
+
+    for( int i = 0; i < (sizeof(defaultHeaders)/sizeof(defaultHeaders[0])); ++i ) {
+        privateAppendHeader( sb, headers, numHeaders, defaultHeaders[ i ], defaultHeadersValue[ i ] );
+    }
+    privateAppendOthers( sb, headers, numHeaders, defaultHeaders, (sizeof(defaultHeaders)/sizeof(defaultHeaders[0])) );
+
+    struct CS_StringBuilder *formString = NULL;
+    if( formParameters != NULL && numFormParameters > 0 ) {
+        char *empty = "";
+        char *ampersand = "&";
+        char *currentSeparator = empty;
+        formString = CS_SB_create( INITIAL_STRING_BUILDER_SIZE );
+        for( int i = 0; i < numFormParameters; ++i ) {
+            CS_SB_printf( formString, "%s%s=%s", currentSeparator, 
+                    formParameters[ i ].name,
+                    CS_httpUrlEncodeTemp( formParameters[i].value ) );
+            currentSeparator = ampersand;
+        }
+        privateAppendHeader( sb, headers, numHeaders, "Content-Type", "application/x-www-form-urlencoded" );
+        privateForceAppendHeader( sb, "Content-Length", CS_tempBuffSnprintf(64,"%d", CS_SB_size( formString ) ) );
+        
+    }
+
+    if( dataLength > 0 && data != NULL ) {
+        privateAppendHeader( sb, headers, numHeaders, "Content-Type", "application/octet-stream" );
+        privateForceAppendHeader( sb, "Content-Length", CS_tempBuffSnprintf(64,"%d", dataLength) );
+    }
+
+    CS_SB_printf(sb,"%c%c",CR,LF);
+
+
+    //Okay, we're ready to actually open the socket and go.
+    
+    addrInfoIter = addrInfos;
+    int connectValue = -1;
+    do {
+        returnValue->remoteSocket = socket(AF_INET, SOCK_STREAM, 0);
+        if( returnValue->remoteSocket < 0 ) {
+            CS_LOG_ERROR("Failed to make an outbound socket.");
+            break;
+        }
+
+        connectValue = connect( returnValue->remoteSocket, addrInfoIter->ai_addr, addrInfoIter->ai_addrlen );
+        if( connectValue < 1 ) {
+            close(returnValue->remoteSocket);
+            returnValue->remoteSocket = -1;
+        }
+    } while( connectValue == -1 && addrInfoIter != NULL );
+
+    if( returnValue->remoteSocket < 0 || connectValue < 0 )
+        goto CLEANUP;
+    CS_httpReleaseAddressInfos( addrInfos );
+    addrInfos = NULL;
+
+    returnValue->ssl = NULL;
+    if( wantSSL ) {
+        returnValue->ssl = newSSL( returnValue->remoteSocket );
+        if( returnValue->ssl == NULL ) goto CLEANUP;
+    }
+
+    struct CS_PushPullBuffer *pp = CS_SB_getPushPullBuffer(sb);
+    do {
+        int numBytesSent = wantSSL?CS_PP_writeToSSL( pp, returnValue->ssl):CS_PP_writeToFile( pp, returnValue->remoteSocket );
+        if( numBytesSent <= 0 ) {
+            goto CLEANUP;
+        }
+    } while ( CS_PP_bufferRemaining( pp ) > 0 );
+
+    returnValue->buffer = CS_PP_defaultAlloc( PP_BUFFER_SIZE_FOR_RETURN );
+
+    int numBytesRead = wantSSL?CS_PP_readFromSSL( returnValue->buffer, returnValue->ssl ):CS_PP_readFromFile( returnValue->buffer, returnValue->remoteSocket );
+
+    if( numBytesRead <= 0 ) {
+        CS_LOG_ERROR("Read from remote failed.");
+        goto CLEANUP;
+    }
+
+
+
+CLEANUP:
+    if( returnValue ) CS_httpCloseRequest( returnValue );
+    if( formString ) CS_SB_free(formString);
+    if( sb ) CS_SB_free(sb);
+    if( pp ) CS_PP_defaultFree(pp);
+    
+    if( addrInfos ) CS_httpReleaseAddressInfos( addrInfos );
+    return NULL;
+}
+
+void CS_httpCloseRequest( struct CS_RequestReply *toReturn ) {
+    if( toReturn == NULL ) return;
+    if( toReturn->remoteSocket > 0 ) close( toReturn->remoteSocket );
+    toReturn->remoteSocket = 0;
+    if( toReturn->ssl ) SSL_free( toReturn->ssl );
+    toReturn->ssl = 0;
+    if( toReturn->buffer ) CS_PP_defaultFree( toReturn->buffer );
+    toReturn->buffer = 0;
+    privateReturnReply(toReturn);
+}
+
+bool CS_httpInitSSL() {
+    return InitSSL();
+}
+
+void CS_httpKillSSL() {
+    KillSSL();
 }

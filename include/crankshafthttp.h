@@ -87,17 +87,28 @@ enum CS_HTTPResponseCodes {
     MAX_NUM_CS_RESPONSE_ENUMS
 };
 
-
-#define CS_MAX_REQUEST_LENGTH 4096
-struct CS_HttpRequest {
-    char address[ CS_MAX_REQUEST_LENGTH ];
-    struct CS_PushPullBuffer *buffIn;
-    struct CS_PushPullBuffer *buffOut;
-    int ioSocket;
-    SSL *ssl;
+struct CS_RequestHeader {
+    const char *header;
+    const char *values;
 };
 
+struct CS_FormParameters {
+    const char *name;
+    const char *value;
+};
 
+#define MAX_REPLY_HEADERS 64
+struct CS_RequestReply {
+    int remoteSocket;
+    SSL *ssl;
+    int responseEnum;
+    struct CS_RequestHeader replyHeaders[MAX_REPLY_HEADERS];
+    struct CS_PushPullBuffer *buffer;
+};
+
+#define CS_MAX_REQUEST_LENGTH 4096
+
+const char *CS_httpMethodEnumToString( int methodEnum );
 const char *CS_httpResponseEnumToString( int responseEnum );
 int CS_httpResponseEnumToCode( int responseEnum );
 bool CS_httpUrlDecodeInPlace( char *toDecode );
@@ -109,6 +120,17 @@ struct CS_StringBuilder *CS_httpUrlDecodeAppend( const char *toDecode, struct CS
 struct CS_StringBuilder *CS_httpUrlEncodeAppend( const char *toEncode, struct CS_StringBuilder *appendTo );
 int CS_httpUrlDecodeBinary( const void *toDecode, int decodeBufferLength, void *output, int outputBufferLength );
 int CS_httpUrlEncodeBinary( const void *toEncode, int encodeBufferLength, void *output, int outputBufferLength );
+
+struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
+                                            const char *uri,
+                                            struct CS_RequestHeader *headers,
+                                            int numHeaders,
+                                            struct CS_FormParameters *formParameters,
+                                            int numFormParameterschar,
+                                            void *data,
+                                            int dataLength,
+                                            struct CS_RequestReply *reuse );
+void CS_httpCloseRequest( struct CS_RequestReply *closeMe );
 
 #ifdef __cplusplus
 }

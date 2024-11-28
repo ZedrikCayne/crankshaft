@@ -701,7 +701,7 @@ static int parseRequest(struct CS_ClientInfo *info) {
                         *currentPoint = 0;
                     }
                     info->requestInfo.formParameters[ currentFormParameterIndex ].value = startOfToken;
-                    CS_httpUrlDecodeInPlace( startOfToken );
+                    if( CS_httpUrlDecodeInPlace( startOfToken ) ) return -1;
                     ++currentFormParameterIndex;
                     info->requestInfo.numFormParameters = currentFormParameterIndex;
                     startOfToken = NULL;

@@ -19,6 +19,7 @@ struct CS_StringBuilder {
 #define CS_SB_printf(_SB,...) CS_SB_snprintf(_SB,0,__VA_ARGS__)
 #define CS_SB_writePosition(_SB) (_SB->buffer + _SB->currentHead)
 #define CS_SB_fakeAppend(_SB,amount) {_SB->currentHead+=amount;_SB->buffer[_SB->currentHead]=0;}
+#define CS_SB_getPushPullBuffer(_SB) CS_PP_onStaticBuffer((_SB)->currentHead,(_SB)->buffer)
 
 struct CS_StringBuilder *CS_SB_create( int initialSize );
 struct CS_StringBuilder *CS_SB_append( struct CS_StringBuilder *buffer, const char *string );
