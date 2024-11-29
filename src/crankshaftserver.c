@@ -16,6 +16,8 @@
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/rsa.h>
 
 #include <stdbool.h>
 
@@ -136,8 +138,8 @@ static void *clientThread(void *var) {
         }
         SSL_set_fd( clientInfo->ssl, clientInfo->clientSocket );
         if( SSL_accept( clientInfo->ssl ) <= 0 ) {
-            CS_LOG_ERROR("Failed to accept new ssl.");
-            ERR_print_errors_fp(stderr);
+            //CS_LOG_ERROR("Failed to accept new ssl.");
+            //ERR_print_errors_fp(stderr);
             goto CLIENT_BAIL_NOSSL;
         }
     } else {
@@ -185,18 +187,57 @@ static void freeRoutes(struct CS_WebServer *server) {
     }
 }
 
-static bool InitSSL(struct CS_WebServer *server, const char *certFile,const char *keyFile ) {
+static EVP_PKEY *ss_pkey = NULL;
+static X509 *ss_X509 = NULL;
+
+static bool privateMakeSelfSign(const char *hostname) {
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+    if( ctx == NULL ) return true;
+    if( EVP_PKEY_keygen_init(ctx) <= 0 ) return true;
+    if( EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 2048) <= 0 ) return true;
+    if( EVP_PKEY_keygen( ctx, &ss_pkey ) <= 0 ) return true;
+    ss_X509 = X509_new();
+    ASN1_INTEGER_set(X509_get_serialNumber(ss_X509),1);
+    X509_gmtime_adj(X509_get_notBefore(ss_X509), 0);
+    X509_gmtime_adj(X509_get_notAfter(ss_X509), 31536000L);
+    X509_set_pubkey(ss_X509, ss_pkey);
+    X509_NAME * name;
+    name = X509_get_subject_name(ss_X509);
+    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC,
+                                       (unsigned char *)"US", -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC,
+                                       (unsigned char *)"Just Add Hippo Inc.", -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
+                                       (unsigned char *)hostname, -1, -1, 0);
+    X509_set_issuer_name(ss_X509, name);
+    X509_sign( ss_X509, ss_pkey, EVP_sha256() );
+    return false;
+}
+
+static bool InitSSL(struct CS_WebServer *server, const char *certFile, const char *keyFile, const char *selfSignHostname ) {
     const SSL_METHOD *method;
     method = TLS_server_method();
     server->sslctx = SSL_CTX_new(method);
     if( server->sslctx ) {
-        if( SSL_CTX_use_certificate_file( server->sslctx, certFile, SSL_FILETYPE_PEM) <= 0 ) {
-            ERR_print_errors_fp(stderr);
-            return true;
-        }
-        if( SSL_CTX_use_PrivateKey_file( server->sslctx, keyFile, SSL_FILETYPE_PEM) <= 0 ) {
-            ERR_print_errors_fp(stderr);
-            return true;
+        if( selfSignHostname ) {
+            if(privateMakeSelfSign( selfSignHostname )) return true;
+            if( SSL_CTX_use_certificate( server->sslctx, ss_X509 ) <= 0 ) {
+                ERR_print_errors_fp(stderr);
+                return true;
+            }
+            if( SSL_CTX_use_PrivateKey( server->sslctx, ss_pkey ) <= 0 ) {
+                ERR_print_errors_fp(stderr);
+                return true;
+            }
+        } else {
+            if( SSL_CTX_use_certificate_file( server->sslctx, certFile, SSL_FILETYPE_PEM) <= 0 ) {
+                ERR_print_errors_fp(stderr);
+                return true;
+            }
+            if( SSL_CTX_use_PrivateKey_file( server->sslctx, keyFile, SSL_FILETYPE_PEM) <= 0 ) {
+                ERR_print_errors_fp(stderr);
+                return true;
+            }
         }
     }
     return server->sslctx == NULL;
@@ -247,6 +288,7 @@ static const char ReplyStackName[] = "Reply Stack";
 struct CS_WebServer *CS_StartWebServer(int portNum, 
                                            const char *certFile,
                                            const char *keyFile,
+                                           const char *selfSignHostname,
                                            const char *fileServingPath,
                                            const char *fileServingFile,
                                            int fileServingCacheControlMaxAge,
@@ -339,8 +381,9 @@ struct CS_WebServer *CS_StartWebServer(int portNum,
         goto ERR_SOCK;
     }
 
-    if( certFile != NULL && keyFile != NULL  ) {
-        if( InitSSL( returnValue, certFile, keyFile ) ) {
+    if( (certFile != NULL && keyFile != NULL) || selfSignHostname != NULL  ) {
+
+        if( InitSSL( returnValue, certFile, keyFile, selfSignHostname ) ) {
             CS_LOG_ERROR("Failed to init SSL");
             goto ERR_SOCK;
         }
@@ -929,6 +972,7 @@ static bool PrivateSetReplyHeader( struct CS_Reply *reply,
     }
     if( indexAlreadySet < 0 || overwrite ) {
         if( indexAlreadySet < 0 ) {
+            indexToSet = reply->numHeaders;
             ++reply->numHeaders;
             strncpy(reply->replyHeaders[indexToSet].header, header, HEADER_MAX);
         }

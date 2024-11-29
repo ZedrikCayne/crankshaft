@@ -92,7 +92,7 @@ struct CS_Reply {
     int returnStatusEnum;
     int contentTypeEnum;
     int numHeaders;
-    struct CS_ReplyHeader *replyHeaders;
+    struct CS_ReplyHeader replyHeaders[MAX_REQUEST_HEADERS];
     const void *outputBuffer;
     int outputLength;
 };
@@ -100,6 +100,7 @@ struct CS_Reply {
 struct CS_WebServer *CS_StartWebServer(int portNum,
                                            const char *certfile,
                                            const char *keyFile,
+                                           const char *selfSignHostname,
                                            const char *fileServingPath,
                                            const char *fileServingFile,
                                            int fileCacheControlTimeInSeconds,

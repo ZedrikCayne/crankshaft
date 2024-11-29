@@ -35,6 +35,7 @@ static char defaultFileServingFile[] = "index.html";
 static char *fileServingFile = defaultFileServingFile;
 static char *certFile = NULL;
 static char *keyFile = NULL;
+static char *selfSignHostname = NULL;
 static int cacheTimeInSeconds = 0;
 
 CS_ARG_DEF(wantHelp,CS_ARG_CMP("-?","-help","--help"),"Prints this help");
@@ -56,6 +57,7 @@ CS_ARG_DEF(fileServingFile,CS_ARG_CMP("-f","--default-file"), "Default file when
 CS_ARG_DEF(fileServingDir,CS_ARG_CMP("--dir","--default-directory"), "Default directory for default file server.");
 CS_ARG_DEF(keyFile,CS_ARG_CMP("-k","--key"), "pemfile for ssl private key.");
 CS_ARG_DEF(certFile,CS_ARG_CMP("-c","--certificate"), "pemfile for certificate");
+CS_ARG_DEF(selfSignHostname,CS_ARG_CMP("--self-sign"), "create a self signed certificate for provided host");
 
 const struct ArgElement myArgs[] = 
     { CS_ARG_ELEMENT(wantHelp,BOOL_ARG),
@@ -76,7 +78,8 @@ const struct ArgElement myArgs[] =
       CS_ARG_ELEMENT(fileServingDir,STRING_ARG),
       CS_ARG_ELEMENT(cacheTimeInSeconds,INT_ARG),
       CS_ARG_ELEMENT(keyFile,STRING_ARG),
-      CS_ARG_ELEMENT(certFile,STRING_ARG)
+      CS_ARG_ELEMENT(certFile,STRING_ARG),
+      CS_ARG_ELEMENT(selfSignHostname,STRING_ARG)
     };
 
 struct ArgTable myArgTable = { sizeof(myArgs)/sizeof(ArgElement), 0, NULL, myArgs };
@@ -201,7 +204,7 @@ int main(int argc, char *argv[] ) {
 
     CS_LOG_INFO("Starting web server.");
 
-    struct CS_WebServer *server = CS_StartWebServer( portNum, certFile, keyFile, fileServingDir, fileServingFile, cacheTimeInSeconds, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
+    struct CS_WebServer *server = CS_StartWebServer( portNum, certFile, keyFile, selfSignHostname, fileServingDir, fileServingFile, cacheTimeInSeconds, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
     if( server != NULL ) {
         CS_LOG_INFO("Server started at port %d", server->serverPort);
         while(!GotInterrupt) {
