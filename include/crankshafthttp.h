@@ -23,6 +23,7 @@ enum CS_HttpMethods {
 };
 
 enum CS_HTTPResponseCodes {
+    CS_RESPONSE_INVALID,
     CS_RESPONSE_100,
     CS_RESPONSE_101,
     CS_RESPONSE_102,
@@ -102,6 +103,14 @@ struct CS_RequestReply {
     int remoteSocket;
     SSL *ssl;
     int responseEnum;
+    int numReplyHeaders;
+    //Chunked handling. chunkedBytesOffset is the # of bytes
+    //from the 'read' head where we expect the # of bytes in
+    //hex. (If it is negative it should already be in the
+    //buffer, if positive it is beyond what we've read already)
+    bool chunked;
+    bool chunkCRLFStillPresent;
+    int chunkedBytesOffset;
     struct CS_RequestHeader replyHeaders[MAX_REPLY_HEADERS];
     struct CS_PushPullBuffer *buffer;
 };
@@ -115,11 +124,13 @@ bool CS_httpUrlDecodeInPlace( char *toDecode );
 char *CS_httpUrlDecodeTemp( const char *doDecode ); 
 char *CS_httpUrlEncodeTemp( const char *toEncode );
 struct CS_StringBuilder *CS_httpUrlDecode( const char *toDecode );
-struct CS_StringBuilder *CS_httpUrlEncoce( const char *toEncode );
+struct CS_StringBuilder *CS_httpUrlEncode( const char *toEncode );
 struct CS_StringBuilder *CS_httpUrlDecodeAppend( const char *toDecode, struct CS_StringBuilder *appendTo );
 struct CS_StringBuilder *CS_httpUrlEncodeAppend( const char *toEncode, struct CS_StringBuilder *appendTo );
 int CS_httpUrlDecodeBinary( const void *toDecode, int decodeBufferLength, void *output, int outputBufferLength );
 int CS_httpUrlEncodeBinary( const void *toEncode, int encodeBufferLength, void *output, int outputBufferLength );
+
+const char *CS_httpReplyHeader( struct CS_RequestReply *reply, const char *header );
 
 struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
                                             const char *uri,
@@ -132,6 +143,8 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
                                             struct CS_RequestReply *reuse );
 void CS_httpCloseRequest( struct CS_RequestReply *closeMe );
 
+bool CS_httpInitSSL();
+void CS_httpKillSSL();
 #ifdef __cplusplus
 }
 #endif

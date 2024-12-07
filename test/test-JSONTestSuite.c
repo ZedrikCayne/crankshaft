@@ -61,7 +61,7 @@ bool test_JSONTestSuite() {
                 if( bytesRead > 0 && bytesRead < CS_PP_BUFFER_SIZE ) {
                     pp->buff[ bytesRead + 1 ] = 0;
                     CS_LOG_TRACE("Parse \"%s\":%s", pp->buff, pathToFile);
-                    struct CS_JsonNode *out = CS_parseJsonCopy( CS_PP_startOfData(pp), bytesRead, CS_PP_BUFFER_SIZE );
+                    struct CS_JsonNode *out = CS_jsonParseCopy( CS_PP_startOfData(pp), bytesRead, CS_PP_BUFFER_SIZE );
                     if( ep->d_name[0] == 'n' ) {
                         CS_FAIL_ON_NOT_NULL( out, pp->buff, "%s", pathToFile );
                     } else if ( ep->d_name[0] == 'y' ) {
@@ -69,7 +69,7 @@ bool test_JSONTestSuite() {
                     } else {
                         //CS_FAIL_ON_NULL( out, pp->buff, "%s", CS_jsonNodePrintable( out )->buffer );
                     }
-                    struct CS_JsonNode *outNoCopy = CS_parseJson( dupeBuffer, bytesRead, CS_PP_BUFFER_SIZE );
+                    struct CS_JsonNode *outNoCopy = CS_jsonParse( dupeBuffer, bytesRead, CS_PP_BUFFER_SIZE );
                     if( ep->d_name[0] == 'n' ) {
                         CS_FAIL_ON_NOT_NULL( outNoCopy, pp->buff, "%s", pathToFile );
                     } else if ( ep->d_name[0] == 'y' ) {
@@ -78,8 +78,8 @@ bool test_JSONTestSuite() {
                         //CS_FAIL_ON_NULL( outNoCopy, pp->buff, "%s", CS_jsonNodePrintable( out )->buffer );
                     }
                     //CS_FAIL_ON_FALSE( CS_jsonNodesEquivalent( out, outNoCopy ), "Nodes not equivalent.", "%s", pathToFile );
-                    if( out ) CS_freeJson( out );
-                    if( outNoCopy ) CS_freeJson( outNoCopy );
+                    if( out ) CS_jsonFree( out );
+                    if( outNoCopy ) CS_jsonFree( outNoCopy );
                 }
                 CS_PP_reset(pp);
             }

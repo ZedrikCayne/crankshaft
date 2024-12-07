@@ -63,6 +63,11 @@ int CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl);
 #define CS_PP_hasError(PPBUFF) (PPBUFF->err!=0)
 #define CS_PP_reset(PPBUFF) (PPBUFF->currentWriteOffset=PPBUFF->currentReadOffset=0)
 
+bool CS_PP_removeOffEnd( struct CS_PushPullBuffer *buffer, int nBytes );
+bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int offset, int nBytes );
+bool CS_PP_makeRoom( struct CS_PushPullBuffer *buffer );
+char *CS_PP_findChar( struct CS_PushPullBuffer *buffer, char needle );
+
 #define CS_PP_printf(PPbuff,...) CS_PP_read(PPbuff,snprintf((char*)CS_PP_endOfData(PPbuff),CS_PP_bufferRemaining(PPbuff),__VA_ARGS__));
 
 const char *CS_PP_desc(struct CS_PushPullBuffer *ppBuff);

@@ -147,6 +147,48 @@ int CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
     return 0;
 }
 
+#define MOVE(_PP,_OFFSET,_NUM){char *out=_PP->buff+_PP->currentWriteOffset+_OFFSET;char *end=_PP->buff+_PP->currentReadOffset;char *in=out+_NUM;while(in<end)*out++=*in++;}
+#define BACKFILL(_PP,_NUM){char *out=_PP->buff+_PP->currentReadOffset;char *end=out+_NUM;while(out<end)*out++='%';}
+
+bool CS_PP_removeOffEnd( struct CS_PushPullBuffer *buffer, int nBytes ) {
+    if( nBytes > CS_PP_dataSize(buffer) ) return true;
+    buffer->currentReadOffset -= nBytes;
+    BACKFILL(buffer,nBytes);
+    return false;
+}
+
+bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int offset, int nBytes ) {
+    //Can't remove more than we have data available.
+    if( nBytes + offset > CS_PP_dataSize(buffer) ) return true;
+    //memmove( buffer->buff + buffer->currentWriteOffset + offset,
+             //buffer->buff + buffer->currentWriteOffset + offset + nBytes,
+             //buffer->currentReadOffset - buffer->currentWriteOffset + offset + nBytes );
+    MOVE(buffer,offset,nBytes);
+    buffer->currentReadOffset -= nBytes;
+    BACKFILL(buffer,nBytes);
+    return false;
+}
+
+bool CS_PP_makeRoom( struct CS_PushPullBuffer *buffer ) {
+    int nBytesToMove = buffer->currentWriteOffset;
+    if( nBytesToMove == 0 ) return true;
+    //memmove( buffer->buff,
+             //buffer->buff + nBytesToMove,
+             //nBytesToMove );
+    MOVE(buffer,0,nBytesToMove);
+    buffer->currentWriteOffset = 0;
+    buffer->currentReadOffset -= nBytesToMove;
+    return false;
+}
+
+char *CS_PP_findChar( struct CS_PushPullBuffer *buffer, char needle ) {
+    char *in = buffer->buff + buffer->currentWriteOffset;
+    char *end = buffer->buff + buffer->currentReadOffset;
+    while( in < end && *in++ != needle );
+    return in==end?NULL:in;
+}
+
+
 #define MAX_PRINT_SIZE 1024
 const char *CS_PP_desc(struct CS_PushPullBuffer *buffer) {
     char *temp = (char*)CS_tempBuff(MAX_PRINT_SIZE);

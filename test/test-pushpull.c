@@ -72,6 +72,34 @@ bool test_pushpull() {
         CS_FAIL_ON_FALSE( temp[i] == testBuffer1->buff[i], "Known buffer contents written. (Descending bytes)", "Buffer wrong at index %d", i);
     }
 
+    CS_PP_reset(testBuffer1);
+    CS_PP_readFromBuffer( testBuffer1, temp, TEST_BUFF_SIZE );
+    CS_PP_write( testBuffer1, 15 );
+    CS_PP_makeRoom( testBuffer1 );
+    CS_FAIL_ON_FALSE( CS_PP_bufferRemaining( testBuffer1 ) == 15, "Buffer should have 15 bytes left after writing 15 and then making room.", "%d left", CS_PP_bufferRemaining( testBuffer1 ) );
+
+    CS_PP_reset(testBuffer1);
+    CS_PP_readFromBuffer( testBuffer1, temp, TEST_BUFF_SIZE );
+    CS_PP_removeChunk( testBuffer1, 0, 15 );
+    for( int i = 0; i < TEST_BUFF_SIZE - 15; ++i ) {
+        CS_FAIL_ON_FALSE( temp[i + 15] == testBuffer1->buff[i], "Known buffer contents written. (Descending bytes with 15 bytes removed off the front)", "Buffer wrong at index %d", i );
+    }
+
+    CS_PP_reset(testBuffer1);
+    CS_PP_readFromBuffer( testBuffer1, temp, TEST_BUFF_SIZE);
+    CS_PP_removeChunk( testBuffer1, 32, 15 );
+    for( int i = 0; i < 32; ++i ) {
+        CS_FAIL_ON_FALSE( temp[i] == testBuffer1->buff[i], "Known buffer contents written. (Descending bytes with 15 bytes removed at offset 32)", "Buffer wrong at index %d", i );
+    }
+    for( int i = 32; i < TEST_BUFF_SIZE - 15; ++i ) {
+        CS_FAIL_ON_FALSE( temp[i + 15] == testBuffer1->buff[i], "Known buffer contents written. (Descending bytes with 15 bytes removed at offset 32)", "Buffer wrong at index %d", i );
+    }
+
+    CS_PP_reset(testBuffer1);
+    CS_PP_readFromBuffer( testBuffer1, temp, TEST_BUFF_SIZE);
+    CS_FAIL_ON_TRUE( CS_PP_removeChunk( testBuffer1, TEST_BUFF_SIZE - 15, 15 ), "Removing the last 15 bytes should work.", "This errored." );
+    CS_FAIL_ON_FALSE( CS_PP_removeChunk( testBuffer1, TEST_BUFF_SIZE - 15, 15 ), "Removing the last 15 bytes should not work if beyond the end of the written buffer.", "This worked, not cool." );
+
     CS_PP_defaultFree( testBuffer1 );
 
     return testCount !=

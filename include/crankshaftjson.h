@@ -90,7 +90,7 @@ extern "C" {
  * double precision floats)
  *
  * Everything is allocated inside the linear allocator pointed at by every node.
- * CS_freeJson() will cycle up to the root node of whatever structure you are in
+ * CS_jsonFree() will cycle up to the root node of whatever structure you are in
  * blast through it freeing any 'allocated' bits, (the last dangling pointer)
  * and then finally freeing the linear allocator.
  *
@@ -141,9 +141,11 @@ struct CS_JsonNode {
     void *alloc;
 };
 
-struct CS_JsonNode *CS_parseJsonCopy(const char *source, int inputLength, int allocSize);
-struct CS_JsonNode *CS_parseJson(const char *source, int inputLength, int allocSize);
-void CS_freeJson( struct CS_JsonNode *any );
+#define CS_JSON_NODE_ITER(_START_NODE,_JSON_ITER) if(((_START_NODE)!=NULL)&&(((_START_NODE)->typeEnum==CS_JSON_ARRAY)||((_START_NODE)->typeEnum==CS_JSON_OBJECT)))for(struct CS_JsonNode *_JSON_ITER=(_START_NODE)->container;_JSON_ITER!=NULL;_JSON_ITER=_JSON_ITER->next)
+
+struct CS_JsonNode *CS_jsonParseCopy(const char *source, int inputLength, int allocSize);
+struct CS_JsonNode *CS_jsonParse(const char *source, int inputLength, int allocSize);
+void CS_jsonFree( struct CS_JsonNode *any );
 bool CS_jsonNodesEquivalent(struct CS_JsonNode *a, struct CS_JsonNode *b);
 struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTree );
 

@@ -8,6 +8,7 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include "crankshafttempbuff.h"
 #include "crankshaftalloc.h"
@@ -73,6 +74,100 @@ static SSL *newSSL( int socket ) {
     return returnValue;
 }
 
+#define LF ((char)10)
+#define CR ((char)13)
+#define HT ((char)9)
+#define SP ((char)32)
+#define AMPERSAND '&'
+#define QUESTION '?'
+#define POUND '#'
+#define COLON ':'
+#define EQUAL '='
+#define SPACE ' '
+
+#define EAT_CRLF() if(*currentPoint==CR){++currentPoint;REQUIRE_CHAR(LF);}
+#define REQUIRE_CHAR(X) if( currentPoint<endOfData && *currentPoint==X)++currentPoint;else return -1;
+#define REQUIRE_CHAR_NO_EAT(X) if( currentPoint<endOfData && *currentPoint!=X)return -1;
+#define REQUIRE_CRLF() REQUIRE_CHAR(CR);REQUIRE_CHAR_NO_EAT(LF)
+
+enum {
+    REPLY_HEADER_NAME,
+    REPLY_HEADER_SEPARATOR,
+    REPLY_HEADER_VALUE,
+    REPLY_HEADER_DONE
+};
+
+static int privateParseReply( struct CS_RequestReply *replyToParse ) {
+    int sizeOfReply = CS_PP_dataSize( replyToParse->buffer );
+    char *startOfBuffer = CS_PP_startOfData( replyToParse->buffer );
+    char *endOfData = startOfBuffer + sizeOfReply;
+    char *currentPoint = startOfBuffer;
+    REQUIRE_CHAR('H');
+    REQUIRE_CHAR('T');
+    REQUIRE_CHAR('T');
+    REQUIRE_CHAR('P');
+    REQUIRE_CHAR('/');
+    REQUIRE_CHAR('1');
+    REQUIRE_CHAR('.');
+    REQUIRE_CHAR('1');
+    REQUIRE_CHAR(' ');
+    char *endOfParse;
+    replyToParse->responseEnum = strtol( currentPoint, &endOfParse, 10 );
+    while( currentPoint < endOfData && *currentPoint != SP ) ++currentPoint;
+    if( endOfParse != currentPoint ) return -1;
+    ++currentPoint;
+    while( currentPoint < endOfData && *currentPoint != CR ) ++currentPoint;
+    REQUIRE_CHAR(CR);
+    REQUIRE_CHAR(LF);
+    char *startOfToken = NULL;
+    int currentState = REPLY_HEADER_NAME;
+    while( currentPoint < endOfData && currentState != REPLY_HEADER_DONE ) {
+        if( startOfToken == NULL ) startOfToken = currentPoint;
+        switch( currentState ) {
+            case REPLY_HEADER_NAME:
+                if( *currentPoint == CR ) {
+                    ++currentPoint;
+                    REQUIRE_CHAR_NO_EAT(LF);
+                    currentState = REPLY_HEADER_DONE;
+                    break;
+                }
+                if( *currentPoint == COLON ) {
+                    if( replyToParse->numReplyHeaders > MAX_REPLY_HEADERS )
+                        return -1;
+                    *currentPoint = 0;
+                    currentState = REPLY_HEADER_SEPARATOR;
+                    replyToParse->replyHeaders[ replyToParse->numReplyHeaders ].header = startOfToken;
+                    startOfToken = NULL;
+                    break;
+                }
+                break;
+            case REPLY_HEADER_SEPARATOR:
+                if( *currentPoint == SPACE ) {
+                    startOfToken = NULL;
+                    break;
+                }
+                currentState = REPLY_HEADER_VALUE;
+            case REPLY_HEADER_VALUE:
+                if( *currentPoint == CR ) {
+                    *currentPoint = 0;
+                    ++currentPoint;
+                    REQUIRE_CHAR_NO_EAT(LF);
+                    currentState = REPLY_HEADER_NAME;
+                    replyToParse->replyHeaders[ replyToParse->numReplyHeaders ].values = startOfToken;
+                    replyToParse->numReplyHeaders++;
+                    startOfToken = NULL;
+                }
+                break;
+            default:
+                break;
+        }
+        ++currentPoint;
+    }
+    if( currentState != REPLY_HEADER_DONE ) return -1;
+        
+    return currentPoint - startOfBuffer;
+}
+
 struct CodeToReturnString {
     int code;
     const char *value;
@@ -80,6 +175,7 @@ struct CodeToReturnString {
 
 //Keep this in line with the enum in the header
 struct CodeToReturnString codeToString[] = {
+    {   0, "Invalid" },
     { 100, "Continue" },
     { 101, "Switching Protocols" },
     { 102, "Processing" },
@@ -168,6 +264,23 @@ const char *CS_httpMethodEnumToString( int methodEnum ) {
     return methodEnumToName[ methodEnum ];
 }
 
+static int comp(const void *a, const void *b) {
+    struct CodeToReturnString *as = (struct CodeToReturnString *)a;
+    struct CodeToReturnString *bs = (struct CodeToReturnString *)b;
+    if( as->code < bs->code ) return -1;
+    if( as->code > bs->code ) return 1;
+    return 0;
+}
+
+int CS_httpResponseCodeToEnum( int code ) {
+    struct CodeToReturnString *response;
+    response = (struct CodeToReturnString *)bsearch( &code, codeToString, sizeof(codeToString)/sizeof(codeToString[0]), sizeof(codeToString[0]), comp);
+
+    if( response == NULL ) return CS_RESPONSE_INVALID;
+
+    return codeToString - response;
+}
+
 static int hexDigitToInt( const char *u ) {
     if( *u < '0' ) return -1;
     if( *u > 'f' ) return -1;
@@ -219,6 +332,7 @@ static int privateEncode( const char *toEncode, int toEncodeBufferLength, char *
         }
         ++in;
     }
+    *out = 0;
 
     return out - encodeTo;
 }
@@ -231,7 +345,7 @@ static int privateDecode( const char *toDecode, int decodeBufferLength, char *ou
 
     for( int i = 0; (decodeBufferLength == 0 && *in) || (i < decodeBufferLength); ++i ) {
         if( toDecode == output ) {
-            end = out + 1;
+            end = out + 3;
         }
         if( *in == '%' ) {
             if( (decodeBufferLength > 0) && (i + 2 > decodeBufferLength) ) {
@@ -258,7 +372,7 @@ static int privateDecode( const char *toDecode, int decodeBufferLength, char *ou
         ++in;
     }
     *out = 0;
-    return toDecode - out;
+    return out - toDecode;
 }
 
 static int privateDecodeInPlace( char *toDecode, int decodeBufferLength ) {
@@ -341,21 +455,6 @@ int CS_httpUrlEncodeBinary( const void *toEncode, int encodeBufferLength, void *
     return privateEncode( (const char *)toEncode, encodeBufferLength, output, outputBufferLength );
 }
 
-#define LF ((char)10)
-#define CR ((char)13)
-#define HT ((char)9)
-#define SP ((char)32)
-#define AMPERSAND '&'
-#define QUESTION '?'
-#define POUND '#'
-#define COLON ':'
-#define EQUAL '='
-
-#define EAT_CRLF() if(*currentPoint==CR){++currentPoint;REQUIRE_CHAR(LF);}
-#define REQUIRE_CHAR(X) if( currentPoint<endOfData && *currentPoint==X)++currentPoint;else return -1;
-#define REQUIRE_CHAR_NO_EAT(X) if( currentPoint<endOfData && *currentPoint!=X)return -1;
-#define REQUIRE_CRLF() REQUIRE_CHAR(CR);REQUIRE_CHAR_NO_EAT(LF)
-
 int privateParseUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
     int len = strlen(uri);
     char *tempUri = CS_tempStringCopy( uri );
@@ -378,7 +477,7 @@ int privateParseUri( const char *uri, char **address, int *port, bool *ssl, cons
     REQUIRE_CHAR('/');
     REQUIRE_CHAR('/');
     *address = currentPoint;
-    while( currentPoint < endOfData && (*currentPoint != ':' || *currentPoint != '/') ) ++currentPoint;
+    while( currentPoint < endOfData && !(*currentPoint == ':' || *currentPoint == '/') ) ++currentPoint;
     if( *currentPoint == ':' ) {
         *currentPoint = 0;
         ++currentPoint;
@@ -387,9 +486,13 @@ int privateParseUri( const char *uri, char **address, int *port, bool *ssl, cons
         *currentPoint = 0;
     } else if ( *currentPoint == '/' ) {
         *currentPoint = 0;
-        ++currentPoint;
     }
-    if( portChar != NULL ) *port = atoi( portChar ); else *port = wantSSL?443:80;
+    if( portChar != NULL ) {
+        *port = atoi( portChar ); 
+    } else {
+        *port = wantSSL?443:80;
+    }
+    *ssl = wantSSL;
     if( currentPoint >= endOfData ) {
         *rest = NULL;
     } else {
@@ -398,13 +501,15 @@ int privateParseUri( const char *uri, char **address, int *port, bool *ssl, cons
     return 0;
 }
 
-struct addrinfo *CS_httpLookupAddress( const char *address ) {
+struct addrinfo *CS_httpLookupAddress( const char *address, int portNum ) {
     struct addrinfo hints = { 0 };
+    char portNumString[64];
+    snprintf( portNumString, 64, "%d", portNum );
     hints.ai_flags = AI_PASSIVE|AI_ADDRCONFIG;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     struct addrinfo *addrInfos;
-    if( getaddrinfo(address,NULL,&hints,&addrInfos) != 0 ) {
+    if( getaddrinfo(address,portNum > 0?portNumString:NULL,&hints,&addrInfos) != 0 ) {
         CS_LOG_WARN("CS_httpLookupAddress() Address lookup fail: %s", address);
         return NULL;
     }
@@ -463,18 +568,98 @@ static const char *defaultHeaders[] = {
     "User-Agent",
     "Connection",
     "Accept",
-    "Accept-Encoding"
+    "Accept-Encoding",
+    "Host"
 };
 
 static const char *defaultHeadersValue[] = {
     "Crankshaft",
     "close",
     "*/*",
-    "identity"
+    "identity",
+    NULL
 };
+#define HOST_INDEX 4
+
+#define CONTINUE_CHUNK_ERROR -1
+#define CONTINUE_CHUNK_DONE   0
+#define CONTINUE_CHUNK_MORE   1
+
+//returns 0 if we're done... negative on error, positive on 'read more'
+static int privateContinueChunked( struct CS_RequestReply *reply ) {
+    //chunkedBytesOffset represents the offset from the 'read' head where the
+    //# of bytes in the next chunk are encoded. When we enter this function
+    //we assume that if we've already gotten it in the buffer, we've already
+    //removed the leading CRLF pair.
+    CS_LOG("IN CHUNK");
+    while( reply->chunked && reply->chunkedBytesOffset <= 0 ) {
+        char *currentPoint = CS_PP_endOfData(reply->buffer) + reply->chunkedBytesOffset;
+        char *initialPoint = currentPoint;
+        CS_LOG("CurrentPoint: %20.20s", currentPoint);
+        if( currentPoint < CS_PP_startOfData(reply->buffer) ) {
+            CS_LOG_ERROR("Point where we think we need to be before is before our start.");
+            return CONTINUE_CHUNK_ERROR;
+        }
+        if( reply->chunkCRLFStillPresent ) {
+            if( *currentPoint != CR || *(currentPoint + 1) != LF ) {
+                CS_LOG_ERROR("This should be a chunk footer CRLF. Was not.");
+                return CONTINUE_CHUNK_ERROR;
+            }
+            if( CS_PP_removeChunk( reply->buffer, currentPoint - CS_PP_startOfData(reply->buffer), 2 ) ) {
+                CS_LOG_VERBOSE("Needed to delete 2 bytes but we ran out of buffer...read more.");
+                return CONTINUE_CHUNK_MORE;
+            }
+            reply->chunkCRLFStillPresent = false;
+        }
+        int initialOffset = currentPoint - CS_PP_startOfData(reply->buffer);
+        char *end = CS_PP_endOfData( reply->buffer );
+        int accumulator = 0;
+
+        CS_LOG_TRACE("Okay, we're here now....about to read hex digits.");
+
+        while( *currentPoint != CR && currentPoint < end ) {
+            accumulator <<= 4;
+            int digit = hexDigitToInt( currentPoint ); 
+            if( digit < 0 ) {
+                CS_LOG_ERROR("Should be hex digits here...was not.");
+                return CONTINUE_CHUNK_ERROR;
+            }
+            ++currentPoint;
+            accumulator += digit;
+        }
+        CS_LOG_TRACE("Accumulator %d", accumulator);
+        CS_LOG_TRACE("We have %d left", CS_PP_bufferRemaining( reply->buffer ) );
+        CS_LOG_TRACE("Checking if we're at the end.");
+        if( currentPoint == end ) {
+            CS_LOG_VERBOSE("We're beyond the end, need more.");
+            return CONTINUE_CHUNK_MORE;
+        }
+        ++currentPoint;
+        if( currentPoint == end ) {
+            CS_LOG_WARN("Beyond the end again, need more.");
+            return CONTINUE_CHUNK_MORE;
+        }
+        if( *currentPoint != LF ) {
+            CS_LOG_ERROR("CR should have been followed by a LF.");
+            return CONTINUE_CHUNK_ERROR;
+        }
+        ++currentPoint;
+        int numBytesToEat = currentPoint - initialPoint;
+        if( CS_PP_removeChunk( reply->buffer, initialOffset, numBytesToEat ) ) {
+            CS_LOG_ERROR("This should not be able to happen...");
+            return CONTINUE_CHUNK_MORE;
+        }
+        reply->chunkedBytesOffset += numBytesToEat + accumulator;
+        reply->chunkCRLFStillPresent = true;
+        if( accumulator == 0 ) {
+            return CONTINUE_CHUNK_DONE;
+        }
+    }
+    return CONTINUE_CHUNK_MORE;
+}
 
 #define INITIAL_STRING_BUILDER_SIZE 4096
-#define PP_BUFFER_SIZE_FOR_RETURN 8192
+#define PP_BUFFER_SIZE_FOR_RETURN 16384
 struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
                                             const char *uri,
                                             struct CS_RequestHeader *headers,
@@ -509,33 +694,26 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
             CS_LOG_ERROR("Form parameters set but user has set a content type other than form-urlencoded.");
             return NULL;
         }
-        
     }
     if( privateParseUri(uri, &tempAddress, &portNum, &wantSSL, &rest) < 0 ) {
         CS_LOG_ERROR("CS_httpMakeRequest() Badly formatted URI %s", uri?uri:"NULL");
         return NULL;
     }
-    struct CS_RequestReply *returnValue = privateGetReply();
+    
+    struct CS_RequestReply *returnValue;
+    if( reuse ) {
+        returnValue = reuse;
+    } else {
+        returnValue = privateGetReply();
+    }
     if( returnValue == NULL ) {
         CS_LOG_ERROR("CS_httpMakeRequest() OOM getting a reply" );
         return NULL;
     }
     strncpy( address, tempAddress, 128 );
-    struct addrinfo *addrInfos = CS_httpLookupAddress( address );
+    struct addrinfo *addrInfos = CS_httpLookupAddress( address, portNum );
     //Lookup already has a log with it.
     if( addrInfos == NULL ) return NULL;
-    //Fill in the port numbers in the address infos.
-    struct addrinfo *addrInfoIter = addrInfos;
-    while( addrInfoIter ) {
-        if( addrInfoIter->ai_family == AF_INET ) {
-            struct sockaddr_in *in1 = (struct sockaddr_in *)addrInfoIter->ai_addr;
-            in1->sin_port = portNum;
-        } else if( addrInfoIter->ai_family == AF_INET6 ) {
-            struct sockaddr_in6 *in1 = (struct sockaddr_in6 *)addrInfoIter->ai_addr;
-            in1->sin6_port = portNum;
-        }
-        addrInfoIter = addrInfoIter->ai_next;
-    }
 
     struct CS_StringBuilder *sb = CS_SB_create( INITIAL_STRING_BUILDER_SIZE );
     if( sb == NULL ) {
@@ -543,8 +721,11 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         goto CLEANUP;
     }
 
-    CS_SB_printf(sb, "%s /%s %s%c%c", method, rest?rest:"", "HTTP1.1", CR, LF);
+    if( rest == NULL || rest[0] == 0 ) rest = "/";
 
+    CS_SB_printf(sb, "%s %s %s%c%c", method, rest, "HTTP/1.1", CR, LF);
+
+    defaultHeadersValue[HOST_INDEX] = address;
     for( int i = 0; i < (sizeof(defaultHeaders)/sizeof(defaultHeaders[0])); ++i ) {
         privateAppendHeader( sb, headers, numHeaders, defaultHeaders[ i ], defaultHeadersValue[ i ] );
     }
@@ -574,10 +755,10 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
 
     CS_SB_printf(sb,"%c%c",CR,LF);
 
+    CS_LOG("SEND: %s", sb->buffer);
 
     //Okay, we're ready to actually open the socket and go.
-    
-    addrInfoIter = addrInfos;
+    struct addrinfo *addrInfoIter = addrInfos;
     int connectValue = -1;
     do {
         returnValue->remoteSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -587,13 +768,15 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         }
 
         connectValue = connect( returnValue->remoteSocket, addrInfoIter->ai_addr, addrInfoIter->ai_addrlen );
-        if( connectValue < 1 ) {
+        if( connectValue != 0 ) {
+            CS_LOG_ERROR("Error connecting: %s", strerror(errno) );
             close(returnValue->remoteSocket);
             returnValue->remoteSocket = -1;
+            addrInfoIter = addrInfoIter->ai_next;
         }
     } while( connectValue == -1 && addrInfoIter != NULL );
 
-    if( returnValue->remoteSocket < 0 || connectValue < 0 )
+    if( returnValue->remoteSocket < 0 || connectValue != 0 )
         goto CLEANUP;
     CS_httpReleaseAddressInfos( addrInfos );
     addrInfos = NULL;
@@ -610,7 +793,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         if( numBytesSent <= 0 ) {
             goto CLEANUP;
         }
-    } while ( CS_PP_bufferRemaining( pp ) > 0 );
+    } while ( CS_PP_dataSize( pp ) > 0 );
 
     returnValue->buffer = CS_PP_defaultAlloc( PP_BUFFER_SIZE_FOR_RETURN );
 
@@ -621,10 +804,48 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         goto CLEANUP;
     }
 
+    CS_LOG("GOT: %s", returnValue->buffer->buff);
 
+    int numBytesParsed = privateParseReply( returnValue );
+    if( numBytesParsed < 0 ) goto CLEANUP;
+
+    CS_PP_write( returnValue->buffer, numBytesParsed );
+
+    //At this point, we're at the front of 'data' if we are 'transfer encoded' at all...
+    //we're going to probably need more and to 'fix' our data so everything in the buffer
+    //is actual data.
+    const char *encodingHeader = CS_httpReplyHeader( returnValue, "Transfer-Encoding" );
+    if( encodingHeader && strstr( "chunked", encodingHeader ) ) {
+        returnValue->chunked = true;
+        returnValue->chunkCRLFStillPresent = false;
+        returnValue->chunkedBytesOffset = -CS_PP_dataSize( returnValue->buffer );
+        CS_LOG_TRACE("Chunked bytes offset is %d", returnValue->chunkedBytesOffset);
+        do {
+            int continueValue = privateContinueChunked( returnValue );
+            if( continueValue == CONTINUE_CHUNK_MORE ) {
+                CS_LOG_TRACE("Need more data.");
+                //Need more data.
+                numBytesRead = wantSSL?CS_PP_readFromSSL( returnValue->buffer, returnValue->ssl ):CS_PP_readFromFile( returnValue->buffer, returnValue->remoteSocket );
+                if( numBytesRead < 0 ) {
+                    CS_LOG_TRACE("Error?");
+                    goto CLEANUP;
+                }
+                CS_LOG_TRACE("Read %d extra", numBytesRead);
+                returnValue->chunkedBytesOffset -= numBytesRead;
+            } else if( continueValue == CONTINUE_CHUNK_ERROR ) {
+                CS_LOG_TRACE("Got a chunk error...");
+                goto CLEANUP;
+            } else {
+                CS_LOG_TRACE("Done!");
+                break;
+            }
+        } while( CS_PP_bufferRemaining( returnValue->buffer ) > 0 );
+    }
+
+    return returnValue;
 
 CLEANUP:
-    if( returnValue ) CS_httpCloseRequest( returnValue );
+    if( returnValue && !reuse ) CS_httpCloseRequest( returnValue );
     if( formString ) CS_SB_free(formString);
     if( sb ) CS_SB_free(sb);
     if( pp ) CS_PP_defaultFree(pp);
@@ -642,6 +863,14 @@ void CS_httpCloseRequest( struct CS_RequestReply *toReturn ) {
     if( toReturn->buffer ) CS_PP_defaultFree( toReturn->buffer );
     toReturn->buffer = 0;
     privateReturnReply(toReturn);
+}
+
+const char *CS_httpReplyHeader( struct CS_RequestReply *reply, const char *header ) {
+    for( int i = 0; i < reply->numReplyHeaders; ++i ) {
+        if( strstr( header, reply->replyHeaders[ i ].header) )
+            return reply->replyHeaders[ i ].values;
+    }
+    return NULL;
 }
 
 bool CS_httpInitSSL() {

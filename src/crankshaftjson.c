@@ -229,7 +229,7 @@ static struct CS_JsonNode *privateInitJson( int stackSize ) {
     return root;
 }
 
-void CS_freeJson( struct CS_JsonNode *any ) {
+void CS_jsonFree( struct CS_JsonNode *any ) {
     struct CS_JsonNode *current = any;
     while( current->up != NULL ) current = current->up;
     
@@ -881,15 +881,15 @@ ERROR_DEL_JSON:
     } else {
         CS_LOG_ERROR("ERROR NOT SET!");
     }
-    CS_freeJson( returnValue );
+    CS_jsonFree( returnValue );
     return NULL;
 }
 
-struct CS_JsonNode *CS_parseJsonCopy(const char *input, int inputLength, int allocSize) {
+struct CS_JsonNode *CS_jsonParseCopy(const char *input, int inputLength, int allocSize) {
     return privateParseJson(input,inputLength,allocSize,true);
 }
 
-struct CS_JsonNode *CS_parseJson(const char *input, int inputLength, int allocSize) {
+struct CS_JsonNode *CS_jsonParse(const char *input, int inputLength, int allocSize) {
     return privateParseJson(input,inputLength,allocSize,false);
 }
 
@@ -1308,7 +1308,7 @@ struct CS_JsonNode *CS_jsonNodeRemoveNode( struct CS_JsonNode *remove ) {
         remove->typeEnum == CS_JSON_ARRAY ) {
         remove->up = NULL;
         remove->voidLinearAllocator = NULL;
-        CS_freeJson( remove );
+        CS_jsonFree( remove );
     }
 
     //We're either going to return the thing which would have replaced

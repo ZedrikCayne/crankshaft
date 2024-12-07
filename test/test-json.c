@@ -92,7 +92,7 @@ static const char *nullButGot(struct CS_JsonNode *got) {
     return returnValue;
 }
 
-#define PARSE_N_PRINT(x) __temp=CS_tempBuff(TEMP_PRINT_SIZE);snprintf(__temp,TEMP_PRINT_SIZE,"Parse \"%s\"",x[i]);js=CS_parseJsonCopy(x[i],strlen(x[i]),TEMP_JSON_ALLOC_SIZE)
+#define PARSE_N_PRINT(x) __temp=CS_tempBuff(TEMP_PRINT_SIZE);snprintf(__temp,TEMP_PRINT_SIZE,"Parse \"%s\"",x[i]);js=CS_jsonParseCopy(x[i],strlen(x[i]),TEMP_JSON_ALLOC_SIZE)
 #define SET__TEMP(x) __temp=CS_tempBuff(TEMP_PRINT_SIZE);snprintf(__temp,TEMP_PRINT_SIZE,"Parse \"%s\"",x)
 
 struct CS_JsonNode *addRandom( struct CS_JsonNode *to, int index ) {
@@ -180,57 +180,57 @@ bool test_json() {
     char *t0 = CS_getTempBuff( myTempBuffer );
     strncpy( t0, firstTest, TEMP_BUFF_SIZE );
     SET__TEMP(firstTest);
-    struct CS_JsonNode * js = CS_parseJsonCopy( t0, strlen( t0 ), TEMP_JSON_ALLOC_SIZE);
+    struct CS_JsonNode * js = CS_jsonParseCopy( t0, strlen( t0 ), TEMP_JSON_ALLOC_SIZE);
     CS_FAIL_ON_FALSE( js && js->typeEnum == CS_JSON_OBJECT, __temp, "%s", wantedButGot( CS_JSON_FLOAT_AS_STRING, js ) );
     if( js ) {
-        CS_freeJson(js);
+        CS_jsonFree(js);
     }
 
     char *t1 = CS_getTempBuff( myTempBuffer );
 
     strncpy(t1, testsource1, TEMP_BUFF_SIZE);
 
-    js = CS_parseJsonCopy( testsource1, strlen( t1 ), TEMP_JSON_ALLOC_SIZE);
+    js = CS_jsonParseCopy( testsource1, strlen( t1 ), TEMP_JSON_ALLOC_SIZE);
     
     CS_FAIL_ON_FALSE( js && js->typeEnum == CS_JSON_ARRAY, "Parse an array", "%s", wantedButGot( CS_JSON_ARRAY, js ) );
-    if( js ) CS_freeJson(js);
+    if( js ) CS_jsonFree(js);
 
     char *t2 = CS_getTempBuff( myTempBuffer );
 
     strncpy(t2, testsource2, TEMP_BUFF_SIZE);
 
-    js = CS_parseJsonCopy( testsource2, strlen( t2 ), TEMP_JSON_ALLOC_SIZE );
+    js = CS_jsonParseCopy( testsource2, strlen( t2 ), TEMP_JSON_ALLOC_SIZE );
     CS_FAIL_ON_FALSE( js && js->typeEnum == CS_JSON_OBJECT, "Parse an object.", "%s", wantedButGot( CS_JSON_OBJECT, js ) );
-    if( js ) CS_freeJson(js);
+    if( js ) CS_jsonFree(js);
     for( int i = 0; i < ARRAY_LENGTH( validIntegers ); ++i ) {
         PARSE_N_PRINT(validIntegers);
         CS_FAIL_ON_FALSE( js && js->typeEnum == CS_JSON_INTEGER_AS_STRING, __temp, "%s", wantedButGot(CS_JSON_INTEGER_AS_STRING, js) );
-        if( js ) CS_freeJson(js);
+        if( js ) CS_jsonFree(js);
     }
     
     for( int i = 0; i < ARRAY_LENGTH( invalidIntegers ); ++i ) {
         PARSE_N_PRINT(invalidIntegers);
         CS_FAIL_ON_NOT_NULL( js, __temp, "%s", nullButGot( js ) );
-        if( js ) CS_freeJson(js);
+        if( js ) CS_jsonFree(js);
     }
 
     for( int i = 0; i < ARRAY_LENGTH( invalidIntegersButValidToken ); ++i ) {
         PARSE_N_PRINT(invalidIntegersButValidToken);
         CS_FAIL_ON_NULL( js, __temp, "Wanted a valid js node but instead got a null." );
         CS_FAIL_ON_TRUE( js && js->typeEnum == CS_JSON_INTEGER_AS_STRING, __temp, "%s", wantedButGot( CS_JSON_ERROR, js ) );
-        if( js ) CS_freeJson(js);
+        if( js ) CS_jsonFree(js);
     }
 
     for( int i = 0; i < ARRAY_LENGTH( validFloat ); ++i ) {
         PARSE_N_PRINT(validFloat);
         CS_FAIL_ON_FALSE( js && js->typeEnum == CS_JSON_FLOAT_AS_STRING, __temp, "%s", wantedButGot(CS_JSON_FLOAT_AS_STRING, js ) );
-        if( js ) CS_freeJson(js);
+        if( js ) CS_jsonFree(js);
     }
 
     for( int i = 0; i < ARRAY_LENGTH( invalidFloat ); ++i ) {
         PARSE_N_PRINT(invalidFloat);
         CS_FAIL_ON_NOT_NULL( js, __temp, "%s", nullButGot( js ) );
-        if( js ) CS_freeJson(js);
+        if( js ) CS_jsonFree(js);
     }
 
     js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE );
@@ -242,14 +242,14 @@ bool test_json() {
     
     CS_FAIL_ON_NOT_NULL( js = CS_jsonNodeAppendFloat(js, NULL, 1.0), "Adding to a root node should fail.", "%s", nullButGot( js ) );
 
-    if( root ) CS_freeJson( root );
+    if( root ) CS_jsonFree( root );
 
     root = js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE );
     js = CS_jsonNodeAppendFloat(js, NULL, 1.0);
     CS_FAIL_ON_FALSE( root == js, "Initial append float.", "First 'node' appended should also be the root node." );
     CS_FAIL_ON_FALSE( js->typeEnum == CS_JSON_FLOAT, "Appended object type check.", "%s", wantedButGot( CS_JSON_FLOAT, js ) );
     CS_FAIL_ON_NOT_NULL( js = CS_jsonNodeAppendInteger(js, NULL, 5), "Adding to a root node should fail.", "%s", nullButGot( js ) );
-    if( root ) CS_freeJson( root );
+    if( root ) CS_jsonFree( root );
 
     root = js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE );
 
@@ -260,12 +260,12 @@ bool test_json() {
     t1[TEMP_BUFF_SIZE-1] = 0;
     js = CS_jsonNodeAppendUnquotedString( js, NULL, t1 );
     CS_FAIL_ON_FALSE( js != NULL && js->typeEnum == CS_JSON_STRING_QUOTED_ALLOCATED, "Adding a very long string should allocate it.", "%s", wantedButGot( CS_JSON_STRING_QUOTED_ALLOCATED, js ) );
-    if( root ) CS_freeJson( root );
+    if( root ) CS_jsonFree( root );
 
     root = js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE_BIG );
     js = CS_jsonNodeAppendUnquotedString( js, NULL, t1 );
     CS_FAIL_ON_FALSE( js != NULL && js->typeEnum == CS_JSON_STRING_QUOTED, "Adding a very long string to a sufficienlty sized allocator should not allocate buffers for the string.", "%s", wantedButGot( CS_JSON_STRING_QUOTED, js ) );
-    if( root ) CS_freeJson( root );
+    if( root ) CS_jsonFree( root );
 
     root = js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE_BIG );
     js = CS_jsonNodeAppendArray( js, NULL );
@@ -281,16 +281,16 @@ bool test_json() {
     js = CS_jsonNodeAppendInteger( js, NULL, 5 );
     CS_FAIL_ON_FALSE( js != NULL && js->typeEnum == CS_JSON_INTEGER, "Type correct 5", "%s", wantedButGot( CS_JSON_INTEGER, js ) );
     static const char *equivalent = "[1,2.0,3,4.0,5]";
-    struct CS_JsonNode *js2 = CS_parseJsonCopy( equivalent, strlen( equivalent ), TEMP_JSON_ALLOC_SIZE_BIG );
+    struct CS_JsonNode *js2 = CS_jsonParseCopy( equivalent, strlen( equivalent ), TEMP_JSON_ALLOC_SIZE_BIG );
     CS_FAIL_ON_FALSE( js2 == CS_jsonNodeToUnquoted( js2, true ), "Conversion from strings to binary/unquoted.", "Should have been equivalent" );
     CS_FAIL_ON_FALSE( CS_jsonNodesEquivalent( root, js2 ), "These two should have ended up equivalent.", "Oops." );
-    if( js2 != NULL ) CS_freeJson( js2 );
+    if( js2 != NULL ) CS_jsonFree( js2 );
     static const char *notEquivalent = "[1,2.0,3,4.0,4]";
-    js2 = CS_parseJsonCopy( notEquivalent, strlen( equivalent ), TEMP_JSON_ALLOC_SIZE_BIG );
+    js2 = CS_jsonParseCopy( notEquivalent, strlen( equivalent ), TEMP_JSON_ALLOC_SIZE_BIG );
     CS_FAIL_ON_FALSE( js2 == CS_jsonNodeToUnquoted( js2, true ), "Conversion from strings to binary/unquoted.", "Should have been equivalent" );
     CS_FAIL_ON_TRUE( CS_jsonNodesEquivalent( root, js2 ), "These two should have ended up different.", "Oops." );
-    if( js2 != NULL ) CS_freeJson( js2 );
-    if( root != NULL ) CS_freeJson( root );
+    if( js2 != NULL ) CS_jsonFree( js2 );
+    if( root != NULL ) CS_jsonFree( root );
 
     for( int i = 0; i < 25; ++i ) {
         root = js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE_BIG );
@@ -301,18 +301,18 @@ bool test_json() {
         struct CS_StringBuilder *out = CS_jsonNodePrintable( root );
         root = CS_jsonNodeToUnquoted( root, true );
         struct CS_StringBuilder *out2 = CS_jsonNodePrintable( root );
-        js2 = CS_parseJsonCopy( out->buffer, CS_SB_length( out ), TEMP_JSON_ALLOC_SIZE_BIG );
+        js2 = CS_jsonParseCopy( out->buffer, CS_SB_length( out ), TEMP_JSON_ALLOC_SIZE_BIG );
         js2 = CS_jsonNodeToUnquoted( js2, true );
         struct CS_StringBuilder *out3 = CS_jsonNodePrintable(js2);
         CS_FAIL_ON_FALSE( CS_jsonNodesEquivalent( root, js2 ), "Should be equivalent", "\n%s\n%s\n%s", out->buffer,out2->buffer,out3->buffer );
         CS_SB_free( out );
         CS_SB_free( out2 );
         CS_SB_free( out3 );
-        CS_freeJson( js2 );
-        CS_freeJson( root );
+        CS_jsonFree( js2 );
+        CS_jsonFree( root );
     }
 
-    js = CS_parseJsonCopy( testsource1, strlen(testsource1), TEMP_JSON_ALLOC_SIZE );
+    js = CS_jsonParseCopy( testsource1, strlen(testsource1), TEMP_JSON_ALLOC_SIZE );
     CS_FAIL_ON_NULL( js, "Parse array [\"foo\",\"bar\",\"baz\"]","Got null?!?!");
     if( js ) {
         js2 = CS_jsonNodeByPath( js, "0" );
@@ -326,10 +326,10 @@ bool test_json() {
         CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_STRING_QUOTED && strcmp(js2->stringValue,"baz") == 0), "Value should be baz.", "That ain't right." );
 
         CS_FAIL_ON_NOT_NULL( js2 = CS_jsonNodeByPath( js, "-1" ), "Expecting null on negative index.", "%s", nullButGot( js ) );
-        CS_freeJson(js);
+        CS_jsonFree(js);
     }
 
-    js = CS_parseJsonCopy( testsource2, strlen(testsource2), TEMP_JSON_ALLOC_SIZE );
+    js = CS_jsonParseCopy( testsource2, strlen(testsource2), TEMP_JSON_ALLOC_SIZE );
     CS_FAIL_ON_NULL( js, "Parse object {\"a\":\"1\",\"b\":2,\"c\":3.3}","Got null?!?!");
     if( js ) {
         js2 = CS_jsonNodeByPath(js, "a");
@@ -339,10 +339,10 @@ bool test_json() {
         js2 = CS_jsonNodeByPath(js,"c");
         CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_FLOAT_AS_STRING), "Expecting the float as string here.", "%s", wantedButGot(CS_JSON_FLOAT_AS_STRING, js2) );
         CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_FLOAT_AS_STRING && strcmp(js2->stringValue,"3.3") == 0), "Expecting to get a string with value '3.3'", "That ain't right." );
-        CS_freeJson(js);
+        CS_jsonFree(js);
     }
 
-    js = CS_parseJsonCopy( testsource3, strlen(testsource3), TEMP_JSON_ALLOC_SIZE );
+    js = CS_jsonParseCopy( testsource3, strlen(testsource3), TEMP_JSON_ALLOC_SIZE );
     CS_FAIL_ON_NULL( js, "Parse object {\"a\":[{\"1\":\"a\",\"b\":2,\"3\":\"c\"},[\"aba\",\"bba\",\"cca\"],\"Funk\"],\"b\":[1,2,3]}", "Got an unexpected null." );
     if( js ) {
         js2 = CS_jsonNodeByPath(js, "a/2");

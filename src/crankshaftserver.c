@@ -411,13 +411,11 @@ ERR_ALLOC:
 }
 
 bool CS_KillWebServer( struct CS_WebServer *server ) {
-    CS_LOG("Webserver shutdown requested.");
     server->killMe = true;
     while( server->threadRunning ) {
         sleep(1);
     }
     const char *slabAllocDesc = CS_descSlabAlloc(server->replyStack);
-    CS_LOG_TRACE("%s", slabAllocDesc);
     CS_free( (void*)slabAllocDesc );
     CS_freeSlabAlloc(server->replyStack);
     CS_free(server);
@@ -454,7 +452,7 @@ static bool BASIC_OK(struct CS_ClientInfo *info, const char *what) {
         CS_PP_printf( tempToWrite, "{\"name\":\"%s\",\"value\":\"%s\"}", 
                 info->requestInfo.headers[i].header, scratch->buffer );
     }
-    CS_PP_printf( tempToWrite, "],\"queryParams\":[" );
+    CS_PP_printf( tempToWrite, "],\"queryParameters\":[" );
     for( int i = 0; i < info->requestInfo.numParameters; ++i ) {
         if( i != 0 ) CS_PP_printf( tempToWrite, "," );
         CS_SB_reset( scratch );
@@ -464,7 +462,7 @@ static bool BASIC_OK(struct CS_ClientInfo *info, const char *what) {
     }
     CS_SB_reset( scratch );
     CS_quoteStringToStringBuilder(info->requestInfo.uri,1024,scratch);
-    CS_PP_printf( tempToWrite, "],\"dataLeftInBuffer\":%d,\"uri\":\"%s\",\"formParams\":[", CS_PP_dataSize( info->buffer ), scratch->buffer );
+    CS_PP_printf( tempToWrite, "],\"dataLeftInBuffer\":%d,\"uri\":\"%s\",\"formParameters\":[", CS_PP_dataSize( info->buffer ), scratch->buffer );
     for( int i = 0; i < info->requestInfo.numFormParameters; ++i ) {
         if( i != 0 ) CS_PP_printf( tempToWrite, "," );
         CS_SB_reset( scratch );
