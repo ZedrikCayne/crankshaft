@@ -63,6 +63,7 @@ bool test_base64(void) {
                 CS_FAIL_ON_FALSE( memcmp( fuzzBuff, t1, inputSize ) == 0, CS_tempBuffSnprintf( 64, "Comparing fuzz buffer #%d", i ), "Not binary identical." );
             }
         }
+        CS_free( fuzzBuff );
     }
 
     return testCount !=

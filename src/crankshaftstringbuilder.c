@@ -69,17 +69,17 @@ ONCE_MORE_UNTO_THE_BREACH:
     currentMax = remain = CS_SB_remain(buffer);
     if( maxAppend > 0 && currentMax > maxAppend ) currentMax = maxAppend;
     bytesNeeded = vsnprintf(buffer->buffer + buffer->currentHead, currentMax, fmt, apCpy );
-    if( (maxAppend > remain )  && (bytesNeeded >= remain) ) {
+    if( (currentMax > remain ) && (bytesNeeded >= remain) ) {
         if( expandIfNeeded(buffer, bytesNeeded) ) return NULL;
         goto ONCE_MORE_UNTO_THE_BREACH;
     }
-    if( maxAppend > 0 && bytesNeeded > maxAppend ) {
+    if( maxAppend > 0 && bytesNeeded > currentMax ) {
         //-1 here because the printf above will have terminated the string one byte earlier
-        bytesNeeded = maxAppend - 1;
+        bytesNeeded = currentMax - 1;
     }
 
     buffer->currentHead += bytesNeeded;
-    buffer->buffer[ buffer->currentHead ] = 0;
+    if( maxAppend > 0 && bytesNeeded > currentMax ) buffer->buffer[ buffer->currentHead ] = 0;
     return buffer;
 }
 

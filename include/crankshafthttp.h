@@ -145,6 +145,7 @@ void CS_httpCloseRequest( struct CS_RequestReply *closeMe );
 
 bool CS_httpInitSSL();
 void CS_httpKillSSL();
+void CS_httpCleanupReplies();
 #ifdef __cplusplus
 }
 #endif

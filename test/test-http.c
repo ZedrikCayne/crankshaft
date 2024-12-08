@@ -101,11 +101,13 @@ bool test_http(void) {
         }
 
         reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, NULL, 0, NULL, 0, NULL, 0, NULL );
-
-        
+        if( reply ) {
+            CS_httpCloseRequest(reply);
+        }
 
         CS_LOG_TRACE("Kill ssl.");
         CS_httpKillSSL();
+        CS_httpCleanupReplies();
         CS_KillWebServer( testServer );
     }
 

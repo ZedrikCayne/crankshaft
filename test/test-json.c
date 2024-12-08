@@ -347,6 +347,7 @@ bool test_json() {
     if( js ) {
         js2 = CS_jsonNodeByPath(js, "a/2");
         CS_FAIL_ON_FALSE( (js2 && js2->typeEnum == CS_JSON_STRING_QUOTED && strcmp(js2->stringValue,"Funk") == 0), "a/3 should be Funk", "Was not funk." );
+        CS_jsonFree(js);
     }
 
     CS_freeManualTempBuff( myTempBuffer );

@@ -1,5 +1,6 @@
 crankshaft
 crankshaft-test
+crankshaft-test-valgrind.txt
 obj/
 lib/
 build/

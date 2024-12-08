@@ -591,11 +591,9 @@ static int privateContinueChunked( struct CS_RequestReply *reply ) {
     //# of bytes in the next chunk are encoded. When we enter this function
     //we assume that if we've already gotten it in the buffer, we've already
     //removed the leading CRLF pair.
-    CS_LOG("IN CHUNK");
     while( reply->chunked && reply->chunkedBytesOffset <= 0 ) {
         char *currentPoint = CS_PP_endOfData(reply->buffer) + reply->chunkedBytesOffset;
         char *initialPoint = currentPoint;
-        CS_LOG("CurrentPoint: %20.20s", currentPoint);
         if( currentPoint < CS_PP_startOfData(reply->buffer) ) {
             CS_LOG_ERROR("Point where we think we need to be before is before our start.");
             return CONTINUE_CHUNK_ERROR;
@@ -755,8 +753,6 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
 
     CS_SB_printf(sb,"%c%c",CR,LF);
 
-    CS_LOG("SEND: %s", sb->buffer);
-
     //Okay, we're ready to actually open the socket and go.
     struct addrinfo *addrInfoIter = addrInfos;
     int connectValue = -1;
@@ -795,6 +791,9 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         }
     } while ( CS_PP_dataSize( pp ) > 0 );
 
+    CS_PP_defaultFree( pp );
+    CS_SB_free( sb );
+
     returnValue->buffer = CS_PP_defaultAlloc( PP_BUFFER_SIZE_FOR_RETURN );
 
     int numBytesRead = wantSSL?CS_PP_readFromSSL( returnValue->buffer, returnValue->ssl ):CS_PP_readFromFile( returnValue->buffer, returnValue->remoteSocket );
@@ -803,8 +802,6 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         CS_LOG_ERROR("Read from remote failed.");
         goto CLEANUP;
     }
-
-    CS_LOG("GOT: %s", returnValue->buffer->buff);
 
     int numBytesParsed = privateParseReply( returnValue );
     if( numBytesParsed < 0 ) goto CLEANUP;
@@ -879,4 +876,11 @@ bool CS_httpInitSSL() {
 
 void CS_httpKillSSL() {
     KillSSL();
+}
+
+void CS_httpCleanupReplies() {
+    pthread_mutex_lock( &slabAllocMutex );
+    if( requestSlabAlloc ) CS_freeSlabAlloc( requestSlabAlloc );
+    requestSlabAlloc = NULL;
+    pthread_mutex_unlock( &slabAllocMutex );
 }
