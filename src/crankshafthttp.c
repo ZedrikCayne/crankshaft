@@ -674,6 +674,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
     bool wantSSL;
     const char *method = CS_httpMethodEnumToString( methodEnum );
     struct CS_StringBuilder *formString = NULL;
+    struct CS_PushPullBuffer *pp = NULL;
 
     if( headerHas( headers, numHeaders, "Content-Length" ) ) {
         CS_LOG_ERROR("User has also set a Content-Length.");
@@ -755,7 +756,6 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
 
     //Okay, we're ready to actually open the socket and go.
     struct addrinfo *addrInfoIter = addrInfos;
-    struct CS_PushPullBuffer *pp = NULL;
     int connectValue = -1;
     do {
         returnValue->remoteSocket = socket(AF_INET, SOCK_STREAM, 0);
