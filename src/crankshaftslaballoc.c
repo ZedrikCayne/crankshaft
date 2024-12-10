@@ -69,7 +69,7 @@ static struct CrankshaftSlabAlloc *initSlabAlloc( int size, int count, int align
     return returnValue;
 }
 
-void *CS_initSlabAlloc( const char *name, int size, int count, int alignment ) {
+void *CS_slabInit( const char *name, int size, int count, int alignment ) {
     if( alignment % CRANKSHAFT_MIN_ALIGNMENT ) {
         CS_LOG_ERROR("Alignment on a slab alloc must be a multiple of CRANKSHAFT_MIN_ALIGNMENT:%d", CRANKSHAFT_MIN_ALIGNMENT);
         return NULL;
@@ -96,13 +96,13 @@ void *CS_initSlabAlloc( const char *name, int size, int count, int alignment ) {
     return returnValue;
 }
 
-bool CS_freeSlabAlloc( void *allocation ) {
+bool CS_slabFree( void *allocation ) {
     struct CrankshaftSlabAlloc *toFree = (struct CrankshaftSlabAlloc *)allocation;
     pthread_mutex_destroy( &toFree->slabMutex );
     return freeSlab( toFree );
 }
 
-void *CS_takeOne(void *voidSlab ) {
+void *CS_slabTake(void *voidSlab ) {
     struct CrankshaftSlabAlloc *slab = (struct CrankshaftSlabAlloc *)voidSlab;
     struct CrankshaftSlabAlloc *currentSlab = slab;
     pthread_mutex_lock(&slab->slabMutex);
@@ -128,7 +128,7 @@ RELEASE_LOCK:
     return returnValue;
 }
 
-bool CS_returnOne(void *voidSlab, void *toReturn) {
+bool CS_slabReturn(void *voidSlab, void *toReturn) {
     if( toReturn == NULL ) {
         CS_LOG_ERROR("Trying to free up a NULL");
         return true;
@@ -157,7 +157,7 @@ bool CS_returnOne(void *voidSlab, void *toReturn) {
     return false;
 }
 
-const char *CS_descSlabAlloc( void *allocation ) {
+const char *CS_slabDesc( void *allocation ) {
     struct CrankshaftSlabAlloc *slab = (struct CrankshaftSlabAlloc *)allocation;
     struct CS_StringBuilder *sb = CS_SB_create( 2048 );
     if( sb == NULL ) return NULL;

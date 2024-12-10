@@ -348,7 +348,7 @@ struct CS_WebServer *CS_StartWebServer(int portNum,
         ++routeCount[ neededRoute ];
     }
 
-    returnValue->replyStack = CS_initSlabAlloc( ReplyStackName, sizeof( struct CS_Reply ), 256, 4 );
+    returnValue->replyStack = CS_slabInit( ReplyStackName, sizeof( struct CS_Reply ), 256, 4 );
 
 
     returnValue->listenSocket = socket(AF_INET, SOCK_STREAM,0);
@@ -420,9 +420,9 @@ bool CS_KillWebServer( struct CS_WebServer *server ) {
     while( server->threadRunning ) {
         sleep(1);
     }
-    const char *slabAllocDesc = CS_descSlabAlloc(server->replyStack);
+    const char *slabAllocDesc = CS_slabDesc(server->replyStack);
     CS_free( (void*)slabAllocDesc );
-    CS_freeSlabAlloc(server->replyStack);
+    CS_slabFree(server->replyStack);
     CS_free(server);
     return false;
 }
@@ -992,7 +992,7 @@ static bool PrivateSetReplyHeaderInt( struct CS_Reply *reply, bool overwrite, co
 }
 
 struct CS_Reply *CS_Reply(struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *outputBuffer, int outputLength ) {
-        struct CS_Reply *returnValue = CS_takeOne(info->server->replyStack);
+        struct CS_Reply *returnValue = CS_slabTake(info->server->replyStack);
     returnValue->returnStatusEnum = responseEnum;
     returnValue->contentTypeEnum = mimeEnum;
     returnValue->numHeaders = 0;
@@ -1002,7 +1002,7 @@ struct CS_Reply *CS_Reply(struct CS_ClientInfo *info, int responseEnum, int mime
 }
 
 void CS_ReturnReply(struct CS_ClientInfo *info, struct CS_Reply *reply) {
-    CS_returnOne(info->server->replyStack, reply);
+    CS_slabReturn(info->server->replyStack, reply);
 }
 
 bool CS_SetReplyHeader( struct CS_Reply *reply, const char *header, const char *value ) {

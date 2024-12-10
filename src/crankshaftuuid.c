@@ -100,7 +100,7 @@ void setSixteenBytesUuid4( struct CS_UUID *uuid ) {
 }
 
 void CS_uuidInit() {
-    voidSlabAllocator = CS_initSlabAlloc( "UUID", sizeof(struct CS_UUID), 200, 4 ); 
+    voidSlabAllocator = CS_slabInit( "UUID", sizeof(struct CS_UUID), 200, 4 ); 
     if( uuidRand.seed == 0 ) CS_uuidSetSeed(0);
 }
 
@@ -111,12 +111,12 @@ void CS_uuidSetSeed( int seed ) {
 }
 
 void CS_uuidKill() {
-    if( voidSlabAllocator ) CS_freeSlabAlloc( voidSlabAllocator );
+    if( voidSlabAllocator ) CS_slabFree( voidSlabAllocator );
     voidSlabAllocator = NULL;
 }
 
 const struct CS_UUID *CS_uuid4() {
-    struct CS_UUID *returnUuid = CS_takeOne( voidSlabAllocator );
+    struct CS_UUID *returnUuid = CS_slabTake( voidSlabAllocator );
     if( returnUuid ) {
         setSixteenBytesUuid4( returnUuid );
     }
@@ -124,7 +124,7 @@ const struct CS_UUID *CS_uuid4() {
 }
 
 void CS_uuidFree(const struct CS_UUID *uuid) {
-    CS_returnOne( voidSlabAllocator, (void*)uuid );
+    CS_slabReturn( voidSlabAllocator, (void*)uuid );
 }
 
 const struct CS_UUID *CS_uuid4Temp() {
@@ -179,10 +179,10 @@ const char *CS_uuidToStringTemp(const struct CS_UUID *uuid) {
 
 const struct CS_UUID *CS_uuidFromString(char *in, int length) {
     if( length < UUID_CHAR_SIZE_BYTES ) return NULL;
-    struct CS_UUID *returnValue = CS_takeOne(voidSlabAllocator);
+    struct CS_UUID *returnValue = CS_slabTake(voidSlabAllocator);
     if( returnValue ) {
         if( textToSixteenBytes( in, returnValue ) ) {
-            CS_returnOne(voidSlabAllocator, returnValue);
+            CS_slabReturn(voidSlabAllocator, returnValue);
             return NULL;
         }
     }

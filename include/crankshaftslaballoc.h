@@ -27,13 +27,13 @@ extern "C" {
 #define CRANKSHAFT_SLAB_NAME_MAX 20
 #define CRANKSHAFT_MIN_ALIGNMENT 4
 
-void *CS_takeOne(void *slab);
-bool CS_returnOne(void *slab, void *toReturn);
+void *CS_slabTake(void *slab);
+bool CS_slabReturn(void *slab, void *toReturn);
 
-void *CS_initSlabAlloc( const char *name, int size, int count, int alignment );
-bool CS_freeSlabAlloc( void *allocation );
+void *CS_slabInit( const char *name, int size, int count, int alignment );
+bool CS_slabFree( void *allocation );
 
-const char *CS_descSlabAlloc( void *allocation );
+const char *CS_slabDesc( void *allocation );
 
 #ifdef __cplusplus
 }

@@ -25,18 +25,18 @@ static pthread_mutex_t slabAllocMutex = PTHREAD_MUTEX_INITIALIZER;
 static struct CS_RequestReply *privateGetReply() {
     if( requestSlabAlloc == NULL ) {
         pthread_mutex_lock( &slabAllocMutex );
-        if( requestSlabAlloc == NULL ) requestSlabAlloc = CS_initSlabAlloc( "Request Reply Slab", sizeof(struct CS_RequestReply), 100, 4 );
+        if( requestSlabAlloc == NULL ) requestSlabAlloc = CS_slabInit( "Request Reply Slab", sizeof(struct CS_RequestReply), 100, 4 );
         pthread_mutex_unlock( &slabAllocMutex );
         if( requestSlabAlloc == NULL ) return NULL;
     }
-    struct CS_RequestReply *returnValue =  CS_takeOne(requestSlabAlloc);
+    struct CS_RequestReply *returnValue =  CS_slabTake(requestSlabAlloc);
     memset(returnValue,0,sizeof(struct CS_RequestReply));
     return returnValue;
 }
 
 static void privateReturnReply( struct CS_RequestReply *toReturn ) {
     if( requestSlabAlloc == NULL ) return;
-    CS_returnOne(requestSlabAlloc, toReturn);
+    CS_slabReturn(requestSlabAlloc, toReturn);
 }
 
 static bool InitSSL() {
@@ -880,7 +880,7 @@ void CS_httpKillSSL() {
 
 void CS_httpCleanupReplies() {
     pthread_mutex_lock( &slabAllocMutex );
-    if( requestSlabAlloc ) CS_freeSlabAlloc( requestSlabAlloc );
+    if( requestSlabAlloc ) CS_slabFree( requestSlabAlloc );
     requestSlabAlloc = NULL;
     pthread_mutex_unlock( &slabAllocMutex );
 }
