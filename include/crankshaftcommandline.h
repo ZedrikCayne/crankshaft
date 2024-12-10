@@ -4,30 +4,30 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-enum ARG_WHAT {
-    INT_ARG,
-    STRING_ARG,
-    BOOL_ARG
+enum CS_ARG_WHAT {
+    CS_INT_ARG,
+    CS_STRING_ARG,
+    CS_BOOL_ARG
 };
 
-struct ArgElement {
+struct CS_ArgElement {
     int nCmp;
-    enum ARG_WHAT what;
+    enum CS_ARG_WHAT what;
     void *out;
     const char **cmp;
     const char *desc;
 };
 
-struct ArgTable {
+struct CS_ArgTable {
     int nArgs;
     int outNRemainders;
     char **remainders;
-    const struct ArgElement *elements;
+    const struct CS_ArgElement *elements;
 };
 
-void CS_printArgs(struct ArgTable *argTable);
+void CS_argsPrint(struct CS_ArgTable *argTable);
 
-const char *CS_parseArgs(int argc, char **argv, struct ArgTable *argTable);
+const char *CS_argsParse(int argc, char **argv, struct CS_ArgTable *argTable);
 
 #define CS_ARG_DEF(varName,cmpString,helpString) static const char *CMP_##varName[] = cmpString; static const char HELP_##varName[] = helpString;
 #define CS_ARG_ELEMENT(varName,varType) { sizeof(CMP_##varName)/sizeof(CMP_##varName[0]), varType, &varName, CMP_##varName, HELP_##varName }

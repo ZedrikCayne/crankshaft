@@ -175,9 +175,9 @@ char *firstTest = "{\"a\":[]}";
 bool test_json() {
     char *__temp = NULL;
     //Tests go here:
-    void *myTempBuffer = CS_allocManualTempBuff( "TEST BUFF", TEMP_BUFF_SIZE, TEMP_BUFF_COUNT, TEMP_BUFF_ALIGNMENT );
+    void *myTempBuffer = CS_tempAllocManual( "TEST BUFF", TEMP_BUFF_SIZE, TEMP_BUFF_COUNT, TEMP_BUFF_ALIGNMENT );
 
-    char *t0 = CS_getTempBuff( myTempBuffer );
+    char *t0 = CS_tempGetManualTemp( myTempBuffer );
     strncpy( t0, firstTest, TEMP_BUFF_SIZE );
     SET__TEMP(firstTest);
     struct CS_JsonNode * js = CS_jsonParseCopy( t0, strlen( t0 ), TEMP_JSON_ALLOC_SIZE);
@@ -186,7 +186,7 @@ bool test_json() {
         CS_jsonFree(js);
     }
 
-    char *t1 = CS_getTempBuff( myTempBuffer );
+    char *t1 = CS_tempGetManualTemp( myTempBuffer );
 
     strncpy(t1, testsource1, TEMP_BUFF_SIZE);
 
@@ -195,7 +195,7 @@ bool test_json() {
     CS_FAIL_ON_FALSE( js && js->typeEnum == CS_JSON_ARRAY, "Parse an array", "%s", wantedButGot( CS_JSON_ARRAY, js ) );
     if( js ) CS_jsonFree(js);
 
-    char *t2 = CS_getTempBuff( myTempBuffer );
+    char *t2 = CS_tempGetManualTemp( myTempBuffer );
 
     strncpy(t2, testsource2, TEMP_BUFF_SIZE);
 
@@ -253,7 +253,7 @@ bool test_json() {
 
     root = js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE );
 
-    t1 = CS_getTempBuff( myTempBuffer );
+    t1 = CS_tempGetManualTemp( myTempBuffer );
     for( int i = 0; i < TEMP_BUFF_SIZE; ++i ) {
         t1[ i ] = (i % 126) + 1;
     }
@@ -350,7 +350,7 @@ bool test_json() {
         CS_jsonFree(js);
     }
 
-    CS_freeManualTempBuff( myTempBuffer );
+    CS_tempFreeManual( myTempBuffer );
 
     return testCount !=
            testSucceeded;

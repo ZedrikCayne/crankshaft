@@ -21,9 +21,9 @@ bool CS_testMain(void) {
         CS_TEST_seed = CS_rand();
     }
     CS_LOG_LOUD("Test random seed is %d, call CS_testSetRandomSeed() to set it explicitly or use --seed if you are using the included main.cpp for repeatable tests in the future.", CS_TEST_seed);
-    CS_allocateTempBuffs();
+    CS_tempAllocateGlobal();
     bool returnValue = TEST_AUTO();
-    CS_freeAllTempBuffs();
+    CS_tempFreeGlobal();
     return returnValue;
 }
 

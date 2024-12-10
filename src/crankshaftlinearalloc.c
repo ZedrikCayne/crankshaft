@@ -39,7 +39,7 @@ inline static void *privateTake(struct LinearAllocator *linearAllocator, int siz
     return aligned;
 }
 
-void *CS_takeLinear(void *voidAllocator, int size, int alignment ) {
+void *CS_linearTake(void *voidAllocator, int size, int alignment ) {
     struct LinearAllocator *linearAllocator = (struct LinearAllocator *)voidAllocator;
     if( size > linearAllocator->size ) {
         CS_LOG_ERROR("Cannot take %d out of an allocator sized of %d", size, linearAllocator->size);
@@ -59,7 +59,7 @@ void *CS_takeLinear(void *voidAllocator, int size, int alignment ) {
     return returnValue;
 }
 
-void CS_resetLinear(void *voidAllocator) {
+void CS_linearReset(void *voidAllocator) {
     struct LinearAllocator *linearAllocator = (struct LinearAllocator *)voidAllocator;
     while(linearAllocator) {
         linearAllocator->current = 0;
@@ -67,11 +67,11 @@ void CS_resetLinear(void *voidAllocator) {
     }
 }
 
-void *CS_allocLinearAllocator( int size ) {
+void *CS_linearInit( int size ) {
     return privateAlloc(size);
 }
 
-void CS_freeLinearAllocator( void *voidAllocator ) {
+void CS_linearFree( void *voidAllocator ) {
     struct LinearAllocator *linearAllocator = (struct LinearAllocator *)voidAllocator;
     while(linearAllocator) {
         void *freeMe = (void*)linearAllocator;

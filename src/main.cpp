@@ -59,33 +59,33 @@ CS_ARG_DEF(keyFile,CS_ARG_CMP("-k","--key"), "pemfile for ssl private key.");
 CS_ARG_DEF(certFile,CS_ARG_CMP("-c","--certificate"), "pemfile for certificate");
 CS_ARG_DEF(selfSignHostname,CS_ARG_CMP("--self-sign"), "create a self signed certificate for provided host");
 
-const struct ArgElement myArgs[] = 
-    { CS_ARG_ELEMENT(wantHelp,BOOL_ARG),
-      CS_ARG_ELEMENT(doTest,BOOL_ARG),
-      CS_ARG_ELEMENT(testSeed,INT_ARG),
-      CS_ARG_ELEMENT(onlyFails,BOOL_ARG),
-      CS_ARG_ELEMENT(noWarn,BOOL_ARG),
-      CS_ARG_ELEMENT(quiet,BOOL_ARG),
-      CS_ARG_ELEMENT(info,BOOL_ARG),
-      CS_ARG_ELEMENT(verbose,BOOL_ARG),
-      CS_ARG_ELEMENT(trace,BOOL_ARG),
-      CS_ARG_ELEMENT(suppressErrors,BOOL_ARG),
-      CS_ARG_ELEMENT(portNum,INT_ARG),
-      CS_ARG_ELEMENT(serverName,STRING_ARG),
-      CS_ARG_ELEMENT(runAsDaemon,BOOL_ARG),
-      CS_ARG_ELEMENT(logFile,STRING_ARG),
-      CS_ARG_ELEMENT(fileServingFile,STRING_ARG),
-      CS_ARG_ELEMENT(fileServingDir,STRING_ARG),
-      CS_ARG_ELEMENT(cacheTimeInSeconds,INT_ARG),
-      CS_ARG_ELEMENT(keyFile,STRING_ARG),
-      CS_ARG_ELEMENT(certFile,STRING_ARG),
-      CS_ARG_ELEMENT(selfSignHostname,STRING_ARG)
+const struct CS_ArgElement myArgs[] = 
+    { CS_ARG_ELEMENT(wantHelp,CS_BOOL_ARG),
+      CS_ARG_ELEMENT(doTest,CS_BOOL_ARG),
+      CS_ARG_ELEMENT(testSeed,CS_INT_ARG),
+      CS_ARG_ELEMENT(onlyFails,CS_BOOL_ARG),
+      CS_ARG_ELEMENT(noWarn,CS_BOOL_ARG),
+      CS_ARG_ELEMENT(quiet,CS_BOOL_ARG),
+      CS_ARG_ELEMENT(info,CS_BOOL_ARG),
+      CS_ARG_ELEMENT(verbose,CS_BOOL_ARG),
+      CS_ARG_ELEMENT(trace,CS_BOOL_ARG),
+      CS_ARG_ELEMENT(suppressErrors,CS_BOOL_ARG),
+      CS_ARG_ELEMENT(portNum,CS_INT_ARG),
+      CS_ARG_ELEMENT(serverName,CS_STRING_ARG),
+      CS_ARG_ELEMENT(runAsDaemon,CS_BOOL_ARG),
+      CS_ARG_ELEMENT(logFile,CS_STRING_ARG),
+      CS_ARG_ELEMENT(fileServingFile,CS_STRING_ARG),
+      CS_ARG_ELEMENT(fileServingDir,CS_STRING_ARG),
+      CS_ARG_ELEMENT(cacheTimeInSeconds,CS_INT_ARG),
+      CS_ARG_ELEMENT(keyFile,CS_STRING_ARG),
+      CS_ARG_ELEMENT(certFile,CS_STRING_ARG),
+      CS_ARG_ELEMENT(selfSignHostname,CS_STRING_ARG)
     };
 
-struct ArgTable myArgTable = { sizeof(myArgs)/sizeof(ArgElement), 0, NULL, myArgs };
+struct CS_ArgTable myCS_ArgTable = { sizeof(myArgs)/sizeof(CS_ArgElement), 0, NULL, myArgs };
 
 void PrintHelp() {
-    CS_printArgs(&myArgTable);
+    CS_argsPrint(&myCS_ArgTable);
 }
 
 void PrintHeader() {
@@ -134,25 +134,25 @@ bool fudge( struct CS_ClientInfo *info ) {
     if( info->disconnectCallback == NULL ) {
         info->disconnectCallback = dcCallback;
     }
-    return CS_Diagnostic200(info);
+    return CS_serverDiagnostic200(info);
 }
 
 bool doQuit( struct CS_ClientInfo *info ) {
     GotInterrupt = true;
-    return CS_Diagnostic200(info);
+    return CS_serverDiagnostic200(info);
 }
 
 struct CS_Route serverRoutes[] = {
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", CS_Diagnostic200 },
-    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", CS_Diagnostic200 },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", CS_serverDiagnostic200 },
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/api", fudge },
     { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, 0, "/api", fudge },
-    { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer },
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_WILDCARD, 0, "", CS_FileServer },
+    { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, 0, "", CS_serverFileServer },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_WILDCARD, 0, "", CS_serverFileServer },
 };
 
 int main(int argc, char *argv[] ) {
-    const char * error = CS_parseArgs(argc, argv, &myArgTable);
+    const char * error = CS_argsParse(argc, argv, &myCS_ArgTable);
     if( error != NULL || wantHelp ) {
         PrintHeader();
         if( error != NULL ) CS_LOG_ERROR("%s", error);
@@ -198,23 +198,23 @@ int main(int argc, char *argv[] ) {
     signal(SIGHUP, hupHandler);
     signal(SIGTERM, terminateHandler);
 
-    CS_allocateTempBuffs();
+    CS_tempAllocateGlobal();
 
     CS_LOG_INFO("Starting web server.");
 
-    struct CS_WebServer *server = CS_StartWebServer( portNum, certFile, keyFile, selfSignHostname, fileServingDir, fileServingFile, cacheTimeInSeconds, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
+    struct CS_WebServer *server = CS_serverStart( portNum, certFile, keyFile, selfSignHostname, fileServingDir, fileServingFile, cacheTimeInSeconds, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
     if( server != NULL ) {
         CS_LOG_INFO("Server started at port %d", server->serverPort);
         while(!GotInterrupt) {
             if( GotHup ) hupOnMainThread();
             sleep(1);
         }
-        CS_KillWebServer(server);
+        CS_serverKill(server);
     } else {
         CS_LOG_ERROR("Server failed to start...");
     }
 
     if( logFile != NULL ) CS_logKill();
-    CS_freeAllTempBuffs();
+    CS_tempFreeGlobal();
     return 0;
 }

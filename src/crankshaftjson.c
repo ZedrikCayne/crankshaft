@@ -143,11 +143,11 @@ static struct CS_StringBuilder *privateQuoteString(const char *inputString, int 
     return returnValue;
 }
 
-struct CS_StringBuilder *CS_quoteStringToStringBuilder(const char *inputString, int len, struct CS_StringBuilder *out) {
+struct CS_StringBuilder *CS_jsonQuoteStringToStringBuilder(const char *inputString, int len, struct CS_StringBuilder *out) {
     return privateQuoteString(inputString,len,out);
 }
 
-struct CS_StringBuilder *CS_quoteString(const char *inputString, int len) {
+struct CS_StringBuilder *CS_jsonQuoteString(const char *inputString, int len) {
     struct CS_StringBuilder *returnValue = CS_SB_create( len * 2 );
     if( returnValue == NULL ) {
         return NULL;
@@ -159,7 +159,7 @@ struct CS_StringBuilder *CS_quoteString(const char *inputString, int len) {
     return returnValue;
 }
 
-#define jsonNode(VA) ((struct CS_JsonNode *)CS_takeLinear(VA,sizeof(struct CS_JsonNode),JSON_NODE_ALIGNMENT))
+#define jsonNode(VA) ((struct CS_JsonNode *)CS_linearTake(VA,sizeof(struct CS_JsonNode),JSON_NODE_ALIGNMENT))
 static struct CS_JsonNode *privateNewNode( struct CS_JsonNode *aNode ) {
     struct CS_JsonNode *returnValue = jsonNode( aNode->voidLinearAllocator );
     returnValue->name = NULL;
@@ -214,7 +214,7 @@ static struct CS_JsonNode *privateClose( struct CS_JsonNode *aNode ) {
 }
 
 static struct CS_JsonNode *privateInitJson( int stackSize ) {
-    void *linearAlloc = CS_allocLinearAllocator( stackSize );
+    void *linearAlloc = CS_linearInit( stackSize );
     if( linearAlloc == NULL ) return NULL;
     struct CS_JsonNode *root = jsonNode(linearAlloc);
     root->name = NULL;
@@ -258,7 +258,7 @@ void CS_jsonFree( struct CS_JsonNode *any ) {
     }
     void *linearAlloc = current->voidLinearAllocator;
     current->voidLinearAllocator = NULL;
-    if( linearAlloc != NULL ) CS_freeLinearAllocator( linearAlloc );
+    if( linearAlloc != NULL ) CS_linearFree( linearAlloc );
 }
 
 enum JSON_TOKEN_TYPES {
@@ -687,7 +687,7 @@ static const char *copyOrMangleInPlace( struct JsonToken *token, struct CS_JsonN
     int len = (end - start);
     char *stringValue = NULL;
     if( copy ) {
-        stringValue = CS_takeLinear(node->voidLinearAllocator, len + 1, 1);
+        stringValue = CS_linearTake(node->voidLinearAllocator, len + 1, 1);
         if( stringValue == NULL ) return NULL;
         memcpy( stringValue, start, len );
         if( fillStringValue ) node->stringValue = stringValue;
@@ -976,7 +976,7 @@ bool CS_unquoteInPlace(char *inputString, int len) {
     return unquotePrivate(inputString, inputString, len) >= 0;
 }
 
-struct CS_StringBuilder *CS_unquoteString(const char *inputString, int len) {
+struct CS_StringBuilder *CS_jsonUnquoteString(const char *inputString, int len) {
     //No matter what, the output string will be either <= the length of the input string
     struct CS_StringBuilder *returnValue = CS_SB_create(len + 2);
     int newLength = unquotePrivate( returnValue->buffer, (char*)inputString, len );
@@ -1212,7 +1212,7 @@ struct CS_StringBuilder *CS_jsonNodePrintable(const struct CS_JsonNode *printMe)
 }
 
 static char *privateAllocStringWithLength( struct CS_JsonNode *from, const char *nullTermString, int len ) {
-    char *buff = CS_takeLinear( from->voidLinearAllocator, len + 1, 1 );
+    char *buff = CS_linearTake( from->voidLinearAllocator, len + 1, 1 );
     if( buff ) {
         strncpy( buff, nullTermString, len + 1 );
     }
@@ -1341,7 +1341,7 @@ static struct CS_JsonNode *stuffQuotedSBOntoJsonNodeAndFreeSB( struct CS_JsonNod
 }
 
 struct CS_JsonNode *CS_jsonNodeAppendUnquotedString( struct CS_JsonNode *appendTo, const char *name, const char *value ) {
-    struct CS_StringBuilder *quoted = CS_quoteString( value, strlen(value) );
+    struct CS_StringBuilder *quoted = CS_jsonQuoteString( value, strlen(value) );
     if( quoted == NULL ) return NULL;
     struct CS_JsonNode *returnValue = privateAppend( appendTo, name );
     if( returnValue == NULL ) {
@@ -1436,7 +1436,7 @@ struct CS_JsonNode *CS_jsonNodeAppendArray( struct CS_JsonNode *appendTo, const 
     return returnValue;
 }
 struct CS_JsonNode *CS_jsonNodeAddUnquotedString( struct CS_JsonNode *addTo, const char *name, const char *value ) {
-    struct CS_StringBuilder *quoted = CS_quoteString( value, strlen(value) );
+    struct CS_StringBuilder *quoted = CS_jsonQuoteString( value, strlen(value) );
     if( quoted == NULL ) return NULL;
     struct CS_JsonNode *returnValue = privateAdd( addTo, name );
     if( returnValue == NULL ) {

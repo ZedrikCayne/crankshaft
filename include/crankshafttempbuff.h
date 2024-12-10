@@ -51,15 +51,15 @@ extern "C" {
 
 void *CS_tempBuff(int size);
 char *CS_tempStringCopy(const char *copyMe);
-bool CS_allocateTempBuffs(void);
-bool CS_freeAllTempBuffs(void);
+bool CS_tempAllocateGlobal(void);
+bool CS_tempFreeGlobal(void);
 char *CS_tempBuffSnprintf(int max, char *fmt, ...);
 
 #define CS_MAX_TEMP_BUFF_TEMP_NAME 64
 
-void *CS_allocManualTempBuff(const char *name, int elementSize, int numberOfElements, int alignment);
-void *CS_getTempBuff(void *manualTempBuff);
-void CS_freeManualTempBuff(void *manualTempBuff);
+void *CS_tempAllocManual(const char *name, int elementSize, int numberOfElements, int alignment);
+void *CS_tempGetManualTemp(void *manualTempBuff);
+void CS_tempFreeManual(void *manualTempBuff);
 
 #ifdef __cplusplus
 }

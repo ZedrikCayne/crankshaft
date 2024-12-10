@@ -19,11 +19,11 @@
 extern "C" {
 #endif
 
-void *CS_takeLinear(void *voidAllocator, int size, int alignment );
-void CS_resetLinear(void *voidAllocator);
+void *CS_linearTake(void *voidAllocator, int size, int alignment );
+void CS_linearReset(void *voidAllocator);
 
-void *CS_allocLinearAllocator( int size );
-void CS_freeLinearAllocator( void *voidAllocator );
+void *CS_linearInit( int size );
+void CS_linearFree( void *voidAllocator );
 
 #ifdef __cplusplus
 }

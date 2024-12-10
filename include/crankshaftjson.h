@@ -155,9 +155,9 @@ struct CS_StringBuilder *CS_jsonNodePrintable(const struct CS_JsonNode *printMe)
 
 bool CS_unquoteInPlace(char *inputString, int len);
 
-struct CS_StringBuilder *CS_quoteStringToStringBuilder(const char *inputString, int len, struct CS_StringBuilder *out);
-struct CS_StringBuilder *CS_quoteString(const char *inputString, int len);
-struct CS_StringBuilder *CS_unquoteString(const char *inputString, int len);
+struct CS_StringBuilder *CS_jsonQuoteStringToStringBuilder(const char *inputString, int len, struct CS_StringBuilder *out);
+struct CS_StringBuilder *CS_jsonQuoteString(const char *inputString, int len);
+struct CS_StringBuilder *CS_jsonUnquoteString(const char *inputString, int len);
 
 const char *CS_jsonEnumTypeAsString(const int enumType);
 

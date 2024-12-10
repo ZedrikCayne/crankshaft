@@ -97,31 +97,31 @@ struct CS_Reply {
     int outputLength;
 };
 
-struct CS_WebServer *CS_StartWebServer(int portNum,
-                                           const char *certfile,
-                                           const char *keyFile,
-                                           const char *selfSignHostname,
-                                           const char *fileServingPath,
-                                           const char *fileServingFile,
-                                           int fileCacheControlTimeInSeconds,
-                                           struct CS_Route *routes,
-                                           int nRoutes);
-bool CS_KillWebServer(struct CS_WebServer *server);
+struct CS_WebServer *CS_serverStart(int portNum,
+                                    const char *certfile,
+                                    const char *keyFile,
+                                    const char *selfSignHostname,
+                                    const char *fileServingPath,
+                                    const char *fileServingFile,
+                                    int fileCacheControlTimeInSeconds,
+                                    struct CS_Route *routes,
+                                    int nRoutes);
+bool CS_serverKill(struct CS_WebServer *server);
 
-bool CS_Diagnostic200( struct CS_ClientInfo *info );
-bool CS_FileServer( struct CS_ClientInfo *info );
+bool CS_serverDiagnostic200( struct CS_ClientInfo *info );
+bool CS_serverFileServer( struct CS_ClientInfo *info );
 
-const char *CS_GetFormParameter( struct CS_ClientInfo *info, const char *name );
-const char *CS_GetRequestHeader( struct CS_ClientInfo *info, const char *header );
-const char *CS_GetQueryParameter( struct CS_ClientInfo *info, const char *name );
-bool CS_SetReplyHeader( struct CS_Reply *reply, const char *header, const char *value );
-bool CS_SetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value );
-bool CS_SetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value );
-bool CS_SetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value );
+const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const char *name );
+const char *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const char *header );
+const char *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const char *name );
+bool CS_serverSetReplyHeader( struct CS_Reply *reply, const char *header, const char *value );
+bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value );
+bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value );
+bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value );
 
-struct CS_Reply *CS_Reply( struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *replyBuffer, int replyLength );
-void CS_ReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
-bool CS_DoReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
+struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *replyBuffer, int replyLength );
+void CS_serverReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
+bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
 
 #ifdef __cplusplus
 }

@@ -64,7 +64,7 @@ void *CS_tempBuff(int size) {
     struct TempBuffStorage *current = _TempBuffStorage.bufferStorage;
     for( int i = 0; i < _TempBuffStorage.size; ++i ) {
         if( size < current->size ) {
-            returnValue = CS_getTempBuff(current);
+            returnValue = CS_tempGetManualTemp(current);
             break;
         }
         ++current;
@@ -82,7 +82,7 @@ char *CS_tempStringCopy(const char *copyFrom) {
     return returnValue;
 }
 
-bool CS_allocateTempBuffs() {
+bool CS_tempAllocateGlobal() {
     if( _TempBuffStorage.size == 0 ) {
         int sizeThing = CS_MIN_TEMP_BUFF_SIZE;
         int numberOfBuffers = 0;
@@ -118,13 +118,13 @@ bool CS_allocateTempBuffs() {
     }
     return false;
 ALLOCATE_ERROR_WITH_FREE:
-    CS_freeAllTempBuffs();
+    CS_tempFreeGlobal();
 ALLOCATE_ERROR:
     _TempBuffStorage.size = 0;
     return true;
 }
 
-bool CS_freeAllTempBuffs() {
+bool CS_tempFreeGlobal() {
     if( _TempBuffStorage.size != 0 ) {
         struct TempBuffStorage *current = _TempBuffStorage.bufferStorage;
         for( int i = 0; i < _TempBuffStorage.size; ++i ) {
@@ -149,7 +149,7 @@ char *CS_tempBuffSnprintf(int max, char *fmt, ...) {
     return tBuff;
 }
 
-void *CS_allocManualTempBuff(const char *name,
+void *CS_tempAllocManual(const char *name,
                              int elementSize,
                              int numberOfElements,
                              int alignment) {
@@ -174,14 +174,14 @@ void *CS_allocManualTempBuff(const char *name,
     return returnValue;
 }
 
-void CS_freeManualTempBuff(void *manualTempBuff) {
+void CS_tempFreeManual(void *manualTempBuff) {
     struct TempBuffStorage *tbuff = (struct TempBuffStorage *)manualTempBuff;
     CS_LOG_TRACE("Freeing a manual temp buffer %s at %p", tbuff->name, tbuff );
     freeTempBuff(tbuff);
     CS_free(manualTempBuff);
 }
 
-void *CS_getTempBuff(void *manualTempBuff) {
+void *CS_tempGetManualTemp(void *manualTempBuff) {
     if( manualTempBuff == NULL ) return NULL;
     struct TempBuffStorage *storage = (struct TempBuffStorage *)manualTempBuff;
     if( storage->capacity == 0 ) return NULL;

@@ -7,7 +7,7 @@
 #include "crankshaftstack.h"
 #include "crankshaftutil.h"
 
-struct CS_Stack *CS_Stack_alloc( int sizePerItem, int itemsPerSlab, int itemAlignment ) {
+struct CS_Stack *CS_stackAlloc( int sizePerItem, int itemsPerSlab, int itemAlignment ) {
     struct CS_Stack *returnValue = CS_alloc(sizeof(struct CS_Stack));
     if( !returnValue ) {
         return NULL;
@@ -26,11 +26,11 @@ struct CS_Stack *CS_Stack_alloc( int sizePerItem, int itemsPerSlab, int itemAlig
     return returnValue;
 }
 
-struct CS_Stack *CS_Stack_allocPointer( int itemsPerSlab ) {
-    return CS_Stack_alloc( sizeof( void * ), itemsPerSlab, sizeof( void * ) );
+struct CS_Stack *CS_stackAllocPointer( int itemsPerSlab ) {
+    return CS_stackAlloc( sizeof( void * ), itemsPerSlab, sizeof( void * ) );
 }
 
-void CS_Stack_free( struct CS_Stack *freeMe ) {
+void CS_stackFree( struct CS_Stack *freeMe ) {
     struct CS_Stack *currentStack = freeMe;
     while( currentStack != NULL ) {
         struct CS_Stack *nextStack = currentStack->nextStack;
@@ -41,14 +41,14 @@ void CS_Stack_free( struct CS_Stack *freeMe ) {
 }
 
 //Generic cases...
-bool CS_push( struct CS_Stack *onTo, const void *this ) {
+bool CS_stackPush( struct CS_Stack *onTo, const void *this ) {
     int whichStack = onTo->current / onTo->itemsPerSlab;
     int whichOne = onTo->current % onTo->itemsPerSlab;
 
     struct CS_Stack *stack = onTo;
     for( int i = 0; i < whichStack; ++i ) {
         if( stack->nextStack == NULL ) {
-            stack->nextStack = CS_Stack_alloc( onTo->itemSize, onTo->itemsPerSlab, onTo->alignment );
+            stack->nextStack = CS_stackAlloc( onTo->itemSize, onTo->itemsPerSlab, onTo->alignment );
             if( stack->nextStack == NULL )
                 return true;
         }
@@ -61,7 +61,7 @@ bool CS_push( struct CS_Stack *onTo, const void *this ) {
     return false;
 }
 
-bool CS_pop( struct CS_Stack *offOf, void *that ) {
+bool CS_stackPop( struct CS_Stack *offOf, void *that ) {
     if( offOf->current == 0 ) return true;
     --offOf->current;
     int whichStack = offOf->current / offOf->itemsPerSlab;
@@ -77,14 +77,14 @@ bool CS_pop( struct CS_Stack *offOf, void *that ) {
 }
 
 //Specific push'n'pop pointers
-bool CS_pushPointer( struct CS_Stack *onTo, const void *this ) {
+bool CS_stackPushPointer( struct CS_Stack *onTo, const void *this ) {
     int whichStack = onTo->current / onTo->itemsPerSlab;
     int whichOne = onTo->current % onTo->itemsPerSlab;
 
     struct CS_Stack *stack = onTo;
     for( int i = 0; i < whichStack; ++i ) {
         if( stack->nextStack == NULL ) {
-            stack->nextStack = CS_Stack_alloc( onTo->itemSize, onTo->itemsPerSlab, onTo->alignment );
+            stack->nextStack = CS_stackAlloc( onTo->itemSize, onTo->itemsPerSlab, onTo->alignment );
             if( stack->nextStack == NULL )
                 return true;
         }
@@ -96,7 +96,7 @@ bool CS_pushPointer( struct CS_Stack *onTo, const void *this ) {
     return false;
 }
 
-void *CS_popPointer( struct CS_Stack *offOf ) {
+void *CS_stackPopPointer( struct CS_Stack *offOf ) {
     if( offOf->current == 0 ) return NULL;
     --offOf->current;
     int whichStack = offOf->current / offOf->itemsPerSlab;

@@ -290,7 +290,7 @@ static void *serverThreadProc(void *var) {
 
 static const char ReplyStackName[] = "Reply Stack";
 
-struct CS_WebServer *CS_StartWebServer(int portNum, 
+struct CS_WebServer *CS_serverStart(int portNum, 
                                            const char *certFile,
                                            const char *keyFile,
                                            const char *selfSignHostname,
@@ -415,7 +415,7 @@ ERR_ALLOC:
     return NULL;
 }
 
-bool CS_KillWebServer( struct CS_WebServer *server ) {
+bool CS_serverKill( struct CS_WebServer *server ) {
     server->killMe = true;
     while( server->threadRunning ) {
         sleep(1);
@@ -436,9 +436,9 @@ static void ERR(struct CS_ClientInfo *info, int errorEnum, const char *details) 
     const char *errorString = CS_httpResponseEnumToString( errorEnum );
 
     int contentLength = snprintf(tempBuff, STACK_BUFFER_SIZE, "{\"error\":\"%s\",\"status\":%d,\"details\":\"%s\"}",errorString,error,errorString);
-    struct CS_Reply *reply = CS_Reply( info, errorEnum, CS_MIME_JS, tempBuff, contentLength );
+    struct CS_Reply *reply = CS_serverCreateReply( info, errorEnum, CS_MIME_JS, tempBuff, contentLength );
     if( reply == NULL ) return;
-    CS_DoReply( info, reply );
+    CS_serverDoReply( info, reply );
 }
 
 #define TEMP_OUTPUT_BUFF_SIZE 8192 
@@ -453,7 +453,7 @@ static bool BASIC_OK(struct CS_ClientInfo *info, const char *what) {
     for( int i = 0; i < info->requestInfo.numHeaders; ++i ) { 
         if( i != 0 ) CS_PP_printf( tempToWrite, "," );
         CS_SB_reset( scratch );
-        CS_quoteStringToStringBuilder(info->requestInfo.headers[i].values,1024,scratch);
+        CS_jsonQuoteStringToStringBuilder(info->requestInfo.headers[i].values,1024,scratch);
         CS_PP_printf( tempToWrite, "{\"name\":\"%s\",\"value\":\"%s\"}", 
                 info->requestInfo.headers[i].header, scratch->buffer );
     }
@@ -461,24 +461,24 @@ static bool BASIC_OK(struct CS_ClientInfo *info, const char *what) {
     for( int i = 0; i < info->requestInfo.numParameters; ++i ) {
         if( i != 0 ) CS_PP_printf( tempToWrite, "," );
         CS_SB_reset( scratch );
-        CS_quoteStringToStringBuilder(info->requestInfo.parameters[i].value,1024,scratch);
+        CS_jsonQuoteStringToStringBuilder(info->requestInfo.parameters[i].value,1024,scratch);
         CS_PP_printf( tempToWrite, "{\"name\":\"%s\",\"value\":\"%s\"}",
                 info->requestInfo.parameters[i].name, scratch->buffer );
     }
     CS_SB_reset( scratch );
-    CS_quoteStringToStringBuilder(info->requestInfo.uri,1024,scratch);
+    CS_jsonQuoteStringToStringBuilder(info->requestInfo.uri,1024,scratch);
     CS_PP_printf( tempToWrite, "],\"dataLeftInBuffer\":%d,\"uri\":\"%s\",\"formParameters\":[", CS_PP_dataSize( info->buffer ), scratch->buffer );
     for( int i = 0; i < info->requestInfo.numFormParameters; ++i ) {
         if( i != 0 ) CS_PP_printf( tempToWrite, "," );
         CS_SB_reset( scratch );
-        CS_quoteStringToStringBuilder(info->requestInfo.formParameters[i].value,1024,scratch);
+        CS_jsonQuoteStringToStringBuilder(info->requestInfo.formParameters[i].value,1024,scratch);
         CS_PP_printf( tempToWrite, "{\"name\":\"%s\",\"value\":\"%s\"}",
                 info->requestInfo.formParameters[i].name, scratch->buffer );
     }
     CS_PP_printf( tempToWrite, "]}" );
     CS_SB_free( scratch );
-    struct CS_Reply *reply = CS_Reply( info, CS_RESPONSE_200, CS_MIME_JS, CS_PP_startOfData( tempToWrite ), CS_PP_dataSize( tempToWrite ) );
-    return CS_DoReply( info, reply );
+    struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_JS, CS_PP_startOfData( tempToWrite ), CS_PP_dataSize( tempToWrite ) );
+    return CS_serverDoReply( info, reply );
 }
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -673,11 +673,11 @@ static int parseRequest(struct CS_ClientInfo *info) {
                     if( info->requestInfo.requestMethodEnum != CS_HTTP_METHOD_POST ) {
                         return currentPoint - startOfData;
                     }
-                    contentType = CS_GetRequestHeader( info, "Content-Type" );
+                    contentType = CS_serverGetRequestHeader( info, "Content-Type" );
                     if( contentType == NULL || strcmp( contentType, "application/x-www-form-urlencoded" ) != 0 ) {
                         return currentPoint - startOfData;
                     }
-                    contentLength = CS_GetRequestHeader( info, "Content-Length" );
+                    contentLength = CS_serverGetRequestHeader( info, "Content-Length" );
                     if( contentLength == NULL ) {
                         return currentPoint - startOfData;
                     }
@@ -798,12 +798,12 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     return true;
 }
 
-bool CS_Diagnostic200( struct CS_ClientInfo *info ) {
+bool CS_serverDiagnostic200( struct CS_ClientInfo *info ) {
     return BASIC_OK(info, info->requestInfo.method);
 }
 
 #define MAX_FILE_PATH 2048
-bool CS_FileServer( struct CS_ClientInfo *info ) {
+bool CS_serverFileServer( struct CS_ClientInfo *info ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     int lengthOfUri = strlen( request->uri );
     char *tempBuff = CS_tempBuff( lengthOfUri );
@@ -890,16 +890,16 @@ bool CS_FileServer( struct CS_ClientInfo *info ) {
 
     //Doing this the long way so we have a default set.
     const char *mimeType = CS_mimeFileExtensionToString(extension);
-    struct CS_Reply *reply = CS_Reply( info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, fileBuffer, fileSize );
-    CS_SetReplyHeader(reply, "Last-Modified", timeString( lastModified ) );
-    CS_SetReplyHeader(reply, "Content-Type", mimeType);
-    CS_SetReplyHeader(reply, "Connection", "close" );
+    struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, fileBuffer, fileSize );
+    CS_serverSetReplyHeader(reply, "Last-Modified", timeString( lastModified ) );
+    CS_serverSetReplyHeader(reply, "Content-Type", mimeType);
+    CS_serverSetReplyHeader(reply, "Connection", "close" );
     if( info->server->defaultFileServingCacheControlMaxAge != 0 ) {
-        CS_SetReplyHeader(reply, "Cache-Control", CS_tempBuffSnprintf(256,"max-age=%d", info->server->defaultFileServingCacheControlMaxAge) );
+        CS_serverSetReplyHeader(reply, "Cache-Control", CS_tempBuffSnprintf(256,"max-age=%d", info->server->defaultFileServingCacheControlMaxAge) );
     } else {
-        CS_SetReplyHeader(reply, "Cache-Control", "no-cache" );
+        CS_serverSetReplyHeader(reply, "Cache-Control", "no-cache" );
     }
-    CS_DoReply(info,reply);
+    CS_serverDoReply(info,reply);
     CS_free(fileBuffer);
     return true;
 ERR_BUFF_FAILED:
@@ -911,7 +911,7 @@ ERR_SETUP:
     return true;
 }
 
-const char *CS_GetRequestHeader( struct CS_ClientInfo *info, const char *header ) {
+const char *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const char *header ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int i = 0; i < request->numHeaders; ++i ) {
         if( strncmp(header,request->headers[i].header,HEADER_MAX) == 0 ) {
@@ -921,7 +921,7 @@ const char *CS_GetRequestHeader( struct CS_ClientInfo *info, const char *header 
     return NULL;
 }
 
-const char *CS_GetQueryParameter( struct CS_ClientInfo *info, const char *name ) {
+const char *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const char *name ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int i = 0; i < request->numHeaders; ++i ) {
         if( strncmp(name,request->parameters[i].name,HEADER_MAX) == 0 ) {
@@ -931,7 +931,7 @@ const char *CS_GetQueryParameter( struct CS_ClientInfo *info, const char *name )
     return NULL;
 }
 
-const char *CS_GetFormParameter( struct CS_ClientInfo *info, const char *name ) {
+const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const char *name ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int i = 0; i < request->numFormParameters; ++i ) {
         if( strncmp(name,request->formParameters[i].name,HEADER_MAX) == 0 ) {
@@ -991,7 +991,7 @@ static bool PrivateSetReplyHeaderInt( struct CS_Reply *reply, bool overwrite, co
     return PrivateSetReplyHeader( reply, overwrite, header, temp );
 }
 
-struct CS_Reply *CS_Reply(struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *outputBuffer, int outputLength ) {
+struct CS_Reply *CS_serverCreateReply(struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *outputBuffer, int outputLength ) {
         struct CS_Reply *returnValue = CS_slabTake(info->server->replyStack);
     returnValue->returnStatusEnum = responseEnum;
     returnValue->contentTypeEnum = mimeEnum;
@@ -1001,25 +1001,25 @@ struct CS_Reply *CS_Reply(struct CS_ClientInfo *info, int responseEnum, int mime
     return returnValue;
 }
 
-void CS_ReturnReply(struct CS_ClientInfo *info, struct CS_Reply *reply) {
+void CS_serverReturnReply(struct CS_ClientInfo *info, struct CS_Reply *reply) {
     CS_slabReturn(info->server->replyStack, reply);
 }
 
-bool CS_SetReplyHeader( struct CS_Reply *reply, const char *header, const char *value ) {
+bool CS_serverSetReplyHeader( struct CS_Reply *reply, const char *header, const char *value ) {
     return PrivateSetReplyHeader(reply,true,header,value);
 }
-bool CS_SetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value ) {
+bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value ) {
     return PrivateSetReplyHeader(reply,false,header,value);
 }
-bool CS_SetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value ) {
+bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value ) {
     return PrivateSetReplyHeaderInt( reply, true, header, value );
 }
-bool CS_SetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value ) {
+bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value ) {
     return PrivateSetReplyHeaderInt( reply, false, header, value );
 }
 
 
-bool CS_DoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
+bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     if( info == NULL || reply == NULL || reply->returnStatusEnum < 0 || reply->returnStatusEnum >= MAX_NUM_CS_RESPONSE_ENUMS ) {
         CS_LOG_ERROR("Bad arguments.");
         return true;
@@ -1027,13 +1027,13 @@ bool CS_DoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     int replyNumber = CS_httpResponseEnumToCode( reply->returnStatusEnum );
     const char *replyString = CS_httpResponseEnumToString( reply->returnStatusEnum );
     if( reply->contentTypeEnum != CS_MIME_DO_NOT_SET ) {
-        CS_SetReplyHeaderIfMissing(reply, "Content-Type", CS_mimeEnumToString( reply->contentTypeEnum ) );
+        CS_serverSetReplyHeaderIfMissing(reply, "Content-Type", CS_mimeEnumToString( reply->contentTypeEnum ) );
     }
     if( reply->outputBuffer != NULL ) {
-        CS_SetReplyHeaderIntIfMissing(reply, "Content-Length", reply->outputLength );
+        CS_serverSetReplyHeaderIntIfMissing(reply, "Content-Length", reply->outputLength );
     }
-    CS_SetReplyHeaderIfMissing(reply, "Date", timeString(time(NULL)));
-    CS_SetReplyHeaderIfMissing(reply, "Cache-Control", "no-cache" );
+    CS_serverSetReplyHeaderIfMissing(reply, "Date", timeString(time(NULL)));
+    CS_serverSetReplyHeaderIfMissing(reply, "Cache-Control", "no-cache" );
     CS_PP_printf( info->output, "%s %d %s\r\n", HTTP_VERSION, replyNumber, replyString );
     for( int i = 0; i < reply->numHeaders; ++i ) {
         CS_PP_printf( info->output, "%s: %s\r\n", reply->replyHeaders[i].header, reply->replyHeaders[i].value );
@@ -1055,7 +1055,7 @@ bool CS_DoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
             bytesToWrite -= bytesWritten;
         } while( bytesToWrite > 0 && bytesWritten > 0 );
     }
-    CS_ReturnReply(info, reply);
+    CS_serverReturnReply(info, reply);
     return false;
 }
 

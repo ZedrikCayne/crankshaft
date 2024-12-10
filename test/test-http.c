@@ -16,20 +16,20 @@ static int testCount = 0;
 static int testSucceeded = 0;
 
 static struct CS_Route testRoutes[] = {
-    { CS_HTTP_METHOD_CONNECT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_Diagnostic200 },
-    { CS_HTTP_METHOD_DELETE,   CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_Diagnostic200 },
-    { CS_HTTP_METHOD_HEAD,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_Diagnostic200 },
-    { CS_HTTP_METHOD_POST,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_Diagnostic200 },
-    { CS_HTTP_METHOD_PUT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_Diagnostic200 },
-    { CS_HTTP_METHOD_TRACE,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_Diagnostic200 },
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_Diagnostic200 }
+    { CS_HTTP_METHOD_CONNECT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_DELETE,   CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_HEAD,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_POST,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_PUT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_TRACE,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 }
 };
 
 bool test_http(void) {
     //Tests go here:
 
-    struct CS_WebServer *testServer = CS_StartWebServer( 0, NULL, NULL, "localhost", "root", "index.html", 0, testRoutes, sizeof(testRoutes)/sizeof(testRoutes[0]) );
-    //struct CS_WebServer *testServer = CS_StartWebServer( 0, NULL, NULL, NULL, "root", "index.html", 0, testRoutes, sizeof(testRoutes)/sizeof(testRoutes[0]) );
+    struct CS_WebServer *testServer = CS_serverStart( 0, NULL, NULL, "localhost", "root", "index.html", 0, testRoutes, sizeof(testRoutes)/sizeof(testRoutes[0]) );
+    //struct CS_WebServer *testServer = CS_serverStart( 0, NULL, NULL, NULL, "root", "index.html", 0, testRoutes, sizeof(testRoutes)/sizeof(testRoutes[0]) );
     CS_FAIL_ON_NULL( testServer, "Start web server.", "Failed." );
     char base[ 128 ];
     snprintf( base, 128, "https://localhost:%d/test", testServer->serverPort );
@@ -108,7 +108,7 @@ bool test_http(void) {
         CS_LOG_TRACE("Kill ssl.");
         CS_httpKillSSL();
         CS_httpCleanupReplies();
-        CS_KillWebServer( testServer );
+        CS_serverKill( testServer );
     }
 
 
