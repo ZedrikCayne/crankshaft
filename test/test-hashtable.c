@@ -60,6 +60,10 @@ bool test_hashtable(void) {
         CS_hashtableFree( uuidVoid );
     }
 
+    for( int i = 0; i < THINGS_TO_ADD; ++i ) {
+        CS_free( (void*)keys[ i ] );
+    }
+    CS_free( keys );
 
     CS_uuidKill();
 

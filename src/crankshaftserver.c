@@ -196,6 +196,7 @@ static bool privateMakeSelfSign(const char *hostname) {
     if( EVP_PKEY_keygen_init(ctx) <= 0 ) return true;
     if( EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 2048) <= 0 ) return true;
     if( EVP_PKEY_keygen( ctx, &ss_pkey ) <= 0 ) return true;
+    EVP_PKEY_CTX_free(ctx);
     ss_X509 = X509_new();
     ASN1_INTEGER_set(X509_get_serialNumber(ss_X509),1);
     X509_gmtime_adj(X509_get_notBefore(ss_X509), 0);
@@ -245,6 +246,10 @@ static bool InitSSL(struct CS_WebServer *server, const char *certFile, const cha
 
 static bool DestroySSL(struct CS_WebServer *server) {
     if( server->sslctx ) { 
+        if( ss_X509 ) X509_free( ss_X509 );
+        ss_X509 = NULL;
+        if( ss_pkey ) EVP_PKEY_free( ss_pkey );
+        ss_pkey = NULL;
         SSL_CTX_free(server->sslctx);
         server->sslctx = NULL;
     }
