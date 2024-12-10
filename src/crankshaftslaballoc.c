@@ -38,6 +38,8 @@ static bool freeSlab( struct CrankshaftSlabAlloc *slab ) {
     return false;
 }
 
+#define ALLOC_ITEM(_SLAB,_ITEM) ((struct CrankshaftSlabAllocItem*)(((_SLAB)->buffer)+((_ITEM)*((_SLAB)->size))))
+
 static struct CrankshaftSlabAlloc *initSlabAlloc( int size, int count, int alignment ) {
     int realSize = (size % alignment == 0) ?
         size :
@@ -59,13 +61,9 @@ static struct CrankshaftSlabAlloc *initSlabAlloc( int size, int count, int align
     returnValue->bufferEnd = returnValue->buffer + ( returnValue->size * returnValue->capacity );
 
     for( int i = 0; i < count; ++i ) { 
-        struct CrankshaftSlabAllocItem *next = (struct CrankshaftSlabAllocItem *)(returnValue->buffer + ( ( i + 1 ) * realSize ));
-        struct CrankshaftSlabAllocItem *current = (struct CrankshaftSlabAllocItem *)(returnValue->buffer + (i * realSize));
-        if( (char*)next < returnValue->bufferEnd ) {
-            current->next = next;
-        } else {
-            current->next = NULL;
-        }
+        struct CrankshaftSlabAllocItem *current = ALLOC_ITEM(returnValue,i);
+        struct CrankshaftSlabAllocItem *next = (i+1>=count)?NULL:ALLOC_ITEM(returnValue,i+1);
+        current->next = next;
     }
 
     return returnValue;

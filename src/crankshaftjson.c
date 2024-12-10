@@ -76,7 +76,7 @@ static int hexDigitToInt( const char *u ) {
     if( *u < '0' ) return -1;
     if( *u > 'f' ) return -1;
     if( *u <= '9' ) return (int)( *u - '0' );
-    if( *u > 'a' ) return (int)( *u - 'a' ) + 10;
+    if( *u >= 'a' ) return (int)( *u - 'a' ) + 10;
     if( *u > 'F' ) return -1;
     if( *u >= 'A' ) return (int)( *u - 'A' ) + 10;
     return -1;

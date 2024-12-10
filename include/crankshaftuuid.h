@@ -26,6 +26,7 @@ const struct CS_UUID *CS_uuidFromStringTemp(char *in, int length);
 const char *CS_uuidToString(const struct CS_UUID *uuid);
 const char *CS_uuidToStringTemp(const struct CS_UUID *uuid);
 const char *CS_uuidToStringOut(const struct CS_UUID *uuid, char *out, int outLength);
+void CS_uuidCopy( struct CS_UUID *dest, const struct CS_UUID *source );
 
 #ifdef __cplusplus
 }

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <time.h>
+#include <string.h>
 
 #include "crankshaftalloc.h"
 #include "crankshaftlogger.h"
@@ -39,7 +40,7 @@ static int hexDigitToInt( const char *u ) {
     if( *u < '0' ) return -1;
     if( *u > 'f' ) return -1;
     if( *u <= '9' ) return (int)( *u - '0' );
-    if( *u > 'a' ) return (int)( *u - 'a' ) + 10;
+    if( *u >= 'a' ) return (int)( *u - 'a' ) + 10;
     if( *u > 'F' ) return -1;
     if( *u >= 'A' ) return (int)( *u - 'A' ) + 10;
     return -1;
@@ -51,20 +52,22 @@ static bool textToSixteenBytes( const char *inString, struct CS_UUID *uuid ) {
     int nextNibble;
     int whichByte = 0;
     int byteAccumulator = 0;
-    for( int i = 0; i < UUID_CHAR_SIZE_BYTES; ++i ) {
+    for( int i = 0; i < UUID_CHAR_SIZE_BYTES - 1; ++i ) {
         switch(i) {
             case 8:
-            case 12:
-            case 16:
-            case 20:
-                if( *in++ != '-' ) {
+            case 13:
+            case 18:
+            case 23:
+                if( *in != '-' ) {
                     CS_LOG_TRACE("UUID at position %d not a -: %s", in - inString, inString);
                     return true;
                 }
+                ++in;
+                break;
             default:
                 nextNibble = hexDigitToInt( in );
                 if( nextNibble < 0 ) {
-                    CS_LOG_ERROR("UUID at position %d not a hex digit: %s", in - inString, inString);
+                    CS_LOG_ERROR("UUID at position %d not a hex digit: %c %s", in - inString, *in, inString);
                     return true;
                 }
                 if( whichByte ) {
@@ -73,6 +76,8 @@ static bool textToSixteenBytes( const char *inString, struct CS_UUID *uuid ) {
                     byteAccumulator = nextNibble << 4;
                 }
                 whichByte = 1-whichByte;
+                ++in;
+                break;
         }
     }
     return false;
@@ -197,3 +202,6 @@ const char *CS_uuidToStringOut(const struct CS_UUID *uuid, char *out, int outLen
     return out;
 }
 
+void CS_uuidCopy(struct CS_UUID *dest, const struct CS_UUID *src) {
+    memcpy(dest, src, sizeof(struct CS_UUID) );
+}
