@@ -86,19 +86,35 @@ struct CS_HashTableEntry *privateFindEntryForKey( struct CS_HashTable *table, co
     return current;
 }
 
+#define INSERT_INTO_ARRAY(__ENTRIES,__CAPACITY,__ENTRY){struct CS_HashTableEntry **__SLOT=(__ENTRIES)+abs(((__ENTRY)->keyHash)%(__CAPACITY));(__ENTRY)->nextInBucket=*__SLOT;*__SLOT=(__ENTRY);}
+
 struct CS_HashTableEntry *privateInsertEntryForKey( struct CS_HashTable *table, const void *key, int hash, const void *value ) {
     struct CS_HashTableEntry *newEntry = CS_slabTake( table->hashTableEntrySlabAllocator );
     if( newEntry ) {
         memset( newEntry, 0, sizeof( struct CS_HashTableEntry ) );
         table->entryInitFunction( table, newEntry, key, hash, value );
-        struct CS_HashTableEntry **slot = table->entries + abs(hash % table->capacity);
-        newEntry->nextInBucket = *slot;
-        *slot = newEntry;
+        INSERT_INTO_ARRAY(table->entries,table->capacity,newEntry);
     }
     return newEntry;
 }
 
 struct CS_HashTable *CS_hashtableResize( struct CS_HashTable *table, int newCapacity ) {
+    struct CS_HashTableEntry **newEntries = CS_alloc( newCapacity * sizeof(struct CS_HashTableEntry *) );
+    memset( newEntries, 0, newCapacity * sizeof(struct CS_HashTableEntry *) );
+    GRAB_MUTEX();
+    for( int i = 0; i < table->capacity; ++i ) {
+        struct CS_HashTableEntry *current = table->entries[ i ];
+        while( current ) {
+            struct CS_HashTableEntry *next = current->nextInBucket;
+            INSERT_INTO_ARRAY(newEntries,newCapacity,current);
+            current = next;
+        }
+    }
+    struct CS_HashTableEntry **oldEntries = table->entries;
+    table->entries = newEntries;
+    table->capacity = newCapacity;
+    CS_free(oldEntries);
+    RELEASE_MUTEX();
     return NULL;
 }
 
