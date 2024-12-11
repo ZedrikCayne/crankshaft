@@ -531,7 +531,7 @@ static const char *headerHas( struct CS_RequestHeader *headers, int numHeaders, 
 
 static const bool alreadySent( const char **alreadySent, int numAlreadySent, const char *which ) {
     for( int i = 0; i < numAlreadySent; ++i ) {
-        if( strcmp( alreadySent[ i ], which ) ) return true;
+        if( strcmp( alreadySent[ i ], which ) == 0 ) return true;
     }
     return false;
 }
@@ -754,6 +754,13 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
 
     CS_SB_printf(sb,"%c%c",CR,LF);
 
+    if( formString ) {
+        CS_SB_append(sb, formString->buffer);
+        CS_SB_free( formString );
+        formString = NULL;
+        CS_SB_printf(sb,"%c%c",CR,LF);
+    }
+
     //Okay, we're ready to actually open the socket and go.
     struct addrinfo *addrInfoIter = addrInfos;
     int connectValue = -1;
@@ -791,9 +798,29 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
             goto CLEANUP;
         }
     } while ( CS_PP_dataSize( pp ) > 0 );
-
     CS_PP_defaultFree( pp );
+    pp = NULL;
     CS_SB_free( sb );
+    sb = NULL;
+
+    char CRLFBUFF[] = { CR,LF };
+
+    if( data && dataLength > 0 ) {
+        pp = CS_PP_onStaticBuffer( dataLength, data );
+        do {
+            int numBytesSent = wantSSL?CS_PP_writeToSSL( pp, returnValue->ssl):CS_PP_writeToFile( pp, returnValue->remoteSocket );
+            if( numBytesSent <= 0 ) {
+                goto CLEANUP;
+            }
+        } while ( CS_PP_dataSize( pp ) > 0 );
+        CS_PP_defaultFree( pp );
+        pp = NULL;
+        if( wantSSL ) {
+            SSL_write( returnValue->ssl, CRLFBUFF, 2 );
+        } else {
+            write( returnValue->remoteSocket, CRLFBUFF, 2 );
+        }
+     }
 
     returnValue->buffer = CS_PP_defaultAlloc( PP_BUFFER_SIZE_FOR_RETURN );
 

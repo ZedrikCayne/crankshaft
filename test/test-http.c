@@ -44,22 +44,10 @@ bool test_http(void) {
             CS_FAIL_ON_NULL( json, "Reply should be json.", "Did not parse as json." );
             if( json ) {
                 //Basic structure, so we're expecting no data or variables.
-                struct CS_JsonNode *headers = CS_jsonNodeByPath( json, "headers" );
-                struct CS_JsonNode *userAgent = NULL;
-                if( headers ) {
-                    CS_JSON_NODE_ITER(headers,aHeader) {
-                        userAgent = CS_jsonNodeByPath( aHeader, "name");
-                        if( userAgent && strcmp(userAgent->stringValue, "User-Agent") == 0 ) break;
-                        userAgent = NULL;
-                        aHeader = aHeader->next;
-                    }
-                    CS_FAIL_ON_NULL( userAgent, "Looking for User-Agent.", "Not found!" );
-                    if( userAgent ) {
-                        struct CS_JsonNode *userAgentValue = CS_jsonNodeByPath( userAgent->up, "value" );
-                        CS_FAIL_ON_NULL( userAgentValue, "Look up value of User-Agent.", "Couldn't find 'value'");
-                        CS_FAIL_ON_FALSE( strcmp(userAgentValue->stringValue, "Crankshaft") == 0, "User-Agent should be Crankshaft", "Was %s", userAgentValue->stringValue?userAgentValue->stringValue:"NULL");
-                    }
-                }
+                struct CS_JsonNode *userAgentValue = CS_jsonNodeByPath( json, "headers/|name=User-Agent/value" );
+                CS_FAIL_ON_NULL( userAgentValue, "Look for user agent.", "Could not find user agent." );
+                if( userAgentValue )
+                    CS_FAIL_ON_FALSE( userAgentValue && strcmp(userAgentValue->stringValue, "Crankshaft") == 0, "User-Agent should be Crankshaft", "Was %s", userAgentValue->stringValue?userAgentValue->stringValue:"NULL");
                 CS_jsonFree( json );
             }
             CS_httpCloseRequest( reply );
@@ -100,11 +88,52 @@ bool test_http(void) {
             CS_httpCloseRequest(reply);
         }
 
-        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, NULL, 0, NULL, 0, NULL, 0, NULL );
+        snprintf(base, 128, "https://localhost:%d/test?a=b&c=fah&d=groovy",testServer->serverPort);
+        struct CS_RequestHeader headers[] = {
+            {"Header1","Value1"},
+            {"Header2","Value2"},
+            {"Header3","Value3"},
+            {"Header4","Value4"},
+        };
+        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, headers, 4, NULL, 0, NULL, 0, NULL );
+        CS_FAIL_ON_NULL( reply, "Make POST with uri parameters and form parameters.", "Failed on %s", base );
         if( reply ) {
+            const char *ctype = CS_httpReplyHeader(reply,"Content-Type");
+            CS_FAIL_ON_NULL( ctype, "Content type header.", "Got a null." );
+            CS_FAIL_ON_FALSE( ctype && strcmp(ctype,"application/json") == 0, "Should have gotten json back.", "Got %s instead", ctype?ctype:"NULL" );
+            struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
+                    CS_PP_dataSize( reply->buffer ), 512 );
+            CS_FAIL_ON_NULL( json, "Json parsing reply", "Json failed." );
+            if( json ) {
+                for( int i = 0; i < sizeof(headers)/sizeof(headers[0]); ++i ) {
+                    const char *tempPath = CS_tempBuffSnprintf( 64, "headers/|name=%s/value", headers[i].header );
+                    const char *tempVal = CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) );
+                    CS_FAIL_ON_FALSE( tempVal && strcmp(tempVal,headers[i].values) == 0, CS_tempBuffSnprintf(64, "Looking for %s in %s", headers[i].values, tempPath), "Found %s", tempVal?tempVal:NULL );
+                }
+            }
             CS_httpCloseRequest(reply);
         }
 
+        struct CS_FormParameters formParameters[] = {
+            {"form1","Form1 Data"},
+            {"form2","Form2 Data"},
+            {"form3","Form3 Data"}
+        };
+
+        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, headers, 4, formParameters, 3, NULL, 0, NULL );
+        CS_FAIL_ON_NULL( reply, "Request with params, form params, uri paramaters.", "Failed." );
+        if( reply ) {
+            struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
+                    CS_PP_dataSize( reply->buffer ), 512 );
+            if( json ) {
+                for( int i = 0; i < sizeof(formParameters)/sizeof(formParameters[0]); ++i ) {
+                    const char *tempPath = CS_tempBuffSnprintf( 64, "formParameters/|name=%s/value", formParameters[i].name);
+                    const char *tempVal = CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) );
+                    CS_FAIL_ON_FALSE( tempVal && strcmp(tempVal,formParameters[i].value)==0, tempPath, "No match." );
+
+                }
+            }
+        }
         CS_LOG_TRACE("Kill ssl.");
         CS_httpKillSSL();
         CS_httpCleanupReplies();

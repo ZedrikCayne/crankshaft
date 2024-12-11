@@ -1564,25 +1564,41 @@ struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *pa
     char *savePtr = NULL;
     char *currToken = NULL;
     struct CS_JsonNode *current = source;
-    while( (currToken = strtok_r(tmpPath,"/",&savePtr)) ) {
+    while( current && (currToken = strtok_r(tmpPath,"/",&savePtr)) ) {
         tmpPath = NULL;
         if( current->typeEnum == CS_JSON_ARRAY ) {
-            char *endPtr;
-            int index=strtol( currToken, &endPtr, 10);
-            if( endPtr == currToken ) {
-                CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index into an array with a non numerical value");
-                return NULL;
-            }
-            if( index < 0 ) {
-                CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index into the negatives.");
-                return NULL;
-            }
-            current = current->container;
-            for( int i = 0; i < index && current != NULL; ++i ) {
-                current = current->next;
-            }
-            if( current == NULL ) {
-                CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index beyond the end of an array.");
+            if( *currToken == '|' ) {
+                char *subTokenSavePtr;
+                char *subName = strtok_r(currToken + 1,"=",&subTokenSavePtr);
+                char *subValue = strtok_r(NULL,"=",&subTokenSavePtr);
+                current = current->container;
+                while( current ) {
+                    if( current->typeEnum == CS_JSON_OBJECT ) {
+                        const char *val = CS_jsonNodeValueAsTempString(CS_jsonNodeByPath(current,subName));
+                        if( val && strcmp( val, subValue ) == 0 ) {
+                            break;
+                        }
+                    }
+                    current = current->next;
+                }
+            } else {
+                char *endPtr;
+                int index=strtol( currToken, &endPtr, 10);
+                if( endPtr == currToken ) {
+                    CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index into an array with a non numerical value");
+                    return NULL;
+                }
+                if( index < 0 ) {
+                    CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index into the negatives.");
+                    return NULL;
+                }
+                current = current->container;
+                for( int i = 0; i < index && current != NULL; ++i ) {
+                    current = current->next;
+                }
+                if( current == NULL ) {
+                    CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index beyond the end of an array.");
+                }
             }
         } else if( current->typeEnum == CS_JSON_OBJECT ) {
             current = current->container;
@@ -1600,4 +1616,34 @@ struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *pa
         }
     }
     return current;
+}
+
+const char *CS_jsonNodeValueAsTempString( struct CS_JsonNode *mine ) {
+    if( mine == NULL ) return NULL;
+    switch( mine->typeEnum ) {
+        case CS_JSON_STRING_QUOTED_ALLOCATED:
+        case CS_JSON_STRING_UNQUOTED_ALLOCATED:
+            return mine->alloc;
+        case CS_JSON_STRING_QUOTED:
+        case CS_JSON_STRING_UNQUOTED:
+        case CS_JSON_INTEGER_AS_STRING:
+        case CS_JSON_FLOAT_AS_STRING:
+            return mine->stringValue;
+        case CS_JSON_INTEGER:
+            return CS_tempBuffSnprintf(32, "%d", mine->intValue);
+        case CS_JSON_FLOAT:
+            return CS_tempBuffSnprintf(32, "%f", mine->floatValue);
+        case CS_JSON_true:
+            return "true";
+        case CS_JSON_false:
+            return "false";
+        case CS_JSON_null:
+            return "null";
+        case CS_JSON_UNKNOWN:
+        case CS_JSON_ERROR:
+        case CS_JSON_ARRAY:
+        case CS_JSON_OBJECT:
+            break;
+    }
+    return NULL;
 }

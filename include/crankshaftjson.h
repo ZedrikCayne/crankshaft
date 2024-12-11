@@ -160,6 +160,7 @@ struct CS_StringBuilder *CS_jsonQuoteString(const char *inputString, int len);
 struct CS_StringBuilder *CS_jsonUnquoteString(const char *inputString, int len);
 
 const char *CS_jsonEnumTypeAsString(const int enumType);
+const char *CS_jsonNodeValueAsTempString( struct CS_JsonNode *mine );
 
 /****************************************************************************
  * Comparison by value. We're mostly using it in our tests to make sure when

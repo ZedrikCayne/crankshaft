@@ -436,7 +436,7 @@ static void ERR(struct CS_ClientInfo *info, int errorEnum, const char *details) 
     const char *errorString = CS_httpResponseEnumToString( errorEnum );
 
     int contentLength = snprintf(tempBuff, STACK_BUFFER_SIZE, "{\"error\":\"%s\",\"status\":%d,\"details\":\"%s\"}",errorString,error,errorString);
-    struct CS_Reply *reply = CS_serverCreateReply( info, errorEnum, CS_MIME_JS, tempBuff, contentLength );
+    struct CS_Reply *reply = CS_serverCreateReply( info, errorEnum, CS_MIME_JSON, tempBuff, contentLength );
     if( reply == NULL ) return;
     CS_serverDoReply( info, reply );
 }
@@ -477,7 +477,7 @@ static bool BASIC_OK(struct CS_ClientInfo *info, const char *what) {
     }
     CS_PP_printf( tempToWrite, "]}" );
     CS_SB_free( scratch );
-    struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_JS, CS_PP_startOfData( tempToWrite ), CS_PP_dataSize( tempToWrite ) );
+    struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_JSON, CS_PP_startOfData( tempToWrite ), CS_PP_dataSize( tempToWrite ) );
     return CS_serverDoReply( info, reply );
 }
 

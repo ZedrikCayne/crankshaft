@@ -40,7 +40,6 @@ bool test_hashtable(void) {
             ++count;
         }
         CS_FAIL_ON_FALSE( count == THINGS_TO_ADD, "Iterate count should match number put in.", "Buh %d vs %d", count, THINGS_TO_ADD );
-        printf("Resize.");
         CS_hashtableResize( stringVoid, 48 );
         CS_HASHTABLE_ITER( stringVoid, entry ) {
             CS_FAIL_ON_FALSE( strcmp(entry->fullKey, entry->value) == 0, "Key/value pair match?", "Nope");
@@ -63,7 +62,6 @@ bool test_hashtable(void) {
             ++count;
         }
         CS_FAIL_ON_FALSE( count == THINGS_TO_ADD, "Iterate count should match number put in.", "Buh %d vs %d", count, THINGS_TO_ADD );
-        printf("resize");
         CS_hashtableResize( uuidVoid, 48 );
         CS_HASHTABLE_ITER( uuidVoid, entry ) {
             CS_FAIL_ON_FALSE( strcmp( CS_uuidToStringTemp(entry->fullKey), entry->value ) == 0,

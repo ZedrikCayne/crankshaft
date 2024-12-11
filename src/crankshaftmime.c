@@ -12,47 +12,7 @@ struct ExtensionToMIME {
     char *filetype;
 };
 
-struct ExtensionToMIME extensions[] = {
-    {"aac", "audio/aac"},
-    {"apng", "image/apng"},
-    {"avi", "video/x-msvideo"},
-    {"azw", "applicatoin/vnd.amazon.ebook"},
-    {"bin", "application/octet-stream"},
-    {"bmp", "image/bmp"},
-    {"bz", "application/x-bzip"},
-    {"bz2", "application/x-bzip2"},
-    {"css", "text/css"},
-    {"gif", "image/gif"},
-    {"htm", "text/html"},
-    {"html", "text/html"},
-    {"ico", "image/vnd.microsoft.icon"},
-    {"jpg", "image/jpg"},
-    {"jpeg", "image/jpeg"},
-    {"js", "text/javascript"},
-    {"mp3", "audio/mpeg"},
-    {"mp4", "video/mp4"},
-    {"oga", "audio/ogg"},
-    {"ogv", "video/ogg"},
-    {"ogx", "application/ogg"},
-    {"otf", "font/otf"},
-    {"png", "image/png"},
-    {"pdf", "application/pdf"},
-    {"rar", "application/vnd.rar"},
-    {"rtf", "application/rtf"},
-    {"svg", "image/svg+xml"},
-    {"tar", "application/x-tar"},
-    {"ttf", "font/ttf"},
-    {"txt", "text/plain"},
-    {"wav", "audio/wav"},
-    {"weba", "audio/webm"},
-    {"webm", "video/webm"},
-    {"webp", "image/webp"},
-    {"woff", "font/woff"},
-    {"woff2", "font/woff2"},
-    {"xml", "applicatoin/xml"},
-    {"xxx", "application/x-www-form-urlencoded" },
-    {"xxy", "multipart/form-data" }
-};
+#include "crankshaftmimevalues.h"
 
 int CS_mimeFileExtensionToEnum(const char *extension ) {
     for( int i = 0; i < sizeof(extensions)/sizeof(extensions[0]); ++i ) {

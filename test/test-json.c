@@ -17,6 +17,7 @@ static int testSucceeded = 0;
 static const char *testsource1 = "[\"foo\",\"bar\",\"baz\"]";
 static const char *testsource2 = "{\"a\":\"1\",\"b\":2,\"c\":3.3}";
 static const char *testsource3 = "{\"a\":[{\"1\":\"a\",\"b\":2,\"3\":\"c\"},[\"aba\",\"bba\",\"cca\"],\"Funk\"],\"b\":[1,2,3]}";
+static const char *testsource4 = "[{\"name\":\"a\",\"value\":\"aVal\"},{\"name\":\"b\",\"value\":\"bVa\"},{\"value\":\"cVal\",\"name\":\"c\"}]";
 
 #define ARRAY_LENGTH(X) (sizeof(X)/(sizeof(X[0])))
 
@@ -347,6 +348,16 @@ bool test_json() {
     if( js ) {
         js2 = CS_jsonNodeByPath(js, "a/2");
         CS_FAIL_ON_FALSE( (js2 && js2->typeEnum == CS_JSON_STRING_QUOTED && strcmp(js2->stringValue,"Funk") == 0), "a/3 should be Funk", "Was not funk." );
+        CS_jsonFree(js);
+    }
+
+    js = CS_jsonParseCopy( testsource4, strlen(testsource4), TEMP_JSON_ALLOC_SIZE );
+    CS_FAIL_ON_NULL( js, CS_tempBuffSnprintf( 256, "Parse %s", testsource4 ), "Failed to parse." );
+    if( js ) {
+        js2 = CS_jsonNodeByPath(js,"|name=a/value");
+        CS_FAIL_ON_FALSE( (js2 && strcmp(js2->stringValue,"aVal")==0 ), "|name=a/value should be aVal", "Was not." );
+        js2 = CS_jsonNodeByPath(js,"|name=c/value");
+        CS_FAIL_ON_FALSE( (js2 && strcmp(js2->stringValue,"cVal")==0 ), "|name=c/value should be cVal", "Was not." );
         CS_jsonFree(js);
     }
 
