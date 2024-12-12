@@ -14,6 +14,7 @@ static int testSucceeded = 0;
 
 bool test_alloc(void) {
     //Tests go here:
+#ifndef CS_ALLOC_USE_MALLOC
     void *temp;
     CS_setFailAlloc(0);
     CS_FAIL_ON_NULL( (temp = CS_alloc(100)), "0% malloc fail", "We didn't get a null");
@@ -28,6 +29,7 @@ bool test_alloc(void) {
     CS_FAIL_ON_NOT_NULL( (temp=CS_alloc(100)), "Alloc 25 on max 50 bytes", "We failed to allocate 25 bytes when the max was set to 50");
     if( temp != NULL ) CS_free(temp);
     CS_setMaxAlloc(0);
+#endif
     return testCount !=
            testSucceeded;
 }

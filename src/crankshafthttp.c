@@ -25,7 +25,7 @@ static pthread_mutex_t slabAllocMutex = PTHREAD_MUTEX_INITIALIZER;
 static struct CS_RequestReply *privateGetReply() {
     if( requestSlabAlloc == NULL ) {
         pthread_mutex_lock( &slabAllocMutex );
-        if( requestSlabAlloc == NULL ) requestSlabAlloc = CS_slabInit( "Request Reply Slab", sizeof(struct CS_RequestReply), 100, 4 );
+        if( requestSlabAlloc == NULL ) requestSlabAlloc = CS_slabInit( "Request Reply Slab", sizeof(struct CS_RequestReply), 100, 8 );
         pthread_mutex_unlock( &slabAllocMutex );
         if( requestSlabAlloc == NULL ) return NULL;
     }

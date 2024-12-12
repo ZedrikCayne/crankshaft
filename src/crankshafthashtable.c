@@ -21,7 +21,7 @@ struct CS_HashTable *CS_hashtableCreateCustom( int capacity, unsigned int flags,
         int (*entryInitFunction)(struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value),
         int (*entryRemoveFunction)(struct CS_HashTable *table, struct CS_HashTableEntry *entry),
         int (*cleanupFunction)(struct CS_HashTable *table) ) {
-    struct CS_HashTable *returnValue = CS_alloc( sizeof( struct CS_HashTable ) );
+    struct CS_HashTable *returnValue = CS_allocB( flags&CS_HASHTABLE_FLAG_MALLOC,sizeof( struct CS_HashTable ) );
     if( returnValue ) {
         memset( returnValue, 0, sizeof(struct CS_HashTable) );
         returnValue->capacity = capacity;
@@ -30,9 +30,9 @@ struct CS_HashTable *CS_hashtableCreateCustom( int capacity, unsigned int flags,
         if( flags & CS_HASHTABLE_FLAG_MUTEX ) {
             if( pthread_mutex_init( &returnValue->hashTableMutex, NULL ) ) goto FAIL;
         }
-        returnValue->hashTableEntrySlabAllocator = CS_slabInit("HashTable", sizeof(struct CS_HashTableEntry), capacity, sizeof(void *));
+        returnValue->hashTableEntrySlabAllocator = (flags&CS_HASHTABLE_FLAG_MALLOC)?CS_slabInitMalloc("HashTable Malloc", sizeof(struct CS_HashTableEntry), capacity, sizeof(void*)):CS_slabInit("HashTable", sizeof(struct CS_HashTableEntry), capacity, sizeof(void *));
         if( returnValue->hashTableEntrySlabAllocator == NULL ) goto FAIL;
-        returnValue->entries = CS_alloc( capacity * sizeof(struct CS_HashTableEntry*) );
+        returnValue->entries = CS_allocB( flags&CS_HASHTABLE_FLAG_MALLOC, capacity * sizeof(struct CS_HashTableEntry*) );
         memset( returnValue->entries, 0, capacity * sizeof(struct CS_HashTableEntry*) );
         if( returnValue->entries == NULL ) {
             goto FAIL;
@@ -48,8 +48,8 @@ struct CS_HashTable *CS_hashtableCreateCustom( int capacity, unsigned int flags,
 FAIL:
     if( returnValue ) {
         if( returnValue->hashTableEntrySlabAllocator ) CS_slabFree( returnValue->hashTableEntrySlabAllocator );
-        if( returnValue->entries ) CS_free( returnValue->entries );
-        CS_free( returnValue );
+        if( returnValue->entries ) CS_freeB( flags&CS_HASHTABLE_FLAG_MALLOC, returnValue->entries );
+        CS_freeB( flags&CS_HASHTABLE_FLAG_MALLOC, returnValue );
     }
     return NULL;
 }
@@ -63,7 +63,7 @@ void CS_hashtableFree( struct CS_HashTable *table ) {
         table->cleanupFunction( table );
     }
     CS_slabFree( table->hashTableEntrySlabAllocator );
-    CS_free( table->entries );
+    CS_freeB( table->flags&CS_HASHTABLE_FLAG_MALLOC, table->entries );
     RELEASE_MUTEX();
     CS_free( table );
 }
@@ -99,7 +99,7 @@ struct CS_HashTableEntry *privateInsertEntryForKey( struct CS_HashTable *table, 
 }
 
 struct CS_HashTable *CS_hashtableResize( struct CS_HashTable *table, int newCapacity ) {
-    struct CS_HashTableEntry **newEntries = CS_alloc( newCapacity * sizeof(struct CS_HashTableEntry *) );
+    struct CS_HashTableEntry **newEntries = CS_allocB( table->flags&CS_HASHTABLE_FLAG_MALLOC, newCapacity * sizeof(struct CS_HashTableEntry *) );
     memset( newEntries, 0, newCapacity * sizeof(struct CS_HashTableEntry *) );
     GRAB_MUTEX();
     for( int i = 0; i < table->capacity; ++i ) {
@@ -113,7 +113,7 @@ struct CS_HashTable *CS_hashtableResize( struct CS_HashTable *table, int newCapa
     struct CS_HashTableEntry **oldEntries = table->entries;
     table->entries = newEntries;
     table->capacity = newCapacity;
-    CS_free(oldEntries);
+    CS_freeB(table->flags&CS_HASHTABLE_FLAG_MALLOC,oldEntries);
     RELEASE_MUTEX();
     return NULL;
 }
@@ -179,7 +179,7 @@ const void *CS_hashtableGet( struct CS_HashTable *table, const void *key ) {
 
 int CS_hashtableDefaultStringVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value ) {
     int nLen = strlen( key );
-    void *newKey = CS_alloc( nLen + 1 );
+    void *newKey = CS_allocB( table->flags&CS_HASHTABLE_FLAG_MALLOC, nLen + 1 );
     if( !newKey ) return -1;
     strcpy( newKey, key );
     strncpy( (char*)entry->keyPrefix, key, sizeof( entry->keyPrefix ) );
@@ -209,7 +209,7 @@ int CS_hashtableDefaultStringKeyCompare( struct CS_HashTable *table, const struc
 }
 
 int CS_hashtableDefaultStringVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry ) {
-    if( entry->fullKey ) CS_free( (void*)entry->fullKey );
+    if( entry->fullKey ) CS_freeB( table->flags&CS_HASHTABLE_FLAG_MALLOC, (void*)entry->fullKey );
     return 0;
 }
 

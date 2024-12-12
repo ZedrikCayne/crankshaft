@@ -14,7 +14,7 @@ extern bool CS_LOG_INFO_BOOL;
 extern bool CS_LOG_VERBOSE_BOOL;
 
 
-#if defined(CRANKSHAFT_NOLOGS)
+#if defined(CRANKSHAFT_NO_LOGS)
 #define CS_LOG_STDERR(...) {}
 #define CS_LOG_ERROR(...) {}
 #define CS_LOG_ERROR_IF(...)
@@ -24,7 +24,7 @@ extern bool CS_LOG_VERBOSE_BOOL;
 #define CS_LOG_ERROR_IF(_PREDICATE,...) if(CS_LOG_ERROR_BOOL&&(_PREDICATE)){CS_log(__FILE__,__LINE__,__VA_ARGS__);}
 #endif
 
-#if defined(CRANKSHAFT_NOLOGS) || defined(CRANKSHAFT_ERROR_LOGS_ONLY)
+#if defined(CRANKSHAFT_NO_LOGS) || defined(CRANKSHAFT_ERROR_LOGS_ONLY)
 #define CS_LOG_LOUD(...) {}
 #define CS_LOG_LOUD_IF(...)
 #define CS_LOG_WARN(...) {}
@@ -40,7 +40,7 @@ extern bool CS_LOG_VERBOSE_BOOL;
 #define CS_LOG_IF(_PREDICATE,...) if(!CS_LOG_QUIET_BOOL&&(_PREDICATE)){CS_log(__FILE__,__LINE__,__VA_ARGS__);}
 #endif
 
-#if defined(CRANKSHAFT_NOLOGS) || defined(CRANSHAFT_ERROR_LOGS_ONLY) || defined(CRANSHAFT_NO_VERBOSE_LOGS)
+#if defined(CRANKSHAFT_NO_LOGS) || defined(CRANSHAFT_ERROR_LOGS_ONLY) || defined(CRANSHAFT_NO_VERBOSE_LOGS)
 #define CS_LOG_VERBOSE(...) {}
 #define CS_LOG_VERBOSE_IF(...)
 #define CS_LOG_INFO(...) {}
@@ -52,7 +52,7 @@ extern bool CS_LOG_VERBOSE_BOOL;
 #define CS_LOG_INFO_IF(_PREDICATE,...) if(CS_LOG_INFO_BOOL&&(_PREDICATE)){CS_log(__FILE__,__LINE__,__VA_ARGS__);}
 #endif
 
-#if defined(CRANKSHAFT_NOLOGS) || defined(CRANSHAFT_ERROR_LOGS_ONLY) || defined(CRANSHAFT_NO_VERBOSE_LOGS) || defined(CRANKSHAFT_NO_TRACE_LOGS)
+#if defined(CRANKSHAFT_NO_LOGS) || defined(CRANSHAFT_ERROR_LOGS_ONLY) || defined(CRANSHAFT_NO_VERBOSE_LOGS) || defined(CRANKSHAFT_NO_TRACE_LOGS)
 #define CS_LOG_TRACE(...) {}
 #define CS_LOG_TRACE_IF(...) {}
 #else

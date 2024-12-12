@@ -20,18 +20,23 @@ scripts/gentest
 make clean test
 ```
 Will run the unit tests... (All c/c++ files in the tests folder are considered unit tests...)
+
 The `scripts/gentest` script generates `test/autogen-test.c` which will get built into the application. The supplied application (main.cpp) is a basic webserver with a special case /api route that just returns back out what was sent in. The server supports get/post on the api and get on the basic file server. The main purpose of it is to drive the unit tests `--test`
 
-Unit tests are pretty comprehensive, including starting the internal web server, and using the internal http request system to hit it. If you want *all* of the tests...in the Makefile there are lines to exclude the tests of the tests that you can comment out. (Note, the unit tests will *fail* because we test failing the tests... Which is why we've got them commented out...)
+Unit tests are pretty comprehensive, including starting the internal web server, and using the internal http request system to hit it. If you want *all* of the tests...in the Makefile there are lines to exclude the tests of the tests that you can comment out. (Note, the unit tests will *fail* because we test failing the tests... Which is why we've got them commented out...) (http only supports 1.1... HTTP2 is...a thought...)
 
 At the moment it'll compile clean with no warnings on osx and wsl. It'll probably compile clean on any recent linux distro provided you've got openssl-dev libraries installed. I'm pretty sure that's the only lib that isn't standard that crankshaft depends on.
 
 ```
 make clean all
 ```
-Builds without the tests. Running --test will exit with a warning that no tests were defined.
+Builds the app without the tests. Running --test will exit with a warning that no tests were defined.
 
 ```
 make clean publish
 ```
-Builds a lib, and tarball packaged with the include directory and associated .a file.
+Builds a lib, and tarball packaged with the include directory and associated .a file. Does not include main.cpp (Or any .cpp files) or any of the tests.
+
+The main.cpp app has lots of switches and twiddles, check out the --help.
+
+Most everything in here can be used apart from everything else, with the exception of the temp buffers. More or less, temp buffers are just that. You don't have to free them. We've got a meg of each size from 32 bytes up to 16k. Don't expect them to keep their value beyond the scope of a function. I wouldn't bet on them surviving a blocking IO call. The logging system blasts all over them, and most things can be asked to return a 'Temp' thing (For example, `CS_uuid4()` vs `CS_uuid4Temp()`. One will return a UUID that will have to be free'd. The other will return one that you can just throw out.)

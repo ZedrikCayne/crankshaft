@@ -100,7 +100,7 @@ void setSixteenBytesUuid4( struct CS_UUID *uuid ) {
 }
 
 void CS_uuidInit() {
-    voidSlabAllocator = CS_slabInit( "UUID", sizeof(struct CS_UUID), 200, 4 ); 
+    voidSlabAllocator = CS_slabInit( "UUID", sizeof(struct CS_UUID), 200, 8 ); 
     if( uuidRand.seed == 0 ) CS_uuidSetSeed(0);
 }
 
@@ -204,4 +204,8 @@ const char *CS_uuidToStringOut(const struct CS_UUID *uuid, char *out, int outLen
 
 void CS_uuidCopy(struct CS_UUID *dest, const struct CS_UUID *src) {
     memcpy(dest, src, sizeof(struct CS_UUID) );
+}
+
+void CS_uuidFreeString( const char *uuidString ) {
+    CS_free((void*)uuidString);
 }

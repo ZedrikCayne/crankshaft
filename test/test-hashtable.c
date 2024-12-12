@@ -48,7 +48,7 @@ bool test_hashtable(void) {
         CS_hashtableFree( stringVoid );
     }
 
-    void *keyAllocatorForHashTable = CS_slabInit("UUID keys",sizeof(struct CS_UUID),32,4);
+    void *keyAllocatorForHashTable = CS_slabInit("UUID keys",sizeof(struct CS_UUID),32,8);
     struct CS_HashTable *uuidVoid = CS_HASHTABLE_UUID_VOID( 32, CS_HASHTABLE_FLAG_VERY_PEDANTIC, keyAllocatorForHashTable );
     CS_FAIL_ON_NULL(uuidVoid, "Creating a default UUID hash table with 32 entries.", "Failed" );
     if( uuidVoid ) {
@@ -72,7 +72,7 @@ bool test_hashtable(void) {
     }
 
     for( int i = 0; i < THINGS_TO_ADD; ++i ) {
-        CS_free( (void*)keys[ i ] );
+        CS_uuidFreeString( keys[ i ] );
     }
     CS_free( keys );
 

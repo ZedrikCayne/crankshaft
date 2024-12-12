@@ -55,9 +55,9 @@ run: all
 debug: all
 	gdb --args $(BINOUT) --test --suppress-errors --only-fails
 
-testWithMalloc: CFLAGS:=-DCS_ALLOC_USE_MALLOC $(CFLAGS)
-testWithMalloc: test
-
+#test: CFLAGS:=-DCRANKSHAFT_NO_LOGS $(CFLAGS)
+#test: CFLAGS:=-DCS_ALLOC_USE_MALLOC $(CFLAGS)
+#test: CFLAGS:=-DCS_ALLOC_TRACKING $(CFLAGS)
 test: CFLAGS:=-DCS_TEST_SKIP_TESTTEST $(CFLAGS)
 test: CFLAGS:=-DCS_AUTOTEST_ENABLED $(CFLAGS)
 test: $(OBJECTS_DIR) $(BINOUT)-test

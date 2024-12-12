@@ -30,7 +30,7 @@ bool test_hash(void) {
         for( int j = i - 1; j >= 0; j-- ) CS_FAIL_ON_TRUE( uuidHashes[ i ] == uuidHashes[ j ], "Hashes should not match.", "Buh? uuidStrings[%d]'%s' vs. uuidStrings[%d]'%s'", i, uuidStrings[i], j, uuidStrings[j] );
     }
     for( int i = 0; i < UUIDS_TO_MAKE; ++i ) {
-        CS_free( (void*)uuidStrings[i] );
+        CS_uuidFreeString( uuidStrings[i] );
     }
     CS_free( uuidHashes );
     CS_free( uuidStrings );

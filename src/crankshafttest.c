@@ -7,6 +7,7 @@
 #include "crankshafttest.h"
 #include "crankshafttempbuff.h"
 #include "crankshaftrandom.h"
+#include "crankshaftalloc.h"
 
 extern bool TEST_AUTO(void);
 
@@ -20,10 +21,16 @@ bool CS_testMain(void) {
         CS_srand(time(NULL));
         CS_TEST_seed = CS_rand();
     }
-    CS_LOG_LOUD("Test random seed is %d, call CS_testSetRandomSeed() to set it explicitly or use --seed if you are using the included main.cpp for repeatable tests in the future.", CS_TEST_seed);
+    int allocSystemError = CS_allocSystemTracker(5000,CS_ALLOC_FLAG_ALL);
+    if( allocSystemError != 0 ) CS_LOG_LOUD("Alloc tracking system not working.");
     CS_tempAllocateGlobal();
+    CS_LOG_LOUD("Test random seed is %d, call CS_testSetRandomSeed() to set it explicitly or use --seed if you are using the included main.cpp for repeatable tests in the future.", CS_TEST_seed);
+
     bool returnValue = TEST_AUTO();
+    CS_allocSystemReport();
     CS_tempFreeGlobal();
+    allocSystemError = CS_allocSystemTrackerKill();
+    if( allocSystemError != 0 ) CS_LOG_LOUD("Alloc tracking failed to de-init.");
     return returnValue;
 }
 

@@ -11,6 +11,8 @@ struct CrankshaftSlabAllocItem {
     struct CrankshaftSlabAllocItem *next;
 };
 
+#define MIN_ITEM_SIZE sizeof( struct CrankshaftSlabAllocItem )
+
 #pragma GCC diagnostic ignored "-Wformat-truncation"
 #define SLAB_NAME_MAX 32
 struct CrankshaftSlabAlloc {
@@ -22,6 +24,7 @@ struct CrankshaftSlabAlloc {
     char *bufferEnd;
     pthread_mutex_t slabMutex;
     char name[SLAB_NAME_MAX];
+    bool useMalloc;
 };
 
 static bool freeSlab( struct CrankshaftSlabAlloc *slab ) {
@@ -30,9 +33,9 @@ static bool freeSlab( struct CrankshaftSlabAlloc *slab ) {
     while( slabToFree != NULL ) {
         nextSlab = slabToFree->nextSlab;
         slabToFree->nextSlab = NULL;
-        CS_free( slabToFree->buffer );
+        slabToFree->useMalloc?free( slabToFree->buffer ):CS_free( slabToFree->buffer );
         slabToFree->buffer = NULL;
-        CS_free( slabToFree );
+        slabToFree->useMalloc?free( slabToFree ):CS_free( slabToFree );
         slabToFree = nextSlab;
     }
     return false;
@@ -40,18 +43,18 @@ static bool freeSlab( struct CrankshaftSlabAlloc *slab ) {
 
 #define ALLOC_ITEM(_SLAB,_ITEM) ((struct CrankshaftSlabAllocItem*)(((_SLAB)->buffer)+((_ITEM)*((_SLAB)->size))))
 
-static struct CrankshaftSlabAlloc *initSlabAlloc( int size, int count, int alignment ) {
+static struct CrankshaftSlabAlloc *initSlabAlloc( int size, int count, int alignment, bool useMalloc ) {
     int realSize = (size % alignment == 0) ?
         size :
         size + ( alignment - (size % alignment) );
-    struct CrankshaftSlabAlloc *returnValue = CS_alloc( sizeof(struct CrankshaftSlabAlloc) );
+    struct CrankshaftSlabAlloc *returnValue = useMalloc?malloc( sizeof(struct CrankshaftSlabAlloc) ):CS_alloc( sizeof(struct CrankshaftSlabAlloc) );
     if( returnValue == NULL ) {
         return NULL;
     }
-    returnValue->buffer = CS_alloc( realSize * count );
+    returnValue->buffer = useMalloc?malloc( realSize * count ):CS_alloc( realSize * count );
 
     if( returnValue->buffer == NULL ) {
-        CS_free(returnValue);
+        useMalloc?free(returnValue):CS_free(returnValue);
         return NULL;
     }
     returnValue->size = realSize;
@@ -59,6 +62,7 @@ static struct CrankshaftSlabAlloc *initSlabAlloc( int size, int count, int align
     returnValue->head = (struct CrankshaftSlabAllocItem *)returnValue->buffer;
     returnValue->nextSlab = NULL;
     returnValue->bufferEnd = returnValue->buffer + ( returnValue->size * returnValue->capacity );
+    returnValue->useMalloc = useMalloc;
 
     for( int i = 0; i < count; ++i ) { 
         struct CrankshaftSlabAllocItem *current = ALLOC_ITEM(returnValue,i);
@@ -69,7 +73,14 @@ static struct CrankshaftSlabAlloc *initSlabAlloc( int size, int count, int align
     return returnValue;
 }
 
+static void *privateSlabInit( const char *name, int size, int count, int alignment, bool useMalloc );
+void *CS_slabInitMalloc( const char *name, int size, int count, int alignment ) {
+    return privateSlabInit(name,size,count,alignment,true);
+}
 void *CS_slabInit( const char *name, int size, int count, int alignment ) {
+    return privateSlabInit(name,size,count,alignment,false);
+}
+static void *privateSlabInit( const char *name, int size, int count, int alignment, bool useMalloc ) {
     if( alignment % CRANKSHAFT_MIN_ALIGNMENT ) {
         CS_LOG_ERROR("Alignment on a slab alloc must be a multiple of CRANKSHAFT_MIN_ALIGNMENT:%d", CRANKSHAFT_MIN_ALIGNMENT);
         return NULL;
@@ -83,7 +94,7 @@ void *CS_slabInit( const char *name, int size, int count, int alignment ) {
         CS_LOG_ERROR("Name of slab must be less than CRANKSHAFT_SLAB_NAME_MAX:%d", CRANKSHAFT_SLAB_NAME_MAX);
         return NULL;
     }
-    struct CrankshaftSlabAlloc *returnValue = initSlabAlloc( size, count, alignment );
+    struct CrankshaftSlabAlloc *returnValue = initSlabAlloc( size, count, alignment, useMalloc );
     if( returnValue != NULL ) {
         if( pthread_mutex_init( &returnValue->slabMutex, NULL ) < 0 ) {
             freeSlab( returnValue );
@@ -111,8 +122,9 @@ void *CS_slabTake(void *voidSlab ) {
     while( returnValue == NULL ) {
         ++slabDeep;
         if( currentSlab->nextSlab == NULL ) {
-            //It is never wrong to use 4. (Minimum anyhow on systems that require int reads to be aligned)
-            currentSlab->nextSlab = initSlabAlloc( currentSlab->size, currentSlab->capacity, CRANKSHAFT_MIN_ALIGNMENT );
+            //It is never wrong to use the min alignment. The size of each
+            //item is already aligned to whatever the user wanted
+            currentSlab->nextSlab = initSlabAlloc( currentSlab->size, currentSlab->capacity, CRANKSHAFT_MIN_ALIGNMENT, currentSlab->useMalloc );
             if( currentSlab->nextSlab == NULL ) {
                 CS_LOG_ERROR("Slab %s failed to expand. OOM", currentSlab->name);
                 goto RELEASE_LOCK;

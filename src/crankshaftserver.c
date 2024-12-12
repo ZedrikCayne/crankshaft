@@ -270,8 +270,7 @@ static void *serverThreadProc(void *var) {
             socklen_t addrSize = sizeof(clientSocketAddress);
             int newSock = accept(server->listenSocket, (struct sockaddr *)&clientSocketAddress, &addrSize);
             if( newSock < 0 ) {
-                int error = errno;
-                CS_LOG_ERROR("Socket closed, error %s", strerror(error));
+                CS_LOG_ERROR("Socket closed, error %s", strerror(errno));
                 server->threadRunning = false;
             } else {
                 createClientInfoWithThread( newSock, server, &clientSocketAddress );
@@ -348,7 +347,7 @@ struct CS_WebServer *CS_serverStart(int portNum,
         ++routeCount[ neededRoute ];
     }
 
-    returnValue->replyStack = CS_slabInit( ReplyStackName, sizeof( struct CS_Reply ), 256, 4 );
+    returnValue->replyStack = CS_slabInit( ReplyStackName, sizeof( struct CS_Reply ), 256, 8 );
 
 
     returnValue->listenSocket = socket(AF_INET, SOCK_STREAM,0);
@@ -420,8 +419,6 @@ bool CS_serverKill( struct CS_WebServer *server ) {
     while( server->threadRunning ) {
         sleep(1);
     }
-    const char *slabAllocDesc = CS_slabDesc(server->replyStack);
-    CS_free( (void*)slabAllocDesc );
     CS_slabFree(server->replyStack);
     CS_free(server);
     return false;
