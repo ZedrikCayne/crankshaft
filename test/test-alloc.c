@@ -26,7 +26,7 @@ bool test_alloc(void) {
     CS_setMaxAlloc(50);
     CS_FAIL_ON_NOT_NULL( (temp=CS_alloc(100)), "Alloc 100 on max 50 bytes", "We managed to allocate 100 bytes when the max was set to 50");
     if( temp != NULL ) CS_free(temp);
-    CS_FAIL_ON_NOT_NULL( (temp=CS_alloc(100)), "Alloc 25 on max 50 bytes", "We failed to allocate 25 bytes when the max was set to 50");
+    CS_FAIL_ON_NULL( (temp=CS_alloc(25)), "Alloc 25 on max 50 bytes", "We failed to allocate 25 bytes when the max was set to 50");
     if( temp != NULL ) CS_free(temp);
     CS_setMaxAlloc(0);
 #endif
