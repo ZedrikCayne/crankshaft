@@ -37,6 +37,8 @@ struct CS_HashTable {
 #define CS_HASHTABLE_ERROR ((const void *)(-1))
 
 #define CS_HASHTABLE_ITER(__TABLE,__ITER) for(struct CS_HashTableEntry **SLOT##__ITER=((__TABLE)->entries),**END##__ITER=((__TABLE)->entries+(__TABLE)->capacity);SLOT##__ITER<END##__ITER;++SLOT##__ITER)for(struct CS_HashTableEntry *__ITER=*(SLOT##__ITER); __ITER; __ITER=__ITER->nextInBucket)
+void CS_hashtableGrabMutex( struct CS_HashTable *table );
+void CS_hashtableReleaseMutex( struct CS_HashTable *table );
 
 struct CS_HashTable *CS_hashtableCreateCustom( int capacity, unsigned int flags,
         void *applicationSpecificData,
@@ -47,6 +49,7 @@ struct CS_HashTable *CS_hashtableCreateCustom( int capacity, unsigned int flags,
         int (*cleanupFunction)(struct CS_HashTable *table) );
 
 void CS_hashtableFree( struct CS_HashTable *table );
+
 
 int CS_hashtableDefaultStringVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value );
 int CS_hashtableDefaultStringVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry );

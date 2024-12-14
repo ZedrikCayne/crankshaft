@@ -791,7 +791,7 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
         }
     }
     
-    ERR(info, CS_RESPONSE_404,"URI not available on this server");
+    ERR(info, CS_RESPONSE_404, "URI not available on this server");
     return true;
 }
 
@@ -1051,6 +1051,11 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
                 CS_PP_writeToFile( info->output, info->clientSocket );
             bytesToWrite -= bytesWritten;
         } while( bytesToWrite > 0 && bytesWritten > 0 );
+        //And stuff out the last two bytes.
+        CS_PP_printf( info->output, "\r\n" );
+        bytesWritten = info->ssl?
+            CS_PP_writeToSSL( info->output, info->ssl ):
+            CS_PP_writeToFile( info->output, info->clientSocket );
     }
     CS_serverReturnReply(info, reply);
     return false;

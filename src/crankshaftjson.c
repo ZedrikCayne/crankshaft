@@ -818,7 +818,6 @@ struct CS_JsonNode *privateParseJson(const char *input, int inputLength, int all
                         goto ERROR_DEL_JSON;
                     }
                     name[outToggle] = copyOrMangleInPlace(out + outToggle,currentNode,copy,false);
-                    //CS_LOG_TRACE("Name %s on toggle %d set", name[outToggle], outToggle);
                     current = out[outToggle].end + 1;
                     tokenType = privateParseNext( out + outToggle, current, inputLength - (current - input) );
                     if( tokenType != JSON_TOKEN_KEY_SEPARATOR ) {

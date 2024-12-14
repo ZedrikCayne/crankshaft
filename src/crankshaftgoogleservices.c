@@ -35,11 +35,22 @@ bool CS_GS_getKeys(void) {
                             NULL, 0,
                             NULL );
     if( reply == NULL ) return true;
-    CS_LOG_TRACE("Whole thing\n%s!", CS_PP_startOfData(reply->buffer));
     googleKeys = CS_jsonParseCopy( CS_PP_startOfData(reply->buffer),
                                    CS_PP_dataSize(reply->buffer),
                                    DEFAULT_KEY_SIZE );
     if( googleKeys == NULL ) return true;
+    if( CS_jsonNodeToUnquoted( googleKeys, true ) == NULL ) {
+        CS_LOG_ERROR("Failed to unquote the reply");
+        CS_jsonFree(googleKeys);
+        return true;
+    }
+    CS_httpCloseRequest( reply );
+
+    struct CS_StringBuilder *sb = CS_jsonNodePrintable( googleKeys );
+    if( sb ) {
+        CS_LOG_LOUD("Keys as Json: %s", sb->buffer);
+    }
+    
 
     return false;
 }

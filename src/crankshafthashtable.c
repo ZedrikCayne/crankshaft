@@ -193,12 +193,12 @@ int CS_hashtableDefaultStringKeyCompare( struct CS_HashTable *table, const struc
     if( entry->keyHash == hash ) {
         if( table->flags & CS_HASHTABLE_FLAG_PEDANTIC ) {
             if( strncmp( entry->keyPrefix, key, sizeof( entry->keyPrefix ) ) ) {
-                CS_LOG_WARN("We had a key collision, caught by prefix check.");
+                CS_LOG_WARN("We had a key collision, caught by prefix check. %s vs %s", key, entry->fullKey );
                 return 1;
             }
             if( table->flags & CS_HASHTABLE_FLAG_VERY_PEDANTIC ) {
-                if( strcmp( entry->fullKey, key ) == 0 ) {
-                    CS_LOG_WARN("We had a key collision, caught by pedantic check.");
+                if( strcmp( entry->fullKey, key ) ) {
+                    CS_LOG_WARN("We had a key collision, caught by pedantic check. %s vs %s", key, entry->fullKey);
                     return 1;
                 }
             }
@@ -241,7 +241,7 @@ int CS_hashtableDefaultUuidKeyCompare( struct CS_HashTable *table, const struct 
     if( entry->keyHash == hash ) {
         if( table->flags & CS_HASHTABLE_FLAG_PEDANTIC ) {
             if( memcmp( entry->keyPrefix, key, sizeof( entry->keyPrefix ) ) ) {
-                CS_LOG_WARN("We had a key collision, caught by prefix check.");
+                CS_LOG_WARN("We had a key collision, caught by prefix check." );
                 return 1;
             }
             if( table->flags & CS_HASHTABLE_FLAG_VERY_PEDANTIC ) {
@@ -261,3 +261,9 @@ int CS_hashtableDefaultUuidCleanup( struct CS_HashTable *table ) {
     return 0;
 }
 
+void CS_hashtableGrabMutex( struct CS_HashTable *table ) {
+    GRAB_MUTEX();
+}
+void CS_hashtableReleaseMutex( struct CS_HashTable *table ) {
+    RELEASE_MUTEX();
+}

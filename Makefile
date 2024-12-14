@@ -1,11 +1,21 @@
 CC:=gcc
 GXX:=g++
+SQLITE_YEAR=2024
+SQLITE_VERSION=3470200
+SQLITE_DIR=sqlite-amalgamation-$(SQLITE_VERSION)
 INCDIRS:=include
 SRCDIR=src
 TESTDIR=test
 AR:=ar
 
 VERSION=0.2.0
+
+sqlite: $(SQLITE_DIR) $(SQLITE_DIR)/sqlite3.o
+
+$(SQLITE_DIR):
+	curl -O https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_DIR).zip
+	unzip $(SQLITE_DIR).zip
+	rm $(SQLITE_DIR).zip
 
 #DEBUG=-g
 
@@ -20,7 +30,7 @@ CFILES=$(foreach D,$(SRCDIR),$(wildcard $(D)/*.c))
 CXXFILES=$(foreach D,$(SRCDIR),$(wildcard $(D)/*.cpp))
 TESTCFILES=$(foreach D,$(TESTDIR),$(wildcard $(D)/*.c))
 TESTCXXFILES=$(foreach D,$(TESTDIR),$(wildcard $(D)/*.cpp))
-CFLAGS:=-Wall $(DEBUG) $(OPT) $(foreach D,$(INCDIRS),-I$(D)) $(CFLAGS)
+CFLAGS:=-Wall $(DEBUG) $(OPT) $(foreach D,$(INCDIRS),-I$(D)) -I$(SQLITE_DIR) $(CFLAGS)
 CXXFLAGS:=$(CFLAGS)
 LIBS:=-lssl -lcrypto -lstdc++ -lpthread -lm -lz
 
@@ -31,7 +41,7 @@ BUILD_DIR=build
 TAROUT=$(BUILD_DIR)/crankshaft-$(VERSION).tgz
 
 
-OBJECTS_C=$(patsubst %.c, $(OBJECTS_DIR)/%.o, $(notdir $(CFILES)))
+OBJECTS_C=$(patsubst %.c, $(OBJECTS_DIR)/%.o, $(notdir $(CFILES))) $(SQLITE_DIR)/sqlite3.o
 OBJECTS_CXX=$(patsubst %.cpp, $(OBJECTS_DIR)/%.o, $(notdir $(CXXFILES)))
 TESTOBJECTS_C=$(patsubst %.c, $(OBJECTS_DIR)/%.o, $(notdir $(TESTCFILES)))
 TESTOBJECTS_CXX=$(patsubst %.cpp, $(OBJECTS_DIR)/%.o, $(notdir $(TESTCXXFILES)))
@@ -87,7 +97,7 @@ $(TAROUT): $(BUILD_DIR) $(LIBOUT)
 $(LIBOUT): $(OBJECTS_C)
 	$(AR) rcs $@ $(OBJECTS_C)
 
-$(BINOUT): $(OBJECTS_C) $(OBJECTS_CXX)
+$(BINOUT): $(OBJECTS_C) $(OBJECTS_CXX) sqlite
 	$(CC) -o $@ $(CXXFLAGS) -Xlinker $^ ${LIBS}
 
 $(OBJECTS_DIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
@@ -95,6 +105,9 @@ $(OBJECTS_DIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 
 $(OBJECTS_DIR)/%.o: $(SRCDIR)/%.cpp $(INCLUDES)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(SQLITE_DIR)/%.o: $(SQLITE_DIR)/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJECTS_DIR)/%.o: $(TESTDIR)/%.c $(INCLUDES)
 	$(CC) $(CFLAGS) -c -o $@ $<

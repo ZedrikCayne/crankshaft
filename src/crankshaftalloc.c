@@ -1,11 +1,11 @@
 #include <stdlib.h>
+#include <string.h>
+
 #include "crankshaftalloc.h"
 #include "crankshaftrandom.h"
 
-
 #ifdef CS_ALLOC_TRACKING
 #include <pthread.h>
-#include <string.h>
 #include "crankshaftslaballoc.h"
 #include "crankshafthashtable.h"
 #include "crankshaftlogger.h"
@@ -231,6 +231,21 @@ void *CS_realloc_detailled(void *reallocMe,unsigned long size,const char *file, 
     if( mallocFailRate > 0 ) if( (CS_LCG_rand(&memoryRNG)%MAX_FAIL_RATE) < mallocFailRate ) return NULL;
     return CS_REALLOC(reallocMe,size);
 }
+
+void *CS_allocDuplicate_detailled(const void *duplicateMe, unsigned long size, const char *file, int line) {
+    void *returnValue = CS_alloc_detailled( size, file, line );
+    if( returnValue ) {
+        memcpy(returnValue, duplicateMe, size);
+    }
+    return returnValue;
+}
 #endif
+void *CS_allocDuplicateMalloc(const void *duplicateMe, unsigned long size) {
+    void *returnValue = malloc( size );
+    if( returnValue ) {
+        memcpy(returnValue, duplicateMe, size);
+    }
+    return returnValue;
+}
 
 

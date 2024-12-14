@@ -6,9 +6,11 @@ obj/
 lib/
 build/
 secrets/
+storage/
 .idea/
 *.swp
 .ccls*
 root
 keys
+sqlite-amal*
 test/autogen-test.*
