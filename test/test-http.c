@@ -134,7 +134,6 @@ bool test_http(void) {
                 }
             }
         }
-        CS_LOG_TRACE("Kill ssl.");
         CS_httpKillSSL();
         CS_httpCleanupReplies();
         CS_serverKill( testServer );
