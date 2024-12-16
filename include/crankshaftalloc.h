@@ -19,7 +19,7 @@ extern "C" {
 #define CS_freeB(_B,_X) free(_X)
 #define CS_reallocB(_B,_X,_Y) realloc(_X,_Y)
 #define CS_allocDuplicateB(_B,_X,_Y) CS_allocDuplicateMalloc(_X,_Y)
-#define CS_allocZeor(_X) CS_allocZeroMalloc(_X)
+#define CS_allocZero(_X) CS_allocZeroMalloc(_X)
 
 #else
 
