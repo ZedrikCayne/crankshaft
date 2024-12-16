@@ -239,12 +239,23 @@ void *CS_allocDuplicate_detailled(const void *duplicateMe, unsigned long size, c
     }
     return returnValue;
 }
+
+void *CS_allocZero_detailled(unsigned long size, const char *file, int line) {
+    void *returnValue = CS_alloc_detailled( size, file, line );
+    if( returnValue ) memset( returnValue, 0, size );
+    return returnValue;
+}
 #endif
+
 void *CS_allocDuplicateMalloc(const void *duplicateMe, unsigned long size) {
     void *returnValue = malloc( size );
-    if( returnValue ) {
-        memcpy(returnValue, duplicateMe, size);
-    }
+    if( returnValue ) memcpy(returnValue, duplicateMe, size);
+    return returnValue;
+}
+
+void *CS_allocZeroMalloc(unsigned long size) {
+    void *returnValue = malloc( size );
+    if( returnValue ) memset( returnValue, 0, size );
     return returnValue;
 }
 

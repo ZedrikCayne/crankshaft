@@ -5,7 +5,11 @@
 echo Generating test test/autogen-test.c
 OUT="test/autogen-test.cpp"
 
-FILES=`find test -mindepth 1 -name "test-*" | sort`
+if [ -z ${1} ]; then
+    FILES=`find test -mindepth 1 -name "test-*" | sort`
+else
+    FILES=$*
+fi
 
 BASES=`echo "${FILES}" | sed 's/^test\///' | sed 's/\.c$//' | sed 's/\.cpp$//' | sed 's/-/_/g' `
 

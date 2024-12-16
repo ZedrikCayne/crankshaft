@@ -67,8 +67,18 @@ int CS_hashtableDefaultUuidCleanup( struct CS_HashTable *table );
 
 struct CS_HashTable *CS_hashtableResize( struct CS_HashTable *hashTable, int newCapacity );
 
+enum CS_HASHTTABLE_MAYBE {
+    CS_HASHTABLE_MAYBE_PUT_RETURN_NEW,
+    CS_HASHTABLE_MAYBE_PUT_RETURN_OLD,
+    CS_HASHTABLE_MAYBE_PUT_RETURN_NULL,
+    CS_HASHTABLE_MAYBE_RETURN_ERROR,
+    CS_HASHTABLE_MAYBE_RETURN_NEW,
+    CS_HASHTABLE_MAYBE_RETURN_OLD,
+    CS_HASHTABLE_MAYBE_RETURN_NULL
+};
 bool CS_hashtableHasKey( struct CS_HashTable *table, const void *key );
 const void *CS_hashtablePut( struct CS_HashTable *table, const void *key, const void *value );
+const void *CS_hashtablePutMaybe( struct CS_HashTable *table, const void *key, const void *value, void *context, int (*maybe)(void *context, const void *oldValue) );
 const void *CS_hashtableRemove( struct CS_HashTable *table, const void *key );
 const void *CS_hashtableGet( struct CS_HashTable *table, const void *key );
 

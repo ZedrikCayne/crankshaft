@@ -137,6 +137,50 @@ const void *CS_hashtablePut( struct CS_HashTable *table, const void *key, const 
     return returnValue;
 }
 
+const void *CS_hashtablePutMaybe( struct CS_HashTable *table, const void *key, const void *value, void *context, int (*maybe)( void *context, const void *oldValue ) ) {
+    int hash = table->keyHashFunction( table, key );
+    const void *returnValue = NULL;
+    GRAB_MUTEX();
+
+    struct CS_HashTableEntry *entry = privateFindEntryForKey( table, key, hash, NULL );
+    const void *entryValue = CS_HASHTABLE_ERROR;
+    if( entry != NULL ) {
+        entryValue = entry->value;
+    }
+    int maybeValue = maybe( context, entryValue );
+    switch( maybeValue ) {
+        case CS_HASHTABLE_MAYBE_RETURN_ERROR:
+            returnValue = CS_HASHTABLE_ERROR;
+            break;
+        case CS_HASHTABLE_MAYBE_PUT_RETURN_NEW:
+        case CS_HASHTABLE_MAYBE_RETURN_NEW:
+            returnValue = value;
+            break;
+        case CS_HASHTABLE_MAYBE_PUT_RETURN_OLD:
+        case CS_HASHTABLE_MAYBE_RETURN_OLD:
+            returnValue = entry?entry->value:NULL;
+            break;
+        case CS_HASHTABLE_MAYBE_PUT_RETURN_NULL:
+        case CS_HASHTABLE_MAYBE_RETURN_NULL:
+            returnValue = NULL;
+            break;
+    }
+    switch( maybeValue ) {
+        case CS_HASHTABLE_MAYBE_PUT_RETURN_NEW:
+        case CS_HASHTABLE_MAYBE_PUT_RETURN_OLD:
+        case CS_HASHTABLE_MAYBE_PUT_RETURN_NULL:
+            if( !entry ) {
+                if(privateInsertEntryForKey( table, key, hash, value ) == NULL) returnValue = CS_HASHTABLE_ERROR;
+            } else {
+                entry->value = value;
+            }
+            break;
+    }
+    
+    RELEASE_MUTEX();
+    return returnValue;
+}
+
 const void *CS_hashtableRemove( struct CS_HashTable *table, const void *key ) {
     int hash = table->keyHashFunction( table, key );
     const void *returnValue = NULL;
