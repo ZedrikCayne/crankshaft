@@ -134,6 +134,10 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
                 CS_FAIL_ON_NOT_NULL( putInFalse, CS_tempBuffSnprintf( 64, "Trying to put '%s' in again.", key), "Should have failed." );
                 CS_FAIL_ON_NULL( alreadyThere, CS_tempBuffSnprintf( 64, "We should have a pointer to the original '%s'", key), "This is null..bad.");
                 CS_FAIL_ON_FALSE( strcmp(alreadyThere->key, key) == 0, CS_tempBuffSnprintf( 64, "Returned item should be keyed '%s'", key), "Item key was %s", alreadyThere->key );
+                if( putInFalse ) {
+                    CS_storageReturnItem( putInFalse );
+                    putInFalse = NULL;
+                }
                 if( alreadyThere ) {
                     CS_storageReturnItem( alreadyThere );
                     alreadyThere = NULL;

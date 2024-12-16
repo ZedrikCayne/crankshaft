@@ -110,6 +110,7 @@ bool test_http(void) {
                     const char *tempVal = CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) );
                     CS_FAIL_ON_FALSE( tempVal && strcmp(tempVal,headers[i].values) == 0, CS_tempBuffSnprintf(64, "Looking for %s in %s", headers[i].values, tempPath), "Found %s", tempVal?tempVal:NULL );
                 }
+                CS_jsonFree( json );
             }
             CS_httpCloseRequest(reply);
         }
@@ -132,7 +133,9 @@ bool test_http(void) {
                     CS_FAIL_ON_FALSE( tempVal && strcmp(tempVal,formParameters[i].value)==0, tempPath, "No match." );
 
                 }
+                CS_jsonFree( json );
             }
+            CS_httpCloseRequest( reply );
         }
         CS_httpKillSSL();
         CS_httpCleanupReplies();

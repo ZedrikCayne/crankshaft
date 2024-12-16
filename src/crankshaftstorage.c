@@ -541,6 +541,7 @@ static struct CS_StorageItem *privateHashtablePut(const struct CS_Storage *stora
     if( old && old != CS_HASHTABLE_ERROR ) privateReturnStorageItem(old);
     if( old == CS_HASHTABLE_ERROR ) {
         //We failed to put the new item in, return a copy of the old one (or possibly NULL)
+        privateReturnStorageItem(itemCopy);
         return context.oldItemCopy;
     }
     return item;
