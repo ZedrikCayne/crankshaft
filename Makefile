@@ -73,11 +73,15 @@ test: CFLAGS:=-DCS_AUTOTEST_ENABLED $(CFLAGS)
 test: $(OBJECTS_DIR) $(BINOUT)-test
 	./$(BINOUT)-test --test --suppress-errors --only-fails
 
+leaks:
+	leaks --outputGraph=$(BINOUT)-test-leaks.graph --atExit -- ./$(BINOUT)-test --test --trace
+	leaks $(BINOUT)-test-leaks.graph
+
 valgrind:
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=$(BINOUT)-test-valgrind.txt ./$(BINOUT)-test --test --trace > ~/a.out
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=$(BINOUT)-test-valgrind.txt ./$(BINOUT)-test --test --trace
 
 valgrindServer:
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=$(BINOUT)-valgrind.txt ./$(BINOUT) --trace --log ~/a.out
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=$(BINOUT)-valgrind.txt ./$(BINOUT) --trace
 
 $(LIB_DIR):
 	mkdir -p $@
