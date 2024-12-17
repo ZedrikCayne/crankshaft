@@ -23,7 +23,7 @@ bool CS_testMain(void) {
     }
     int allocSystemError = CS_allocSystemTracker(5000,CS_ALLOC_FLAG_ALL);
     if( allocSystemError != 0 ) CS_LOG_LOUD("Alloc tracking system not working.");
-    CS_tempAllocateGlobal();
+    CS_tempAllocateGlobal(5*1024*1024);
     CS_LOG_LOUD("Test random seed is %d, call CS_testSetRandomSeed() to set it explicitly or use --seed if you are using the included main.cpp for repeatable tests in the future.", CS_TEST_seed);
 
     bool returnValue = TEST_AUTO();

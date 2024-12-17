@@ -161,6 +161,7 @@ struct CS_StringBuilder *CS_jsonQuoteString(const char *inputString, int len) {
 
 #define jsonNode(VA) ((struct CS_JsonNode *)CS_linearTake(VA,sizeof(struct CS_JsonNode),JSON_NODE_ALIGNMENT))
 static struct CS_JsonNode *privateNewNode( struct CS_JsonNode *aNode ) {
+    if( aNode->voidLinearAllocator == NULL ) return NULL;
     struct CS_JsonNode *returnValue = jsonNode( aNode->voidLinearAllocator );
     returnValue->name = NULL;
     returnValue->next = NULL;
@@ -213,8 +214,8 @@ static struct CS_JsonNode *privateClose( struct CS_JsonNode *aNode ) {
     return aNode;
 }
 
-static struct CS_JsonNode *privateInitJson( int stackSize ) {
-    void *linearAlloc = CS_linearInit( stackSize );
+static struct CS_JsonNode *privateInitJson( int stackSize, void *linearAllocator ) {
+    void *linearAlloc = linearAllocator?linearAllocator:CS_linearInit( stackSize );
     if( linearAlloc == NULL ) return NULL;
     struct CS_JsonNode *root = jsonNode(linearAlloc);
     root->name = NULL;
@@ -227,6 +228,36 @@ static struct CS_JsonNode *privateInitJson( int stackSize ) {
     root->alloc = NULL;
     
     return root;
+}
+
+//Clear out all the internal linear allocators...
+void privateClearAllocators( struct CS_JsonNode *any ) {
+    struct CS_JsonNode *current = any;
+    while( current->up != NULL ) current = current->up;
+
+    while( current != NULL ) {
+        current->voidLinearAllocator = NULL;
+        //If we are a container, dip into the container. We'll be working our way
+        //back up here, we can avoid going back down by checking to see if
+        //the container has had its allocator cleared or not.
+        if( current->typeEnum <= CS_JSON_OBJECT &&
+            current->container != NULL &&
+            current->container->voidLinearAllocator != NULL ) {
+            current = current->container;
+            continue;
+        }
+        if( current->next ) {
+            current = current->next;
+            continue;
+        }
+        if( current->up ) {
+            current = current->up;
+            continue;
+        }
+        if( current->up == NULL ) {
+            break;
+        }
+    }
 }
 
 void CS_jsonFree( struct CS_JsonNode *any ) {
@@ -770,8 +801,8 @@ static struct CS_JsonNode *pushOn( struct JsonToken *token, const char *name, st
     return returnValue;
 }
 
-struct CS_JsonNode *privateParseJson(const char *input, int inputLength, int allocSize, bool copy ) {
-    struct CS_JsonNode *returnValue = privateInitJson( allocSize );
+struct CS_JsonNode *privateParseJson(const char *input, int inputLength, int allocSize, bool copy, void *linearAllocator ) {
+    struct CS_JsonNode *returnValue = privateInitJson( allocSize, linearAllocator );
     const char *current;
     const char *end;
 
@@ -880,16 +911,23 @@ ERROR_DEL_JSON:
     } else {
         CS_LOG_ERROR("ERROR NOT SET!");
     }
+    if( linearAllocator ) privateClearAllocators( returnValue );
     CS_jsonFree( returnValue );
     return NULL;
 }
 
+struct CS_JsonNode *CS_jsonParseCopyWithAllocator(const char *input, int inputLength, void *linearAllocator ) {
+    struct CS_JsonNode *returnValue = privateParseJson(input,inputLength,0,true,linearAllocator);
+    if( returnValue ) privateClearAllocators( returnValue );
+    return returnValue;
+}
+
 struct CS_JsonNode *CS_jsonParseCopy(const char *input, int inputLength, int allocSize) {
-    return privateParseJson(input,inputLength,allocSize,true);
+    return privateParseJson(input,inputLength,allocSize,true,NULL);
 }
 
 struct CS_JsonNode *CS_jsonParse(const char *input, int inputLength, int allocSize) {
-    return privateParseJson(input,inputLength,allocSize,false);
+    return privateParseJson(input,inputLength,allocSize,false,NULL);
 }
 
 static int unquotePrivate( char *output, char *inputString, int len ) {
@@ -1418,7 +1456,7 @@ struct CS_JsonNode *CS_jsonNodeAppendQuotedString( struct CS_JsonNode *appendTo,
 }
 
 struct CS_JsonNode *CS_jsonNodeNew( int allocSize ) {
-    return privateInitJson( allocSize );
+    return privateInitJson( allocSize, NULL );
 }
 struct CS_JsonNode *CS_jsonNodeAppendObject( struct CS_JsonNode *appendTo, const char *name ) {
     struct CS_JsonNode *returnValue = privateAppend( appendTo, name ); 

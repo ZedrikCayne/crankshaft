@@ -8,6 +8,7 @@
 #include "crankshafttest.h"
 #include "crankshafttempbuff.h"
 #include "crankshaftjson.h"
+#include "crankshaftlinearalloc.h"
 
 extern bool test_json();
 
@@ -176,9 +177,9 @@ char *firstTest = "{\"a\":[]}";
 bool test_json() {
     char *__temp = NULL;
     //Tests go here:
-    void *myTempBuffer = CS_tempAllocManual( "TEST BUFF", TEMP_BUFF_SIZE, TEMP_BUFF_COUNT, TEMP_BUFF_ALIGNMENT );
+    void *myTempBuffer = CS_tempAllocManual( "TEST BUFF", TEMP_BUFF_SIZE * TEMP_BUFF_COUNT );
 
-    char *t0 = CS_tempGetManualTemp( myTempBuffer );
+    char *t0 = CS_tempGetManual( myTempBuffer, TEMP_BUFF_SIZE );
     strncpy( t0, firstTest, TEMP_BUFF_SIZE );
     SET__TEMP(firstTest);
     struct CS_JsonNode * js = CS_jsonParseCopy( t0, strlen( t0 ), TEMP_JSON_ALLOC_SIZE);
@@ -187,7 +188,7 @@ bool test_json() {
         CS_jsonFree(js);
     }
 
-    char *t1 = CS_tempGetManualTemp( myTempBuffer );
+    char *t1 = CS_tempGetManual( myTempBuffer, TEMP_BUFF_SIZE );
 
     strncpy(t1, testsource1, TEMP_BUFF_SIZE);
 
@@ -196,7 +197,7 @@ bool test_json() {
     CS_FAIL_ON_FALSE( js && js->typeEnum == CS_JSON_ARRAY, "Parse an array", "%s", wantedButGot( CS_JSON_ARRAY, js ) );
     if( js ) CS_jsonFree(js);
 
-    char *t2 = CS_tempGetManualTemp( myTempBuffer );
+    char *t2 = CS_tempGetManual( myTempBuffer, TEMP_BUFF_SIZE );
 
     strncpy(t2, testsource2, TEMP_BUFF_SIZE);
 
@@ -254,7 +255,7 @@ bool test_json() {
 
     root = js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE );
 
-    t1 = CS_tempGetManualTemp( myTempBuffer );
+    t1 = CS_tempGetManual( myTempBuffer, TEMP_BUFF_SIZE );
     for( int i = 0; i < TEMP_BUFF_SIZE; ++i ) {
         t1[ i ] = (i % 126) + 1;
     }
@@ -335,7 +336,7 @@ bool test_json() {
     if( js ) {
         js2 = CS_jsonNodeByPath(js, "a");
         CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_STRING_QUOTED), "Expecting to get a string with key 'a'", "%s", wantedButGot(CS_JSON_STRING_UNQUOTED, js2) );
-        CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_STRING_QUOTED && strcmp(js2->stringValue,"1") == 0), "Expecting to get a string with value '1'", "%s",  js2->stringValue );
+        CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_STRING_QUOTED && strcmp(js2->stringValue,"1") == 0), "Expecting to get a string with value '1'", "%s",  js2?js2->stringValue?js2->stringValue:"NULL":"NULL" );
         CS_FAIL_ON_NOT_NULL( js2 = CS_jsonNodeByPath(js,"1"), "Expecting a null by asking for a string that is not a key.", "%s", nullButGot( js2 ) );
         js2 = CS_jsonNodeByPath(js,"c");
         CS_FAIL_ON_FALSE( (js2 != NULL && js2->typeEnum == CS_JSON_FLOAT_AS_STRING), "Expecting the float as string here.", "%s", wantedButGot(CS_JSON_FLOAT_AS_STRING, js2) );
@@ -360,6 +361,17 @@ bool test_json() {
         CS_FAIL_ON_FALSE( (js2 && strcmp(js2->stringValue,"cVal")==0 ), "|name=c/value should be cVal", "Was not." );
         CS_jsonFree(js);
     }
+
+    void *tempVoidAllocator = CS_linearInit( 1024 );
+    js = CS_jsonParseCopyWithAllocator( testsource4, strlen(testsource4), tempVoidAllocator );
+    if( js ) {
+        js2 = CS_jsonNodeByPath(js,"|name=a/value");
+        CS_FAIL_ON_FALSE( (js2 && strcmp(js2->stringValue,"aVal")==0 ), "|name=a/value should be aVal", "Was not." );
+        js2 = CS_jsonNodeByPath(js,"|name=c/value");
+        CS_FAIL_ON_FALSE( (js2 && strcmp(js2->stringValue,"cVal")==0 ), "|name=c/value should be cVal", "Was not." );
+        CS_jsonFree(js);
+    }
+    
 
     CS_tempFreeManual( myTempBuffer );
 

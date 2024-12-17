@@ -198,7 +198,7 @@ int main(int argc, char *argv[] ) {
     signal(SIGHUP, hupHandler);
     signal(SIGTERM, terminateHandler);
 
-    CS_tempAllocateGlobal();
+    CS_tempAllocateGlobal(10*1024*1024);
 
     CS_LOG_INFO("Starting web server.");
 

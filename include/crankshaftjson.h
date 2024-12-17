@@ -143,6 +143,9 @@ struct CS_JsonNode {
 
 #define CS_JSON_NODE_ITER(_START_NODE,_JSON_ITER) if(((_START_NODE)!=NULL)&&(((_START_NODE)->typeEnum==CS_JSON_ARRAY)||((_START_NODE)->typeEnum==CS_JSON_OBJECT)))for(struct CS_JsonNode *_JSON_ITER=(_START_NODE)->container;_JSON_ITER!=NULL;_JSON_ITER=_JSON_ITER->next)
 
+//LeakWarning: You still have to CS_jsonFree() a json node created with an external allocator
+//just in case there are alloc'd nodes.
+struct CS_JsonNode *CS_jsonParseCopyWithAllocator(const char *source, int inputLength, void *linearAllocator );
 struct CS_JsonNode *CS_jsonParseCopy(const char *source, int inputLength, int allocSize);
 struct CS_JsonNode *CS_jsonParse(const char *source, int inputLength, int allocSize);
 void CS_jsonFree( struct CS_JsonNode *any );

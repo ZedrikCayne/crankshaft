@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "crankshaftalloc.h"
 #include "crankshaftlogger.h"
@@ -56,6 +57,12 @@ void *CS_linearTake(void *voidAllocator, int size, int alignment ) {
         }
         linearAllocator = linearAllocator->next;
     }
+    return returnValue;
+}
+
+void *CS_linearTakeZero(void *voidAllocator, int size, int alignment ) {
+    void *returnValue = CS_linearTake( voidAllocator, size, alignment );
+    if( returnValue ) memset( returnValue, 0, size );
     return returnValue;
 }
 

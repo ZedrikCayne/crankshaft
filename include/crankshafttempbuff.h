@@ -7,10 +7,6 @@
  *
  * Temp Buffer system.
  *
- * Sets a default number of temporary
- * buffers. (Sizes from 32 bytes to
- * 16384). Growing in powers of 2.
- *
  * Ask for a buffer of size, get a buffer.
  * No nulls unless it isn't initialized in
  * the first place or you ask for a buffer
@@ -18,8 +14,7 @@
  * CS_MAX_TEMP_BUFF_SIZE
  *
  * These buffers should not be trusted for
- * very long. (There are only 64 16k buffers
- * for example) and definitely not past
+ * very long and definitely not past
  * the scope of an IO call of any kind or
  * even for the scope of an IO call if
  * the IO is slow. (Networked drives,
@@ -44,21 +39,20 @@
 extern "C" {
 #endif
 
-#define CS_MIN_TEMP_BUFF_SIZE 32
-#define CS_MAX_TEMP_BUFF_SIZE 16384
-#define CS_TEMP_BUFF_ALLOC_SIZE (1024 * 1024)
-#define CS_TEMP_BUFF_ALIGNMENT 4
+#define CS_TEMPBUFF_MIN_SIZE 8
+#define CS_TEMPBUFF_MAX_SIZE 16384
+#define CS_TEMPBUFF_ALIGNMENT 8
 
 void *CS_tempBuff(int size);
 char *CS_tempStringCopy(const char *copyMe);
-bool CS_tempAllocateGlobal(void);
-bool CS_tempFreeGlobal(void);
+bool CS_tempAllocateGlobal(int globalSize);
+bool CS_tempFreeGlobal();
 char *CS_tempBuffSnprintf(int max, char *fmt, ...);
 
 #define CS_MAX_TEMP_BUFF_TEMP_NAME 64
 
-void *CS_tempAllocManual(const char *name, int elementSize, int numberOfElements, int alignment);
-void *CS_tempGetManualTemp(void *manualTempBuff);
+void *CS_tempAllocManual(const char *name, int size );
+void *CS_tempGetManual(void *manualTempBuff, int size);
 void CS_tempFreeManual(void *manualTempBuff);
 
 #ifdef __cplusplus
