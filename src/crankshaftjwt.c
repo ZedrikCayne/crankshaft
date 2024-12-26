@@ -90,16 +90,18 @@ const struct CS_Jwt *CS_jwtParse( const char *inJwt,
         goto ERROR;
     }
     int tempJsonStringLength;
-    char *tempJsonString = CS_base64DecodeTemp( outJwt->header, outJwt->headerLength, &tempJsonStringLength );
+    char *tempJsonString = CS_base64DecodeUrlTemp( outJwt->header, outJwt->headerLength, &tempJsonStringLength );
     if( tempJsonString == NULL ) goto ERROR;
     outJwt->jsonHeader = CS_jsonParseCopyWithAllocator( tempJsonString, tempJsonStringLength, linearAllocator );
     if( outJwt->jsonHeader == NULL ) goto ERROR;
-    tempJsonString = CS_base64DecodeTemp( outJwt->payload, outJwt->payloadLength, &tempJsonStringLength );
+    CS_jsonNodeToUnquoted( outJwt->jsonHeader, true );
+    tempJsonString = CS_base64DecodeUrlTemp( outJwt->payload, outJwt->payloadLength, &tempJsonStringLength );
     if( tempJsonString == NULL ) goto ERROR;
     outJwt->jsonPayload = CS_jsonParseCopyWithAllocator( tempJsonString, tempJsonStringLength, linearAllocator );
     if( outJwt->jsonPayload == NULL ) goto ERROR;
+    CS_jsonNodeToUnquoted( outJwt->jsonPayload, true );
     if( outJwt->signature ) {
-        outJwt->signatureInBinary = CS_base64DecodeLinearAlloc( outJwt->signature, outJwt->signatureLength, &tempJsonStringLength, linearAllocator );
+        outJwt->signatureInBinary = CS_base64DecodeUrlLinearAlloc( outJwt->signature, outJwt->signatureLength, &tempJsonStringLength, linearAllocator );
         if( outJwt->signatureInBinary == NULL ) goto ERROR;
         outJwt->binarySignatureLength = tempJsonStringLength;
     }

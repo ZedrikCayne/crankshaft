@@ -155,6 +155,7 @@ struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTr
 struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *path);
 
 struct CS_StringBuilder *CS_jsonNodePrintable(const struct CS_JsonNode *printMe);
+char *CS_jsonNodePrintableTemp(const struct CS_JsonNode *printMe);
 
 bool CS_unquoteInPlace(char *inputString, int len);
 

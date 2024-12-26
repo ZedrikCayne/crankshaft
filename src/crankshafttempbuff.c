@@ -86,6 +86,14 @@ char *CS_tempStringCopy(const char *copyFrom) {
     return returnValue;
 }
 
+void *CS_tempMemCopy( const void *from, int size ) {
+    void *returnValue = CS_tempBuff(size);
+    if( returnValue ) {
+        memcpy(returnValue, from, size);
+    }
+    return returnValue;
+}
+
 bool CS_tempAllocateGlobal(int globalSize) {
     CS_LOG_TRACE("Temp buffers allocated with %d", globalSize);
         

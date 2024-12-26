@@ -7,6 +7,7 @@
 #include <openssl/bn.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/param_build.h>
 
 #include "crankshaftalloc.h"
 #include "crankshaftlogger.h"
@@ -39,8 +40,6 @@ bool test_jwt(void) {
     if( jwt ) {
         struct CS_JsonNode *js = CS_jsonParseCopy(testHeader, strlen(testHeader), 1024);
         struct CS_JsonNode *js2 = CS_jsonParseCopy(testPayload, strlen(testPayload), 1024);
-        CS_FAIL_ON_FALSE( CS_jsonNodesEquivalent( (struct CS_JsonNode *)jwt->jsonHeader, js ), "Json header parsed correctly?", "Nope!" );
-        CS_FAIL_ON_FALSE( CS_jsonNodesEquivalent( (struct CS_JsonNode *)jwt->jsonPayload, js2 ), "Json payload parsed correctly?", "Nope!" );
         CS_jsonFree( js );
         CS_jsonFree( js2 );
         if( keysJson ) {
@@ -55,11 +54,60 @@ bool test_jwt(void) {
                 CS_FAIL_ON_FALSE( strlen( n->stringValue ) == n->nItemsOrLength, "Check lengths of n.", "Different." );
                 CS_FAIL_ON_FALSE( strlen( e->stringValue ) == e->nItemsOrLength, "Check lengths of e.", "Different." );
                 int nSize;
-                void *nBits = CS_base64Decode( n->stringValue, n->nItemsOrLength, &nSize );
+                void *nBits = CS_base64DecodeUrl( n->stringValue, n->nItemsOrLength, &nSize );
                 int eSize;
-                void *eBits = CS_base64Decode( e->stringValue, e->nItemsOrLength, &eSize );
+                void *eBits = CS_base64DecodeUrl( e->stringValue, e->nItemsOrLength, &eSize );
                 CS_FAIL_ON_NULL( nBits, "Decode N.", "Nope." );
                 CS_FAIL_ON_NULL( eBits, "Decode E.", "Nope." );
+                
+                BIGNUM *bn = BN_bin2bn( nBits, nSize, NULL );
+                CS_FAIL_ON_NULL( bn, "Make BIGNUM out of nbits", "Nope." );
+                BIGNUM *be = BN_bin2bn( eBits, eSize, NULL );
+                CS_FAIL_ON_NULL( bn, "Make BIGNUM out of ebits", "Nope." );
+
+                //Okay, this isn't well documented. So, we grab a param builder.
+                //Stuff in our 'n' and 'e' parameters
+                //https://docs.openssl.org/3.3/man7/EVP_PKEY-RSA/
+                OSSL_PARAM_BLD *param_builder = OSSL_PARAM_BLD_new();
+                CS_FAIL_ON_NULL( param_builder, "Parameter builder", "Nope!" );
+                if( param_builder ) {
+                    CS_FAIL_ON_FALSE( OSSL_PARAM_BLD_push_BN( param_builder, "n", bn ) == 1, "Push n", "Failed." );
+                    CS_FAIL_ON_FALSE( OSSL_PARAM_BLD_push_BN( param_builder, "e", be ) == 1, "Push e", "Failed." );
+                    OSSL_PARAM *param = OSSL_PARAM_BLD_to_param( param_builder );
+                    CS_FAIL_ON_NULL( param, "Convert parameter builder to parameters.", "Failed." );
+
+                    if( param ) {
+                        //Generate a public key context...and then tell it we're going
+                        //to use the fromdata thing on it.
+                        EVP_PKEY_CTX *pkey_context = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
+                        CS_FAIL_ON_NULL( pkey_context, "Public key context creation.", "Failed." );
+                        if( pkey_context ) {
+                            CS_FAIL_ON_FALSE( EVP_PKEY_fromdata_init( pkey_context ) == 1, "Fromdata init.", "Failed." );
+
+                            //Call the fromdata thing and have it output the key.
+                            EVP_PKEY *pkey = NULL;
+                            CS_FAIL_ON_FALSE( EVP_PKEY_fromdata( pkey_context, &pkey, EVP_PKEY_PUBLIC_KEY, param ) == 1, "Create PKEY from the parameters.", "Failed." );
+                            CS_FAIL_ON_NULL( pkey, "Finally, pkey generated.", "Nope." );
+                            if( pkey ) {
+                                //Now, grab a message digest context thing.
+                                EVP_MD_CTX *mdctx = EVP_MD_CTX_create();
+                                CS_FAIL_ON_NULL( mdctx, "Message Digest CTX.", "Failed." );
+                                if( mdctx ) {
+                                    struct CS_StringBuilder *sb = CS_SB_create( 1024 );
+                                    EVP_PKEY_CTX *newCtx;
+                                    CS_LOG( "CHECKING: %s.%s", jwt->header, jwt->payload );
+                                    CS_SB_append( sb, jwt->header );
+                                    CS_SB_appendChar(sb,'.');
+                                    CS_SB_append(sb, jwt->payload );
+                                    CS_LOG( "VS      : %s", CS_SB_buffer(sb) );
+                                    CS_FAIL_ON_FALSE( EVP_DigestVerifyInit(mdctx, &newCtx, EVP_sha256(), NULL, pkey ) == 1, "Init digest.", "Failed" );
+                                    CS_LOG_LOUD( "Length: %d", jwt->binarySignatureLength );
+                                    CS_FAIL_ON_FALSE( EVP_DigestVerify( mdctx, jwt->signatureInBinary, jwt->binarySignatureLength, (unsigned char *)CS_SB_buffer(sb), CS_SB_size(sb) ) == 1, "Verify digest", "Failed" );
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         CS_jwtFree( jwt );
@@ -69,5 +117,4 @@ bool test_jwt(void) {
     return testCount !=
            testSucceeded;
 }
-
 

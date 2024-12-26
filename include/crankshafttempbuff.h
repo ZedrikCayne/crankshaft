@@ -45,6 +45,7 @@ extern "C" {
 
 void *CS_tempBuff(int size);
 char *CS_tempStringCopy(const char *copyMe);
+void *CS_tempMemCopy(const void *from, int size);
 bool CS_tempAllocateGlobal(int globalSize);
 bool CS_tempFreeGlobal();
 char *CS_tempBuffSnprintf(int max, char *fmt, ...);

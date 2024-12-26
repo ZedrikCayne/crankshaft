@@ -1166,6 +1166,19 @@ static bool appendUnquoted( struct CS_StringBuilder *sb, const char *string ) {
     return returnValue;
 }
 
+char *CS_jsonNodePrintableTemp(const struct CS_JsonNode *printMe) {
+    struct CS_StringBuilder *sb = CS_jsonNodePrintable( printMe );
+
+    char *returnValue = NULL;
+
+    if( sb ) {
+        returnValue = CS_tempStringCopy( sb->buffer );
+        CS_SB_free( sb );
+    }
+
+    return returnValue;
+}
+
 struct CS_StringBuilder *CS_jsonNodePrintable(const struct CS_JsonNode *printMe) {
     struct CS_StringBuilder *sb = CS_SB_create(2048);
 

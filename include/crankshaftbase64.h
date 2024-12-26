@@ -16,6 +16,10 @@ void *CS_base64Decode( const char *toDecode, int length, int *outputLength );
 void *CS_base64DecodeTemp( const char *toDecode, int length, int *outputLength );
 void *CS_base64DecodeInPlace( char *toDecode, int length, int *outputLength );
 void *CS_base64DecodeLinearAlloc( const char *toDecode, int length, int *outputLength, void *linearAllocator );
+void *CS_base64DecodeUrl( const char *toDecode, int length, int *outputLength );
+void *CS_base64DecodeUrlTemp( const char *toDecode, int length, int *outputLength );
+void *CS_base64DecodeUrlInPlace( char *toDecode, int length, int *outputLength );
+void *CS_base64DecodeUrlLinearAlloc( const char *toDecode, int length, int *outputLength, void *linearAllocator );
 
 #ifdef __cplusplus
 }
