@@ -101,7 +101,7 @@ $(TAROUT): $(BUILD_DIR) $(LIBOUT)
 $(LIBOUT): $(OBJECTS_C)
 	$(AR) rcs $@ $(OBJECTS_C)
 
-$(BINOUT): $(OBJECTS_C) $(OBJECTS_CXX) sqlite
+$(BINOUT): $(OBJECTS_C) $(OBJECTS_CXX)
 	$(CC) -o $@ $(CXXFLAGS) -Xlinker $^ ${LIBS}
 
 $(OBJECTS_DIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)

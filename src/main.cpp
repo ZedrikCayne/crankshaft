@@ -130,6 +130,13 @@ void dcCallback( struct CS_ClientInfo *info ) {
     CS_LOG_TRACE("Disconnecting.");
 }
 
+bool googleLogin( struct CS_ClientInfo *info ) {
+    FILE * fout = fopen("/home/zed/from.js", "w");
+    fwrite( CS_PP_startOfData( info->buffer ), 1, CS_PP_dataSize( info->buffer ), fout );
+    fclose(fout);
+    return CS_serverDiagnostic200(info);
+}
+
 bool fudge( struct CS_ClientInfo *info ) {
     if( info->disconnectCallback == NULL ) {
         info->disconnectCallback = dcCallback;
@@ -143,8 +150,8 @@ bool doQuit( struct CS_ClientInfo *info ) {
 }
 
 struct CS_Route serverRoutes[] = {
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", googleLogin},
+    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", googleLogin},
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/api", fudge },
     { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, 0, "/api", fudge },
     { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, 0, "", CS_serverFileServer },

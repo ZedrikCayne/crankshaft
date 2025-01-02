@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 enum CS_HttpMethods {
+    CS_HTTP_METHOD_ANY = -1,
     CS_HTTP_METHOD_CONNECT = 0,
     CS_HTTP_METHOD_DELETE,
     CS_HTTP_METHOD_GET,

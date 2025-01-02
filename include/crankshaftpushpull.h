@@ -51,11 +51,13 @@ void CS_PP_defaultFree(struct CS_PushPullBuffer *freeMe);
 int CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int fileDescriptor);
 int CS_PP_readFromBuffer(struct CS_PushPullBuffer *buffer, const void *source, int nBytes);
 int CS_PP_readFromSSL(struct CS_PushPullBuffer *buffer, SSL *ssl);
+int CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file);
 #define CS_PP_read(PPbuff,PPnBytes) CS_PP_readFromBuffer(PPbuff,NULL,PPnBytes)
 
 int CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int fileDescriptor);
 int CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination, int nBytes);
 int CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl);
+int CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file);
 #define CS_PP_write(PPbuff,PPnBytes) CS_PP_writeToBuffer(PPbuff,NULL,PPnBytes)
 
 #define CS_PP_setFull(PPBUFF) (PPBUFF->currentReadOffset=PPBUFF->size)

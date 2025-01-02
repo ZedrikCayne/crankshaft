@@ -109,14 +109,18 @@ static int privateDecode( void *toDecode, int decodeLength, void *decodedBuffer,
     unsigned char *end = input + decodeLength;
     int outputLength = (decodeLength / 4) * 3;
 
-    //if (input[decodeLength - 1] == '=') (outputLength)--;
-    //if (input[decodeLength - 2] == '=') (outputLength)--;
+    if( decodeLength % 4 ) {
+        CS_LOG_ERROR("Tring to decode base64 on a buffer that isn't a multiple of 4 bytes long. (was %d)", decodeLength);
+        return -1;
+    }
+
+    if (input[decodeLength - 1] == '=') (outputLength)--;
+    if (input[decodeLength - 2] == '=') (outputLength)--;
 
     if( decodeBufferLength < outputLength ) {
         return -1;
     }
     
-    //if( decodeLength % 4 ) return -1;
     unsigned int threeBytes;
     while( input < end - 4 ) {
         threeBytes  = decoding_table[ *input++ ] << 18;
@@ -221,21 +225,32 @@ static void privateSwapUrl( char *in, int length ) {
     }
 }
 void *CS_base64DecodeUrl( const char *toDecode, int length, int *outputLength ) {
-    char *copy = CS_tempMemCopy( toDecode, length );
-    privateSwapUrl(copy, length);
-    return CS_base64Decode( copy, length, outputLength );
+    int newLength;
+    char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
+    if( copy == NULL ) return NULL;
+    privateSwapUrl(copy, newLength);
+    return CS_base64Decode( copy, newLength, outputLength );
 }
 void *CS_base64DecodeUrlTemp( const char *toDecode, int length, int *outputLength ) {
-    char *copy = CS_tempMemCopy( toDecode, length );
-    privateSwapUrl(copy, length);
-    return CS_base64DecodeTemp(copy, length, outputLength);
+    int newLength;
+    char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
+    if( copy == NULL ) return NULL;
+    privateSwapUrl(copy, newLength);
+    return CS_base64DecodeTemp(copy, newLength, outputLength);
 }
 void *CS_base64DecodeUrlInPlace( char *toDecode, int length, int *outputLength ) {
-    privateSwapUrl(toDecode,length);
-    return CS_base64DecodeInPlace(toDecode, length, outputLength);
+    int newLength;
+    char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
+    if( copy == NULL ) return NULL;
+    privateSwapUrl(copy,newLength);
+    int outLength = privateDecode(copy, newLength, toDecode, length );
+    if( outLength < 0 ) return NULL;
+    return toDecode;
 }
 void *CS_base64DecodeUrlLinearAlloc( const char *toDecode, int length, int *outputLength, void *linearAllocator ) {
-    char *copy = CS_tempMemCopy( toDecode, length );
-    privateSwapUrl(copy, length);
-    return CS_base64DecodeLinearAlloc(copy, length, outputLength, linearAllocator);
+    int newLength;
+    char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
+    if( copy == NULL ) return NULL;
+    privateSwapUrl(copy, newLength);
+    return CS_base64DecodeLinearAlloc(copy, newLength, outputLength, linearAllocator);
 }

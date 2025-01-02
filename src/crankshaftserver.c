@@ -311,6 +311,7 @@ struct CS_WebServer *CS_serverStart(int portNum,
     returnValue->defaultFileServingCacheControlMaxAge = fileServingCacheControlMaxAge;
     
     int i = 0;
+    int j = 0;
     for( i = 0; i < CS_MAX_HTTP_METHODS; ++i ) {
         returnValue->routeNumbers[ i ] = 0;
         returnValue->routes[ i ] = NULL;
@@ -318,13 +319,17 @@ struct CS_WebServer *CS_serverStart(int portNum,
 
     for( i = 0; i < numberOfRoutes; ++i ) {
         int currentIndex = routes[ i ].method;
-        if( currentIndex < 0 || currentIndex >= CS_MAX_HTTP_METHODS ) {
+        if( currentIndex < CS_HTTP_METHOD_ANY || currentIndex >= CS_MAX_HTTP_METHODS ) {
             CS_LOG_ERROR("Method defined in routes for web server is outside of allowed range.");
             goto ERR_ALLOC;
         }
-        returnValue->routeNumbers[ currentIndex ]++;
         int routeLength = strlen(routes[ i ].route);
         routes[ i ].routeLength = routeLength;
+        if( currentIndex == CS_HTTP_METHOD_ANY ) {
+            for( j = 0; j < CS_MAX_HTTP_METHODS; ++j ) returnValue->routeNumbers[ j ]++;
+        } else {
+            returnValue->routeNumbers[ currentIndex ]++;
+        }
     }
 
     for( i = 0; i < CS_MAX_HTTP_METHODS; ++i ) {
@@ -338,17 +343,24 @@ struct CS_WebServer *CS_serverStart(int portNum,
     int routeCount[ CS_MAX_HTTP_METHODS ] = {0};
     for( i = 0; i < numberOfRoutes; ++i ) {
         int neededRoute = routes[ i ].method;
-        int currentWriteIndex = routeCount[ neededRoute ];
+        if( neededRoute == CS_HTTP_METHOD_ANY ) {
+            for( j = 0; j < CS_MAX_HTTP_METHODS; ++j ) {
+                int currentWriteIndex = routeCount[ j ];
+                memcpy( returnValue->routes[ j ] + currentWriteIndex, routes + i, sizeof( struct CS_Route) );
+                ++routeCount[ j ];
+            }
+        } else {
+            int currentWriteIndex = routeCount[ neededRoute ];
 
-        memcpy( returnValue->routes[ neededRoute ] + currentWriteIndex,
-                routes + i,
-                sizeof( struct CS_Route ) );
+            memcpy( returnValue->routes[ neededRoute ] + currentWriteIndex,
+                    routes + i,
+                    sizeof( struct CS_Route ) );
 
-        ++routeCount[ neededRoute ];
+            ++routeCount[ neededRoute ];
+        }
     }
 
     returnValue->replyStack = CS_slabInit( ReplyStackName, sizeof( struct CS_Reply ), 256, 8 );
-
 
     returnValue->listenSocket = socket(AF_INET, SOCK_STREAM,0);
     if( returnValue->listenSocket < 0 ) {
@@ -777,6 +789,10 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
 
     for( int i = 0; i < nRoutes; ++i ) {
         switch( routes[ i ].routeType ) {
+            case CS_ROUTE_TYPE_FILTER:
+                if( routes[i].handler(info) )
+                    return true;
+                break;
             case CS_ROUTE_TYPE_WILDCARD:
                 return routes[ i ].handler( info );
                 break;
@@ -988,6 +1004,31 @@ static bool PrivateSetReplyHeaderInt( struct CS_Reply *reply, bool overwrite, co
     return PrivateSetReplyHeader( reply, overwrite, header, temp );
 }
 
+static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value ) {
+    if( cookie == NULL || value == NULL ) {
+        CS_LOG_ERROR("Trying to set an invalid value as a cookie... %s=%s",cookie?cookie:"NULL",value?value:"NULL");
+        return true;
+    }
+    if( reply->numCookies >= MAX_REPLY_COOKIES ) {
+        CS_LOG_ERROR("Trying to add more cookies than we have room for. Max %d", MAX_REPLY_COOKIES);
+        return true;
+    }
+    int nLen = strlen( cookie );
+    if( nLen > COOKIE_MAX ) {
+        CS_LOG_ERROR("Trying to set a cookie name longer than %d", COOKIE_MAX );
+        return true;
+    }
+    nLen = strlen( value );
+    if( nLen > COOKIE_VALUE_MAX ) {
+        CS_LOG_ERROR("Trying to set a cookie value longer than %d", COOKIE_VALUE_MAX );
+        return true;
+    }
+    strncpy( reply->setCookie[ reply->numCookies ].cookie, cookie, COOKIE_MAX );
+    strncpy( reply->setCookie[ reply->numCookies ].value, value, COOKIE_VALUE_MAX );
+    reply->numCookies++;
+    return false;
+}
+
 struct CS_Reply *CS_serverCreateReply(struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *outputBuffer, int outputLength ) {
         struct CS_Reply *returnValue = CS_slabTake(info->server->replyStack);
     returnValue->returnStatusEnum = responseEnum;
@@ -1014,7 +1055,9 @@ bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int
 bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value ) {
     return PrivateSetReplyHeaderInt( reply, false, header, value );
 }
-
+bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value ) {
+    return PrivateSetReplyCookie( reply, cookie, value );
+}
 
 bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     if( info == NULL || reply == NULL || reply->returnStatusEnum < 0 || reply->returnStatusEnum >= MAX_NUM_CS_RESPONSE_ENUMS ) {
@@ -1034,6 +1077,12 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     CS_PP_printf( info->output, "%s %d %s\r\n", HTTP_VERSION, replyNumber, replyString );
     for( int i = 0; i < reply->numHeaders; ++i ) {
         CS_PP_printf( info->output, "%s: %s\r\n", reply->replyHeaders[i].header, reply->replyHeaders[i].value );
+    }
+    for( int i = 0; i < reply->numCookies; ++i ) {
+        CS_PP_printf( info->output, "Set-Cookie: %s=%s", reply->setCookie[i].cookie, reply->setCookie[i].value);
+        if( reply->setCookie[i].httpOnly ) CS_PP_printf( info->output, "; HttpOnly" );
+        if( info->ssl ) CS_PP_printf( info->output, "; Secure");
+        CS_PP_printf( info->output, "\r\n" );
     }
     CS_PP_printf( info->output, "\r\n" );
 

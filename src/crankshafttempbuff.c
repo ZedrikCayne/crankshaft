@@ -77,12 +77,37 @@ void *CS_tempBuff(int size) {
     return returnValue;
 }
 
+void *CS_tempBuffZero( int size ) {
+    void *returnValue = CS_tempBuff(size);
+    if( returnValue ) memset( returnValue, 0, size );
+    return returnValue;
+}
+
 char *CS_tempStringCopy(const char *copyFrom) {
     int nLen = strlen(copyFrom) + 1;
     char *returnValue = CS_tempBuff( nLen );
     if( returnValue ) {
         memcpy( returnValue, copyFrom, nLen );
     }
+    return returnValue;
+}
+
+char *CS_tempStringCopyWithPad(const char *copyFrom, int size, char pad, int *outLength, int aligned) {
+    int nLen = size;
+    int newLength = size%aligned==0?size:(size + aligned - ( size % aligned ) );
+    char *returnValue = CS_tempBuffZero( newLength + 1 );
+    if( returnValue ) {
+        strncpy( returnValue, copyFrom, size );
+        int oldLen = strlen( returnValue );
+        if( oldLen < size ) {
+            nLen = oldLen;
+            newLength = oldLen%aligned==0?oldLen:(oldLen + aligned - (oldLen % aligned));
+        }
+        for( int i = nLen; i < newLength; ++i ) returnValue[ i ] = pad;
+        returnValue[newLength] = 0;
+    }
+    if( outLength ) *outLength = newLength;
+
     return returnValue;
 }
 

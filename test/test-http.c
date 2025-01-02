@@ -15,7 +15,41 @@ extern bool test_http(void);
 static int testCount = 0;
 static int testSucceeded = 0;
 
+static char *testData = "Le Test Data";
+
+static void dcCallback( struct CS_ClientInfo *info ) {
+    info->persistentData = NULL;
+}
+
+static bool grundle( struct CS_ClientInfo *info ) {
+    info->disconnectCallback = dcCallback;
+    info->persistentData = testData;
+    return false;
+}
+static bool grundle2( struct CS_ClientInfo *info ) {
+    if( info->persistentData != testData )
+        return true;
+    return false;
+}
+
+static bool grundle3( struct CS_ClientInfo *info) {
+    return false;
+}
+
 static struct CS_Route testRoutes[] = {
+    { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, 0, "czech", grundle },
+    { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, 0, "czech2", grundle2 },
+    { CS_HTTP_METHOD_CONNECT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_DELETE,   CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_HEAD,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_POST,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_PUT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_TRACE,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 }
+};
+
+static struct CS_Route failRoute[] = {
+    { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, 0, "czech", grundle2 },
     { CS_HTTP_METHOD_CONNECT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
     { CS_HTTP_METHOD_DELETE,   CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
     { CS_HTTP_METHOD_HEAD,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
@@ -27,11 +61,19 @@ static struct CS_Route testRoutes[] = {
 
 bool test_http(void) {
     //Tests go here:
-
-    struct CS_WebServer *testServer = CS_serverStart( 0, NULL, NULL, "localhost", "root", "index.html", 0, testRoutes, sizeof(testRoutes)/sizeof(testRoutes[0]) );
-    //struct CS_WebServer *testServer = CS_serverStart( 0, NULL, NULL, NULL, "root", "index.html", 0, testRoutes, sizeof(testRoutes)/sizeof(testRoutes[0]) );
-    CS_FAIL_ON_NULL( testServer, "Start web server.", "Failed." );
+    struct CS_WebServer *testServer = CS_serverStart( 0, NULL, NULL, NULL, "root", "index.html", 0, failRoute, sizeof(failRoute)/sizeof(failRoute[0]) );
+    CS_FAIL_ON_NULL( testServer, "Start fail web server.", "Failed." );
     char base[ 128 ];
+    snprintf( base, 128, "http://localhost:%d/test", testServer->serverPort );
+
+    if( testServer ) {
+        struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, base, NULL, 0, NULL, 0, NULL, 0, NULL );
+        CS_FAIL_ON_NOT_NULL( reply, "Request should come back null.", "Oops." );
+        CS_serverKill( testServer );
+    }
+
+    testServer = CS_serverStart( 0, NULL, NULL, "localhost", "root", "index.html", 0, testRoutes, sizeof(testRoutes)/sizeof(testRoutes[0]) );
+    CS_FAIL_ON_NULL( testServer, "Start web server.", "Failed." );
     snprintf( base, 128, "https://localhost:%d/test", testServer->serverPort );
     if( testServer ) {
         CS_httpInitSSL();
@@ -138,9 +180,9 @@ bool test_http(void) {
             CS_httpCloseRequest( reply );
         }
         CS_httpKillSSL();
-        CS_httpCleanupReplies();
         CS_serverKill( testServer );
     }
+    CS_httpCleanupReplies();
 
 
     return testCount !=

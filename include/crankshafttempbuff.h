@@ -44,7 +44,9 @@ extern "C" {
 #define CS_TEMPBUFF_ALIGNMENT 8
 
 void *CS_tempBuff(int size);
+void *CS_tempBuffZero( int size );
 char *CS_tempStringCopy(const char *copyMe);
+char *CS_tempStringCopyWithPad(const char *copyme, int size, char pad, int *outLength, int aligned);
 void *CS_tempMemCopy(const void *from, int size);
 bool CS_tempAllocateGlobal(int globalSize);
 bool CS_tempFreeGlobal();

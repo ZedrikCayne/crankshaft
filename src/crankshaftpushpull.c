@@ -147,6 +147,43 @@ int CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
     return 0;
 }
 
+int CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
+    buffer->err = 0;
+    if( buffer->currentReadOffset < buffer->size ) {
+        int bytesRead = fread( CS_PP_endOfData(buffer),
+                               1,
+                               CS_PP_bufferRemaining(buffer),
+                               file );
+        if( bytesRead < 0 || (bytesRead == 0 && errno != 0) ) {
+            buffer->err = errno;
+        } else {
+            buffer->currentReadOffset += bytesRead;
+        }
+        return bytesRead;
+    }
+    return 0;
+}
+
+int CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
+    buffer->err = 0;
+    if( buffer->currentWriteOffset < buffer->currentReadOffset ) {
+        int bytesWritten = fwrite( CS_PP_startOfData(buffer),
+                                   1,
+                                   CS_PP_dataSize(buffer),
+                                   file );
+        if( bytesWritten < 0 || (bytesWritten == 0 && errno != 0) ) {
+            buffer->err = errno;
+        } else {
+            buffer->currentWriteOffset += bytesWritten;
+        }
+        if( buffer->currentWriteOffset == buffer->currentReadOffset ) {
+            buffer->currentWriteOffset = buffer->currentReadOffset = 0;
+        }
+        return bytesWritten;
+    }
+    return 0;
+}
+
 #define MOVE(_PP,_OFFSET,_NUM){char *out=_PP->buff+_PP->currentWriteOffset+_OFFSET;char *end=_PP->buff+_PP->currentReadOffset;char *in=out+_NUM;while(in<end)*out++=*in++;}
 #define BACKFILL(_PP,_NUM){char *out=_PP->buff+_PP->currentReadOffset;char *end=out+_NUM;while(out<end)*out++='%';}
 

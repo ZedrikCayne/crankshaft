@@ -37,6 +37,13 @@ struct CS_ReplyHeader {
     char header[ HEADER_MAX ];
     char value[ HEADER_VALUE_MAX ];
 };
+#define COOKIE_MAX 64
+#define COOKIE_VALUE_MAX 256
+struct CS_ReplyCookie {
+    bool httpOnly;
+    char cookie[ COOKIE_MAX ];
+    char value[ COOKIE_VALUE_MAX ];
+};
 
 struct CS_QueryParameter {
     const char *name;
@@ -47,6 +54,7 @@ struct CS_QueryParameter {
 #define MAX_REQUEST_HEADERS 64
 #define MAX_QUERY_PARAMETERS 64
 #define MAX_FORM_PARAMETERS 64
+#define MAX_REPLY_COOKIES 64
 
 struct CS_RequestInfo {
     bool valid;
@@ -75,6 +83,7 @@ struct CS_ClientInfo {
 };
 
 enum {
+    CS_ROUTE_TYPE_FILTER,
     CS_ROUTE_TYPE_WILDCARD,
     CS_ROUTE_TYPE_PREFIX,
     CS_ROUTE_TYPE_EXACT
@@ -92,7 +101,9 @@ struct CS_Reply {
     int returnStatusEnum;
     int contentTypeEnum;
     int numHeaders;
+    int numCookies;
     struct CS_ReplyHeader replyHeaders[MAX_REQUEST_HEADERS];
+    struct CS_ReplyCookie setCookie[MAX_REPLY_COOKIES];
     const void *outputBuffer;
     int outputLength;
 };
@@ -114,10 +125,12 @@ bool CS_serverFileServer( struct CS_ClientInfo *info );
 const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const char *name );
 const char *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const char *header );
 const char *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const char *name );
+const char *CS_serverGetRequestCookie( struct CS_ClientInfo *info, const char *cookie );
 bool CS_serverSetReplyHeader( struct CS_Reply *reply, const char *header, const char *value );
 bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value );
 bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value );
 bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value );
+bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value );
 
 struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *replyBuffer, int replyLength );
 void CS_serverReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
