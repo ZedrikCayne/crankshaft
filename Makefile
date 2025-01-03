@@ -10,13 +10,6 @@ AR:=ar
 
 VERSION=0.2.0
 
-sqlite: $(SQLITE_DIR) $(SQLITE_DIR)/sqlite3.o
-
-$(SQLITE_DIR):
-	curl -O https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_DIR).zip
-	unzip $(SQLITE_DIR).zip
-	rm $(SQLITE_DIR).zip
-
 #DEBUG=-g
 
 OS=$(shell uname -o)
@@ -32,7 +25,7 @@ TESTCFILES=$(foreach D,$(TESTDIR),$(wildcard $(D)/*.c))
 TESTCXXFILES=$(foreach D,$(TESTDIR),$(wildcard $(D)/*.cpp))
 CFLAGS:=-Wall $(DEBUG) $(OPT) $(foreach D,$(INCDIRS),-I$(D)) -I$(SQLITE_DIR) $(CFLAGS)
 CXXFLAGS:=$(CFLAGS)
-LIBS:=-lssl -lcrypto -lstdc++ -lpthread -lm -lz
+LIBS:=-lssl -lcrypto -lstdc++ -lpthread -lm -lz -ldl
 
 OBJECTS_DIR=obj
 LIB_DIR=lib
@@ -56,8 +49,18 @@ library: $(LIB_DIR) $(LIBOUT)
 
 publish: $(BUILD_DIR) $(TAROUT)
 
+sqlite: $(SQLITE_DIR) $(SQLITE_DIR)/sqlite3.o
+
+$(SQLITE_DIR):
+	curl -O https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_DIR).zip
+	unzip $(SQLITE_DIR).zip
+	rm $(SQLITE_DIR).zip
+
 clean:
 	@rm -rvf $(BINOUT)* $(OBJECTS_DIR)/*.o $(LIB_DIR)/* $(BUILD_DIR)/*
+
+cleansqlite:
+	@rm $(SQLITE_DIR)/sqlite3.o
 
 run: all
 	./$(BINOUT) --trace
