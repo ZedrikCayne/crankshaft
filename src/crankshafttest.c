@@ -2,12 +2,12 @@
 #include <stdio.h>
 #include <time.h>
 
-#include "crankshaft/alloc.h"
-#include "crankshaft/logger.h"
-#include "crankshaft/test.h"
-#include "crankshaft/tempbuff.h"
-#include "crankshaft/random.h"
-#include "crankshaft/alloc.h"
+#include <crankshaft/alloc.h>
+#include <crankshaft/logger.h>
+#include <crankshaft/test.h>
+#include <crankshaft/tempbuff.h>
+#include <crankshaft/random.h>
+#include <crankshaft/alloc.h>
 
 extern bool TEST_AUTO(void);
 

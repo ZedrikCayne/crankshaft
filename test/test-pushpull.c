@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "crankshaft/alloc.h"
-#include "crankshaft/logger.h"
-#include "crankshaft/test.h"
-#include "crankshaft/pushpull.h"
-#include "crankshaft/tempbuff.h"
+#include <crankshaft/alloc.h>
+#include <crankshaft/logger.h>
+#include <crankshaft/test.h>
+#include <crankshaft/pushpull.h>
+#include <crankshaft/tempbuff.h>
 
 extern bool test_pushpull();
 

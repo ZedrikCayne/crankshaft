@@ -3,10 +3,10 @@
 #include <stdbool.h>
 #include <math.h>
 
-#include "crankshaft/alloc.h"
-#include "crankshaft/logger.h"
-#include "crankshaft/test.h"
-#include "crankshaft/random.h"
+#include <crankshaft/alloc.h>
+#include <crankshaft/logger.h>
+#include <crankshaft/test.h>
+#include <crankshaft/random.h>
 
 extern bool test_random(void);
 

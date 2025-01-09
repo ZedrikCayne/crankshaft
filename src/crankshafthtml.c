@@ -2,12 +2,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "crankshaft/alloc.h"
-#include "crankshaft/linearalloc.h"
-#include "crankshaft/logger.h"
-#include "crankshaft/tempbuff.h"
+#include <crankshaft/alloc.h>
+#include <crankshaft/linearalloc.h>
+#include <crankshaft/logger.h>
+#include <crankshaft/tempbuff.h>
 
-#include "crankshaft/html.h"
+#include <crankshaft/html.h>
 
 static int okayTable[] = {
    //NUL   SOH   STX   ETX   EOT   ENQ   ACK   BEL

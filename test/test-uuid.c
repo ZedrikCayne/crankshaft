@@ -3,11 +3,11 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "crankshaft/alloc.h"
-#include "crankshaft/logger.h"
-#include "crankshaft/test.h"
+#include <crankshaft/alloc.h>
+#include <crankshaft/logger.h>
+#include <crankshaft/test.h>
 
-#include "crankshaft/uuid.h"
+#include <crankshaft/uuid.h>
 
 extern bool test_uuid(void);
 

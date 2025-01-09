@@ -10,12 +10,12 @@
 #include <pthread.h>
 #include <errno.h>
 
-#include "crankshaft/tempbuff.h"
-#include "crankshaft/alloc.h"
-#include "crankshaft/logger.h"
-#include "crankshaft/mime.h"
-#include "crankshaft/http.h"
-#include "crankshaft/slaballoc.h"
+#include <crankshaft/tempbuff.h>
+#include <crankshaft/alloc.h>
+#include <crankshaft/logger.h>
+#include <crankshaft/mime.h>
+#include <crankshaft/http.h>
+#include <crankshaft/slaballoc.h>
 
 static SSL_CTX *globalClientCTX = NULL;
 static pthread_mutex_t sslCTXMutex = PTHREAD_MUTEX_INITIALIZER;

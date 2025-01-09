@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "crankshaft/alloc.h"
-#include "crankshaft/logger.h"
-#include "crankshaft/stack.h"
-#include "crankshaft/util.h"
+#include <crankshaft/alloc.h>
+#include <crankshaft/logger.h>
+#include <crankshaft/stack.h>
+#include <crankshaft/util.h>
 
 struct CS_Stack *CS_stackAlloc( int sizePerItem, int itemsPerSlab, int itemAlignment ) {
     struct CS_Stack *returnValue = CS_alloc(sizeof(struct CS_Stack));

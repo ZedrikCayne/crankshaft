@@ -6,11 +6,11 @@
 #include <sys/socket.h>
 #include <signal.h>
 
-#include "crankshaft/logger.h"
-#include "crankshaft/commandline.h"
-#include "crankshaft/server.h"
-#include "crankshaft/tempbuff.h"
-#include "crankshaft/test.h"
+#include <crankshaft/logger.h>
+#include <crankshaft/commandline.h>
+#include <crankshaft/server.h>
+#include <crankshaft/tempbuff.h>
+#include <crankshaft/test.h>
 
 int acceptSocket = 0;
 

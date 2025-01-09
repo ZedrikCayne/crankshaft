@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "crankshaft/alloc.h"
-#include "crankshaft/logger.h"
-#include "crankshaft/test.h"
-#include "crankshaft/alloc.h"
+#include <crankshaft/alloc.h>
+#include <crankshaft/logger.h>
+#include <crankshaft/test.h>
+#include <crankshaft/alloc.h>
 
 extern bool test_alloc(void);
 
