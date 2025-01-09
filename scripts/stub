@@ -22,10 +22,10 @@ echo "#endif"                      >> include/${BASENAME}.h
 echo "#include <stdlib.h>"            >  src/${BASENAME}.c
 echo "#include <stdio.h>"             >> src/${BASENAME}.c
 echo ""                               >> src/${BASENAME}.c
-echo "#include \"crankshaftalloc.h\"" >> src/${BASENAME}.c
-echo "#include \"crankshaftlogger.h\"">> src/${BASENAME}.c
+echo "#include <crankshaft/alloc.h>" >> src/${BASENAME}.c
+echo "#include <crankshaft/logger.h>">> src/${BASENAME}.c
 echo ""                               >> src/${BASENAME}.c
-echo "#include \"${BASENAME}.h\""     >> src/${BASENAME}.c
+echo "#include <crankshaft/${1}.h>"     >> src/${BASENAME}.c
 echo ""                               >> src/${BASENAME}.c
 echo ""                               >> src/${BASENAME}.c
 echo ""                               >> src/${BASENAME}.c

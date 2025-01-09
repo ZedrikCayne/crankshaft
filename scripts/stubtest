@@ -8,9 +8,9 @@ echo "#include <stdlib.h>"            >  test/${BASENAME}.c
 echo "#include <stdio.h>"             >> test/${BASENAME}.c
 echo "#include <stdbool.h>"           >> test/${BASENAME}.c
 echo ""                               >> test/${BASENAME}.c
-echo "#include \"crankshaftalloc.h\"" >> test/${BASENAME}.c
-echo "#include \"crankshaftlogger.h\"">> test/${BASENAME}.c
-echo "#include \"crankshafttest.h\""  >> test/${BASENAME}.c
+echo "#include <crankshaft/alloc.h>" >> test/${BASENAME}.c
+echo "#include <crankshaft/logger.h>">> test/${BASENAME}.c
+echo "#include <crankshaft/test.h>"  >> test/${BASENAME}.c
 echo ""                               >> test/${BASENAME}.c
 echo "extern bool test_${1}(void);"   >> test/${BASENAME}.c
 echo ""                               >> test/${BASENAME}.c

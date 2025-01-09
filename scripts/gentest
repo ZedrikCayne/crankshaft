@@ -16,9 +16,9 @@ BASES=`echo "${FILES}" | sed 's/^test\///' | sed 's/\.c$//' | sed 's/\.cpp$//' |
 echo "#include <stdlib.h>"                                >  ${OUT}
 echo "#include <stdio.h>"                                 >> ${OUT}
 echo ""                                                   >> ${OUT}
-echo "#include \"crankshaftalloc.h\""                     >> ${OUT}
-echo "#include \"crankshaftlogger.h\""                    >> ${OUT}
-echo "#include \"crankshafttest.h\""                      >> ${OUT}
+echo "#include <crankshaft/alloc.h>"                     >> ${OUT}
+echo "#include <crankshaft/logger.h>"                    >> ${OUT}
+echo "#include <crankshaft/test.h>"                      >> ${OUT}
 echo ""                                                   >> ${OUT}
 echo "extern \"C\" bool TEST_AUTO();"                     >> ${OUT}
 for I in ${BASES}; do
