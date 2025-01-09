@@ -21,6 +21,7 @@ extern "C" {
 
 void *CS_linearTake(void *voidAllocator, int size, int alignment );
 void *CS_linearTakeZero( void *linearAllocator, int size, int alignment );
+char *CS_linearCopyString( void *linearAllocator, const char *string );
 void CS_linearReset(void *voidAllocator);
 
 void *CS_linearInit( int size );

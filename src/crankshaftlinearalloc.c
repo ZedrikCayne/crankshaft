@@ -66,6 +66,13 @@ void *CS_linearTakeZero(void *voidAllocator, int size, int alignment ) {
     return returnValue;
 }
 
+char *CS_linearCopyString(void *voidAllocator, const char *string ) {
+    int len = strlen( string );
+    void *returnValue = CS_linearTake( voidAllocator, len+1, sizeof(void*) );
+    if( returnValue ) strcpy( returnValue, string );
+    return returnValue;
+}
+
 void CS_linearReset(void *voidAllocator) {
     struct LinearAllocator *linearAllocator = (struct LinearAllocator *)voidAllocator;
     while(linearAllocator) {

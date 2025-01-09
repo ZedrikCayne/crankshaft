@@ -32,10 +32,6 @@ static bool grundle2( struct CS_ClientInfo *info ) {
     return false;
 }
 
-static bool grundle3( struct CS_ClientInfo *info) {
-    return false;
-}
-
 static struct CS_Route testRoutes[] = {
     { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, 0, "czech", grundle },
     { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, 0, "czech2", grundle2 },
