@@ -3,11 +3,11 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttest.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/test.h"
 
-#include "crankshaftstorage.h"
+#include "crankshaft/storage.h"
 
 extern bool test_sqlitestorage(void);
 

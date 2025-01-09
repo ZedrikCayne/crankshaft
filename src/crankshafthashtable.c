@@ -3,13 +3,13 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshaftslaballoc.h"
-#include "crankshaftuuid.h"
-#include "crankshafthash.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/slaballoc.h"
+#include "crankshaft/uuid.h"
+#include "crankshaft/hash.h"
 
-#include "crankshafthashtable.h"
+#include "crankshaft/hashtable.h"
 
 #define GRAB_MUTEX() if(table->flags&CS_HASHTABLE_FLAG_MUTEX){pthread_mutex_lock(&table->hashTableMutex);}
 #define RELEASE_MUTEX() if(table->flags&CS_HASHTABLE_FLAG_MUTEX){pthread_mutex_unlock(&table->hashTableMutex);}

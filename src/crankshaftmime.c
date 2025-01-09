@@ -2,17 +2,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
 
-#include "crankshaftmime.h"
+#include "crankshaft/mime.h"
 
 struct ExtensionToMIME {
     char *extension;
     char *filetype;
 };
 
-#include "crankshaftmimevalues.h"
+#include "crankshaft/mimevalues.h"
 
 int CS_mimeFileExtensionToEnum(const char *extension ) {
     for( int i = 0; i < sizeof(extensions)/sizeof(extensions[0]); ++i ) {

@@ -3,11 +3,11 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttest.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/test.h"
 
-#include "crankshafthtml.h"
+#include "crankshaft/html.h"
 
 extern bool test_html(void);
 

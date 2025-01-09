@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshaftlinearalloc.h"
-#include "crankshaftalloc.h"
-#include "crankshaftutil.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/linearalloc.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/util.h"
 
 struct LinearAllocator {
     int size;

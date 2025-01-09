@@ -6,11 +6,11 @@
 #include <dirent.h>
 #include <fcntl.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttest.h"
-#include "crankshaftjson.h"
-#include "crankshaftpushpull.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/test.h"
+#include "crankshaft/json.h"
+#include "crankshaft/pushpull.h"
 
 extern bool test_JSONTestSuite();
 

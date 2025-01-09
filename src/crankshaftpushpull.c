@@ -6,9 +6,9 @@
 #include <errno.h>
 #include <openssl/ssl.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftpushpull.h"
-#include "crankshafttempbuff.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/pushpull.h"
+#include "crankshaft/tempbuff.h"
 
 #define CS_PP_bytesRequired(x) (sizeof(struct CS_PushPullBuffer)+x)
 

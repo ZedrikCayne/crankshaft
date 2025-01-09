@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "crankshaftcommandline.h"
+#include "crankshaft/commandline.h"
 
 const char *CS_argsParse(int argc, char **argv, struct CS_ArgTable *argTable) {
     static const char *argErr1 = "Invalid # of arguments";

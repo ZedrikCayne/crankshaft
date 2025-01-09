@@ -3,12 +3,12 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttest.h"
-#include "crankshafttempbuff.h"
-#include "crankshaftjson.h"
-#include "crankshaftlinearalloc.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/test.h"
+#include "crankshaft/tempbuff.h"
+#include "crankshaft/json.h"
+#include "crankshaft/linearalloc.h"
 
 extern bool test_json();
 

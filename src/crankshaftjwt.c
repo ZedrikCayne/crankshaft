@@ -2,14 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttempbuff.h"
-#include "crankshaftbase64.h"
-#include "crankshaftlinearalloc.h"
-#include "crankshaftjson.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/tempbuff.h"
+#include "crankshaft/base64.h"
+#include "crankshaft/linearalloc.h"
+#include "crankshaft/json.h"
 
-#include "crankshaftjwt.h"
+#include "crankshaft/jwt.h"
 
 //struct CS_Jwt {
 //    //Original pieces in base 64

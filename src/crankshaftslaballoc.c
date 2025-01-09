@@ -2,10 +2,10 @@
 #include <string.h>
 #include <pthread.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftslaballoc.h"
-#include "crankshaftstringbuilder.h"
-#include "crankshaftlogger.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/slaballoc.h"
+#include "crankshaft/stringbuilder.h"
+#include "crankshaft/logger.h"
 
 struct CrankshaftSlabAllocItem {
     struct CrankshaftSlabAllocItem *next;

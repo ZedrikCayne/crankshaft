@@ -7,17 +7,17 @@
 
 #include "sqlite3.h"
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
 
-#include "crankshaftslaballoc.h"
-#include "crankshafthashtable.h"
-#include "crankshaftstorage.h"
-#include "crankshaftstring.h"
-#include "crankshaftstack.h"
+#include "crankshaft/slaballoc.h"
+#include "crankshaft/hashtable.h"
+#include "crankshaft/storage.h"
+#include "crankshaft/string.h"
+#include "crankshaft/stack.h"
 
-#include "crankshafttempbuff.h"
-#include "crankshaftstringbuilder.h"
+#include "crankshaft/tempbuff.h"
+#include "crankshaft/stringbuilder.h"
 
 //Engine define storage bits.
 static struct CS_Storage     *privateSqliteOpen(struct CS_Storage *storage);

@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
 
-#include "crankshaftstring.h"
+#include "crankshaft/string.h"
 
 char *CS_stringCopy( const char *in ) {
     if( !in ) return NULL;

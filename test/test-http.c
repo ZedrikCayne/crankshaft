@@ -2,13 +2,13 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttest.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/test.h"
 
-#include "crankshafthttp.h"
-#include "crankshaftserver.h"
-#include "crankshaftjson.h"
+#include "crankshaft/http.h"
+#include "crankshaft/server.h"
+#include "crankshaft/json.h"
 
 extern bool test_http(void);
 

@@ -8,16 +8,16 @@
 #include <openssl/evp.h>
 #include <openssl/param_build.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshaftjson.h"
-#include "crankshaftpushpull.h"
-#include "crankshaftstring.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/json.h"
+#include "crankshaft/pushpull.h"
+#include "crankshaft/string.h"
 
-#include "crankshaftstringbuilder.h"
-#include "crankshaftgoogleservices.h"
-#include "crankshafthttp.h"
-#include "crankshaftbase64.h"
+#include "crankshaft/stringbuilder.h"
+#include "crankshaft/googleservices.h"
+#include "crankshaft/http.h"
+#include "crankshaft/base64.h"
 
 struct CS_GoogleKey {
     const char *keyId;

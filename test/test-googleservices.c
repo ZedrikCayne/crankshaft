@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttest.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/test.h"
 
-#include "crankshaftgoogleservices.h"
+#include "crankshaft/googleservices.h"
 
 extern bool test_googleservices(void);
 

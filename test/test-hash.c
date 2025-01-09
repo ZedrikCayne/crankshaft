@@ -2,12 +2,12 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttest.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/test.h"
 
-#include "crankshaftuuid.h"
-#include "crankshafthash.h"
+#include "crankshaft/uuid.h"
+#include "crankshaft/hash.h"
 
 extern bool test_hash(void);
 

@@ -1,14 +1,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftrandom.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/random.h"
 
 #ifdef CS_ALLOC_TRACKING
 #include <pthread.h>
-#include "crankshaftslaballoc.h"
-#include "crankshafthashtable.h"
-#include "crankshaftlogger.h"
+#include "crankshaft/slaballoc.h"
+#include "crankshaft/hashtable.h"
+#include "crankshaft/logger.h"
 
 //Hash table functions for storing the extra data for tracking
 struct CS_AllocInfo {

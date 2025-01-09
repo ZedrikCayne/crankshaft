@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
 
-#include "crankshafthash.h"
+#include "crankshaft/hash.h"
 
 //#define PRIME 31
 #define PRIME 37

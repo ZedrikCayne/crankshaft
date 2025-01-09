@@ -3,12 +3,12 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttest.h"
-#include "crankshafthashtable.h"
-#include "crankshaftuuid.h"
-#include "crankshaftslaballoc.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/test.h"
+#include "crankshaft/hashtable.h"
+#include "crankshaft/uuid.h"
+#include "crankshaft/slaballoc.h"
 
 extern bool test_hashtable(void);
 

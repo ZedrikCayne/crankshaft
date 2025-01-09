@@ -3,10 +3,10 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshaftstringbuilder.h"
-#include "crankshafttempbuff.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/stringbuilder.h"
+#include "crankshaft/tempbuff.h"
 
 struct CS_StringBuilder *CS_SB_create( int initialSize ) {
     struct CS_StringBuilder *returnValue = CS_alloc(sizeof(struct CS_StringBuilder));

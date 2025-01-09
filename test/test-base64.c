@@ -3,12 +3,12 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttest.h"
-#include "crankshaftrandom.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/test.h"
+#include "crankshaft/random.h"
 
-#include "crankshaftbase64.h"
+#include "crankshaft/base64.h"
 
 extern bool test_base64(void);
 

@@ -9,13 +9,13 @@
 #include <openssl/evp.h>
 #include <openssl/param_build.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshafttest.h"
-#include "crankshaftjson.h"
-#include "crankshaftbase64.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/test.h"
+#include "crankshaft/json.h"
+#include "crankshaft/base64.h"
 
-#include "crankshaftjwt.h"
+#include "crankshaft/jwt.h"
 
 extern bool test_jwt(void);
 

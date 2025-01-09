@@ -4,13 +4,13 @@
 #include <time.h>
 #include <string.h>
 
-#include "crankshaftalloc.h"
-#include "crankshaftlogger.h"
-#include "crankshaftslaballoc.h"
-#include "crankshafttempbuff.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/logger.h"
+#include "crankshaft/slaballoc.h"
+#include "crankshaft/tempbuff.h"
 
-#include "crankshaftuuid.h"
-#include "crankshaftrandom.h"
+#include "crankshaft/uuid.h"
+#include "crankshaft/random.h"
 
 static pthread_mutex_t uuidMutex = PTHREAD_MUTEX_INITIALIZER;
 struct CS_LCG_rand_state uuidRand = {0};

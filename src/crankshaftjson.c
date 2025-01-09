@@ -5,14 +5,14 @@
 //#include <values.h>
 #include <math.h>
 
-#include "crankshaftjson.h"
-#include "crankshafttempbuff.h"
-#include "crankshaftlinearalloc.h"
-#include "crankshaftalloc.h"
-#include "crankshaftstringbuilder.h"
-#include "crankshaftstack.h"
-#include "crankshaftstringbuilder.h"
-#include "crankshaftlogger.h"
+#include "crankshaft/json.h"
+#include "crankshaft/tempbuff.h"
+#include "crankshaft/linearalloc.h"
+#include "crankshaft/alloc.h"
+#include "crankshaft/stringbuilder.h"
+#include "crankshaft/stack.h"
+#include "crankshaft/stringbuilder.h"
+#include "crankshaft/logger.h"
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 
