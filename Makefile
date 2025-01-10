@@ -51,6 +51,10 @@ publish: $(BUILD_DIR) $(TAROUT)
 
 sqlite: $(SQLITE_DIR) $(SQLITE_DIR)/sqlite3.o
 
+install: $(BINOUT) $(LIBOUT)
+	cp -r include/* /usr/local/include
+	cp -r lib/* /usr/local/lib
+
 $(SQLITE_DIR):
 	curl -O https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_DIR).zip
 	unzip $(SQLITE_DIR).zip
