@@ -696,6 +696,19 @@ static int parseRequest(struct CS_ClientInfo *info) {
                         return currentPoint - startOfData;
                     }
                     endOfContent = startOfToken + length;
+                    //We might not have read anything beyond the header...keep pulling stuff in
+                    //until we can't anymore.
+                    while( endOfContent > endOfData ) {
+                        if( CS_PP_bufferRemaining( info->buffer ) <= 0 ) {
+                            CS_LOG_ERROR("Header + Payload for urlencoded form too big.");
+                            return -1;
+                        }
+                        ssize_t bytesRead = info->ssl?
+                            CS_PP_readFromSSL(info->buffer,info->ssl):
+                            CS_PP_readFromFile(info->buffer,info->clientSocket);
+                        if( bytesRead < 0 ) return -1;
+                        endOfData = CS_PP_endOfData(info->buffer);
+                    }
                     currentHeaderState = HEADER_STATE_FORM_NAME;
                     break;
                 }
@@ -777,9 +790,9 @@ static int parseRequest(struct CS_ClientInfo *info) {
 
 static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     //Message starts:
-    size_t bytesAvailable = CS_PP_dataSize(info->buffer);
     int bytesRequiredForHeaders = parseRequest(info);
     if( bytesRequiredForHeaders < 0 ) return true;
+    size_t bytesAvailable = CS_PP_dataSize(info->buffer);
     //If there's anything left after the headers, set the internal file pointer ahead.
     if( bytesRequiredForHeaders < bytesAvailable ) CS_PP_write(info->buffer,bytesRequiredForHeaders);
     CS_LOG_INFO("Request: %s %s",info->requestInfo.method,info->requestInfo.uri);
@@ -939,6 +952,25 @@ const char *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const
     for( int i = 0; i < request->numHeaders; ++i ) {
         if( strncmp(name,request->parameters[i].name,HEADER_MAX) == 0 ) {
             return request->parameters[i].value;
+        }
+    }
+    return NULL;
+}
+
+const char *CS_serverGetRequestCookie( struct CS_ClientInfo *info, const char *cookie ) {
+    const char *cookieValue = CS_serverGetRequestHeader( info, "Cookie" );
+    if( cookie == NULL ) return NULL;
+    char *cookieCopy = CS_tempStringCopy( cookieValue );
+    char *savePtrOuter;
+    char *savePtrInner;
+    char *current;
+    char *innerCurrent;
+    while( (current = strtok_r( cookieCopy, ";", &savePtrOuter )) ) {
+        cookieCopy = NULL;
+        innerCurrent = strtok_r( current, "=", &savePtrInner );
+        if( strcmp( cookie, innerCurrent ) == 0 ) {
+            innerCurrent = strtok_r( NULL, "=", &savePtrInner );
+            return innerCurrent;
         }
     }
     return NULL;

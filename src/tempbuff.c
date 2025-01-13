@@ -139,7 +139,7 @@ bool CS_tempFreeGlobal() {
     return false;
 }
 
-char *CS_tempBuffSnprintf(int max, char *fmt, ...) {
+char *CS_tempBuffSnprintf(int max, const char *fmt, ...) {
     char *tBuff = CS_tempBuff(max);
     if( tBuff ) {
         va_list ap;

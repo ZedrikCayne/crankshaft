@@ -21,7 +21,7 @@ static int okayTable[] = {
    //' '     !     "     #     $     %     &     '
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
    //  (     )     *     +     ,     -     .     /
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00,
    //  0     1     2     3     4     5     6     7
     0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,
    //  8     9     :     ;     <     =     >     ?
@@ -33,7 +33,7 @@ static int okayTable[] = {
    //  P     Q     R     S     T     U     V     W
     0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
    //  X     Y     Z     [     \     /     ^     _
-    0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01,
    //  `     a     b     c     d     e     f     g
     0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
    //  h     i     j     k     l     m     n     o
@@ -82,16 +82,18 @@ static struct CS_HtmlAttribute *privateAddAttribute( struct CS_HtmlNode *node, c
         if( !newAttribute->name ) return NULL;
         insertNew = true;
     }
-    struct CS_HtmlValue *newValue = NEWATTRIBUTEVALUE( node->linearAllocator );
-    if( !newValue ) {
-        return NULL;
+    if( attributeValue ) {
+        struct CS_HtmlValue *newValue = NEWATTRIBUTEVALUE( node->linearAllocator );
+        if( !newValue ) {
+            return NULL;
+        }
+        newValue->value = CS_linearCopyString( node->linearAllocator, attributeValue );
+        if( !newValue->value ) {
+            return NULL;
+        }
+        newValue->next = newAttribute->values;
+        newAttribute->values = newValue;
     }
-    newValue->value = CS_linearCopyString( node->linearAllocator, attributeValue );
-    if( !newValue->value ) {
-        return NULL;
-    }
-    newValue->next = newAttribute->values;
-    newAttribute->values = newValue;
     if( insertNew ) {
         newAttribute->next = node->attributes;
         node->attributes = newAttribute;
@@ -389,14 +391,18 @@ static struct CS_HtmlNode *privatePrintNodeIntro( struct CS_HtmlNode *node, stru
     CS_SB_printf( sb, "<%s", node->name );
     struct CS_HtmlAttribute *current = node->attributes;
     while( current ) {
-        CS_SB_printf( sb, " %s=\"", current->name );
-        struct CS_HtmlValue *currentValue = current->values;
-        while( currentValue ) {
-            CS_SB_append( sb, privateStripQuotes(currentValue->value) );
-            if( currentValue->next ) CS_SB_appendChar( sb, ' ' );
-            currentValue = currentValue->next;
+        CS_SB_appendChar( sb, ' ' );
+        CS_SB_append( sb, current->name );
+        if( current->values ) {
+            CS_SB_append( sb, "=\"" );
+            struct CS_HtmlValue *currentValue = current->values;
+            while( currentValue ) {
+                CS_SB_append( sb, privateStripQuotes(currentValue->value) );
+                if( currentValue->next ) CS_SB_appendChar( sb, ' ' );
+                currentValue = currentValue->next;
+            }
+            CS_SB_appendChar( sb, '"' );
         }
-        CS_SB_appendChar( sb, '"' );
         current = current->next;
     }
     CS_SB_appendChar( sb, '>' );

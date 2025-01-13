@@ -50,7 +50,7 @@ char *CS_tempStringCopyWithPad(const char *copyme, int size, char pad, int *outL
 void *CS_tempMemCopy(const void *from, int size);
 bool CS_tempAllocateGlobal(int globalSize);
 bool CS_tempFreeGlobal();
-char *CS_tempBuffSnprintf(int max, char *fmt, ...);
+char *CS_tempBuffSnprintf(int max, const char *fmt, ...);
 
 #define CS_MAX_TEMP_BUFF_TEMP_NAME 64
 

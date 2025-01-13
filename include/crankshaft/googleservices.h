@@ -10,6 +10,8 @@ extern "C" {
 #endif
 
 bool CS_GS_initWithFile( const char * pathToGoogleServicesJson );
+bool CS_GS_initWithEnvironmentVariable( const char *variableName );
+bool CS_GS_initWithEmbeddedJson( const char *json );
 bool CS_GS_kill( void );
 
 const char *CS_GS_getClientID( void );

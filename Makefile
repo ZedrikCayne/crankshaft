@@ -53,6 +53,7 @@ sqlite: $(SQLITE_DIR) $(SQLITE_DIR)/sqlite3.o
 
 install: $(BINOUT) $(LIBOUT)
 	cp -r include/* /usr/local/include
+	cp $(SQLITE_DIR)/sqlite3.h /usr/local/include/sqlite3.h
 	cp -r lib/* /usr/local/lib
 
 $(SQLITE_DIR):

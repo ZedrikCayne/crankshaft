@@ -118,7 +118,8 @@ bool CS_GS_initWithEnvironmentVariable( const char *variableName ) {
     privateClearSecret();
     const char * varValue = getenv( variableName ) ;
     if( varValue ) {
-        googleServicesJson = CS_jsonParseCopy( varValue, -1, SECRET_ALLOC_SIZE );
+        int nLen = strlen( varValue );
+        googleServicesJson = CS_jsonParseCopy( varValue, nLen, SECRET_ALLOC_SIZE );
         if( googleServicesJson )
             returnValue = false;
     }
@@ -130,7 +131,8 @@ bool CS_GS_initWithEmbeddedJson( const char *json ) {
     bool returnValue = true;
     privateClearSecret();
     if( json ) {
-        googleServicesJson = CS_jsonParseCopy( json, -1, SECRET_ALLOC_SIZE );
+        int nLen = strlen( json );
+        googleServicesJson = CS_jsonParseCopy( json, nLen, SECRET_ALLOC_SIZE );
         if( googleServicesJson )
             returnValue = false;
     }
@@ -222,9 +224,52 @@ UNLOCK_MUTEX_ERROR:
 }
 
 bool CS_GS_verifyJwt( const struct CS_Jwt *jwt ) {
-    privateGetKey("a");
-    return false;
+    bool returnValue = false;
+    if( !jwt ) {
+        CS_LOG_ERROR("googlesercices: Provided jwt is NULL");
+        goto FAIL;
+    }
+    struct CS_JsonNode *keyIdNode = CS_jsonNodeByPath( jwt->jsonHeader, "kid" );
+    if( !keyIdNode ) {
+        CS_LOG_ERROR("googleservices: Provided jwt does not have a 'kid' field.");
+        goto FAIL;
+    }
+    EVP_PKEY *pkey = privateGetKey( keyIdNode->stringValue );
+    if( !pkey ) {
+        CS_LOG_ERROR("googleservices: No private key for %s", keyIdNode->stringValue );
+        goto FAIL;
+    }
+    struct CS_StringBuilder *sb = CS_SB_create( 1024 );
+    if( !sb ) {
+        CS_LOG_ERROR("Failed to create a string buffer.");
+        goto FAIL;
+    }
+    CS_SB_append( sb, jwt->header );
+    CS_SB_appendChar( sb,'.' );
+    CS_SB_append( sb, jwt->payload );
 
+    EVP_MD_CTX *mdctx = EVP_MD_CTX_create();
+    if( !mdctx ) {
+        CS_LOG_ERROR("googleservices: Cannot create a message digest context.");
+        goto FAIL_FREE_SB;
+    }
+    EVP_PKEY_CTX *newCtx;
+    if( EVP_DigestVerifyInit(mdctx, &newCtx, EVP_sha256(), NULL, pkey ) != 1 ) {
+        CS_LOG_ERROR("googleservices: Could not create message digest verifier.");
+        goto FAIL_FREE_MD_CTX;
+    }
+    if( EVP_DigestVerify( mdctx, jwt->signatureInBinary, jwt->binarySignatureLength, (unsigned char *)CS_SB_buffer(sb), CS_SB_size(sb) ) != 1 ) {
+        CS_LOG_ERROR("googleservices: Digest verify fail.");
+        goto FAIL_FREE_MD_CTX;
+    }
+    returnValue = true;
+
+FAIL_FREE_MD_CTX:
+    EVP_MD_CTX_free( mdctx );
+FAIL_FREE_SB:
+    CS_SB_free(sb);
+FAIL:
+    return returnValue;
 }
 
 bool CS_GS_getKeys(void) {

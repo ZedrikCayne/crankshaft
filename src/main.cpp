@@ -11,6 +11,9 @@
 #include <crankshaft/server.h>
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/test.h>
+#include <crankshaft/html.h>
+#include <crankshaft/googleservices.h>
+#include <crankshaft/mime.h>
 
 int acceptSocket = 0;
 
@@ -131,9 +134,7 @@ void dcCallback( struct CS_ClientInfo *info ) {
 }
 
 bool googleLogin( struct CS_ClientInfo *info ) {
-    FILE * fout = fopen("/home/zed/from.js", "w");
-    fwrite( CS_PP_startOfData( info->buffer ), 1, CS_PP_dataSize( info->buffer ), fout );
-    fclose(fout);
+    
     return CS_serverDiagnostic200(info);
 }
 
@@ -147,6 +148,42 @@ bool fudge( struct CS_ClientInfo *info ) {
 bool doQuit( struct CS_ClientInfo *info ) {
     GotInterrupt = true;
     return CS_serverDiagnostic200(info);
+}
+
+bool loginPageReturn( struct CS_ClientInfo *info ) {
+    struct CS_HtmlNode *root = CS_htmlCreateRoot("html",2048);
+    CS_LOG("HEAD");
+    struct CS_HtmlNode *head = CS_htmlAddContainerAfter( root, "head" );
+    struct CS_HtmlNode *body = CS_htmlAddContainerAfter( root, "body" );
+    struct CS_HtmlNode *script = CS_htmlAddContainerAfter(body, "script");
+    CS_htmlAddAttribute( script, "async", NULL );
+    CS_htmlAddAttribute( script, "src", "https://accounts.google.com/gsi/client" );
+    struct CS_HtmlNode *div = CS_htmlAddContainerAfter( body, "div" );
+    CS_LOG("id");
+    CS_htmlAddAttribute( div, "id", "g_id_onload" );
+    CS_htmlAddAttribute( div, "data-client_id", CS_GS_getClientID() );
+
+    const char *host = CS_serverGetRequestHeader(info,"Host");
+    if( host == NULL ) host = "localhost";
+    CS_htmlAddAttribute( div, "data-login_uri",
+           CS_tempBuffSnprintf( 1024, "http%s://%s/googlelogin", 
+               info->ssl?"s":"", host ) );
+    CS_htmlAddAttribute( div, "data-auto_prompt", "false" );
+    div = CS_htmlAddContainerAfter( body, "div" );
+    CS_htmlAddAttribute( div, "class", "g_id_signin" );
+    CS_htmlAddAttribute( div, "data-type", "standard" );
+    CS_htmlAddAttribute( div, "data-size", "large" );
+    CS_htmlAddAttribute( div, "data-theme", "outline" );
+    CS_htmlAddAttribute( div, "data-text", "sign_in_with" );
+    CS_htmlAddAttribute( div, "data-shape", "rectangular" );
+    CS_htmlAddAttribute( div, "data-logo_alignment", "left" );
+    struct CS_StringBuilder *sb = CS_htmlToStringBuilder( root, 2048 );
+    struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_HTML, CS_SB_buffer( sb ), CS_SB_size( sb ) );
+    CS_serverDoReply( info, reply );
+    CS_serverReturnReply( info, reply );
+    CS_SB_free( sb );
+    CS_htmlFree( root );
+    return true;
 }
 
 struct CS_Route serverRoutes[] = {
@@ -186,6 +223,10 @@ int main(int argc, char *argv[] ) {
             CS_LOG_ERROR("Logging subsystem failed to init. Bailing!");
             return -1;
         }
+    }
+
+    if( CS_GS_initWithEnvironmentVariable( "GOOGLE_JSON" ) ) {
+        CS_LOG_WARN("GOOGLE_JSON not defined in the environment. Anything depending on google services json being initialized will fail.");
     }
 
     if( doTest ) {
