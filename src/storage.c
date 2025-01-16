@@ -340,6 +340,8 @@ static int sqlCallback( void *storagePointer, int numberOfColumns, char **column
 
 static struct privateSqliteData *privateCreateSqliteFromConfig( const char *config ) {
     struct privateSqliteData *returnValue = (struct privateSqliteData *)CS_allocZero( sizeof( struct privateSqliteData ) );
+    struct CS_StringBuilder *sb = NULL;
+    char *errorMessage = NULL;
     if( returnValue ) {
         returnValue->sb = CS_SB_create( 4096 );
         returnValue->tableName = NULL;
@@ -368,42 +370,62 @@ static struct privateSqliteData *privateCreateSqliteFromConfig( const char *conf
 
         if( sqlite3_open_v2( returnValue->dbFile, &returnValue->connection, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX, NULL ) != SQLITE_OK ) {
             CS_LOG_ERROR("Failed to open sqlite db %s", returnValue->dbFile);
-            privateFreeSqlite(returnValue);
-            return NULL;
+            goto FAIL;
         }
 
-        struct CS_StringBuilder *sb = CS_SB_create( 4096 );
+        sb = CS_SB_create( 4096 );
         CS_SB_printf( sb, "CREATE TABLE IF NOT EXISTS %s (\n", returnValue->tableName );
         CS_SB_printf( sb, "    key TEXT(128) PRIMARY KEY,\n" );
         CS_SB_printf( sb, "    cas INT(11),\n" );
         CS_SB_printf( sb, "    value BLOB ) WITHOUT ROWID" );
 
-        char *errorMessage;
         sqlite3_exec( returnValue->connection, sb->buffer, sqlCallback, (void*)returnValue, &errorMessage );
         if( errorMessage ) {
-            CS_LOG_ERROR("SQL: error message %s", errorMessage );
-            sqlite3_free( errorMessage );
+            goto FAIL;
         }
 
         CS_SB_reset( sb );
         CS_SB_printf(sb, "SELECT cas, value FROM %s WHERE key = ?", returnValue->tableName);
-        if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->get, NULL ) != SQLITE_OK ) CS_LOG_ERROR("SQL: %s: %s", sb->buffer, sqlite3_errmsg( returnValue->connection ) );
+        if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->get, NULL ) != SQLITE_OK ) {
+            goto FAIL;
+        }
 
         CS_SB_reset( sb );
         CS_SB_printf(sb, "UPDATE %s SET cas = ?, value = ? WHERE key = ? AND cas = ?", returnValue->tableName);
-        if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->update, NULL ) != SQLITE_OK ) CS_LOG_ERROR("SQL: %s: %s", sb->buffer, sqlite3_errmsg( returnValue->connection ) );
+        if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->update, NULL ) != SQLITE_OK ) {
+            goto FAIL;
+        }
 
         CS_SB_reset( sb );
         CS_SB_printf(sb, "INSERT INTO %s ( key, cas, value ) VALUES (?, ?, ?)", returnValue->tableName );
-        if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->put, NULL ) != SQLITE_OK ) CS_LOG_ERROR("SQL: %s: %s", sb->buffer, sqlite3_errmsg( returnValue->connection ) );
+        if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->put, NULL ) != SQLITE_OK ) {
+            goto FAIL;
+        }
 
         CS_SB_reset( sb );
         CS_SB_printf(sb, "DELETE FROM %s WHERE key = ?", returnValue->tableName );
-        if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->remove, NULL ) != SQLITE_OK ) CS_LOG_ERROR("SQL: %s: %s", sb->buffer, sqlite3_errmsg( returnValue->connection ) );
+        if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->remove, NULL ) != SQLITE_OK ) {
+            goto FAIL;
+        }
 
         CS_SB_free( sb );
+        sb = NULL;
     }
+    
     return returnValue;
+
+FAIL:
+    if( returnValue ) {
+        if( sb ) {
+            CS_LOG_ERROR("SQL: %s: %s", sb->buffer, sqlite3_errmsg( returnValue->connection ) );
+        } else {
+            if( errorMessage ) CS_LOG_ERROR("SQL: error message %s", errorMessage );
+        }
+        privateFreeSqlite( returnValue );
+    }
+    if( errorMessage ) sqlite3_free( errorMessage );
+    if( sb ) CS_SB_free( sb );
+    return NULL;
 }
 
 static struct CS_Storage *privateSqliteOpen(struct CS_Storage *storage) {

@@ -8,7 +8,7 @@ OUT="test/autogen-test.cpp"
 if [ -z ${1} ]; then
     FILES=`find test -mindepth 1 -name "test-*" | sort`
 else
-    FILES=$*
+    FILES=`for I in $*; do echo $I; done`
 fi
 
 BASES=`echo "${FILES}" | sed 's/^test\///' | sed 's/\.c$//' | sed 's/\.cpp$//' | sed 's/-/_/g' `
