@@ -225,6 +225,8 @@ int main(int argc, char *argv[] ) {
         }
     }
 
+    CS_tempAllocateGlobal(2*1024*1024);
+
     if( CS_GS_initWithEnvironmentVariable( "GOOGLE_JSON" ) ) {
         CS_LOG_WARN("GOOGLE_JSON not defined in the environment. Anything depending on google services json being initialized will fail.");
     }
@@ -245,8 +247,6 @@ int main(int argc, char *argv[] ) {
     signal(SIGINT, interruptHandler);
     signal(SIGHUP, hupHandler);
     signal(SIGTERM, terminateHandler);
-
-    CS_tempAllocateGlobal(10*1024*1024);
 
     CS_LOG_INFO("Starting web server.");
 
