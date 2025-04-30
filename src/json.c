@@ -178,7 +178,6 @@ static struct CS_JsonNode *privateNewNode( struct CS_JsonNode *aNode ) {
 static struct CS_JsonNode *privateNewNext( struct CS_JsonNode *aNode ) {
     struct CS_JsonNode *returnValue = privateNewNode( aNode );
     if( returnValue ) {
-        if( aNode->up ) aNode->up->nItemsOrLength++;
         returnValue->up = aNode->up;
         returnValue->last = aNode;
         returnValue->next = aNode->next;
@@ -188,12 +187,18 @@ static struct CS_JsonNode *privateNewNext( struct CS_JsonNode *aNode ) {
 }
 
 static struct CS_JsonNode *privateNewContained( struct CS_JsonNode *aNode ) {
-    struct CS_JsonNode *returnValue = privateNewNode( aNode );
-    if( returnValue ) {
-        returnValue->up = aNode;
-        aNode->container = returnValue;
+    if( aNode->container ) {
+        struct CS_JsonNode *current = aNode->container;
+        while( current->next ) current = current->next;
+        return privateNewNode( current );
+    } else {
+        struct CS_JsonNode *returnValue = privateNewNode( aNode );
+        if( returnValue ) {
+            returnValue->up = aNode;
+            aNode->container = returnValue;
+        }
+        return returnValue;
     }
-    return returnValue;
 }
 
 static struct CS_JsonNode *privateClose( struct CS_JsonNode *aNode ) {
@@ -201,12 +206,14 @@ static struct CS_JsonNode *privateClose( struct CS_JsonNode *aNode ) {
     if( aNode->up == NULL ) return NULL;
     //Cut off the 'last' thing that was pointing to us as 'next' since we won't
     //be there.
+    struct CS_JsonNode *current = NULL;
     if( aNode->last != NULL ) {
         aNode->last->next = NULL;
+        current = aNode->last;
+        while( current ) { ++aNode->up->nItemsOrLength; current = current->last; }
     } else {
         aNode->up->container = NULL;
     }
-    struct CS_JsonNode *current = NULL;
     current = aNode->up;
     current->next = aNode;
     aNode->up = current->up;

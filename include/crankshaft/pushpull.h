@@ -39,6 +39,7 @@ struct CS_PushPullBuffer {
  **********************************/
 struct CS_PushPullBuffer *CS_PP_defaultAlloc(int initialSize);
 struct CS_PushPullBuffer *CS_PP_onStaticBuffer(int initialSize, char *buff);
+struct CS_PushPullBuffer *CS_PP_fromFile(char *fileName);
 void CS_PP_init(struct CS_PushPullBuffer *initMe, int initialSize, char *buff);
 
 void CS_PP_defaultFree(struct CS_PushPullBuffer *freeMe);

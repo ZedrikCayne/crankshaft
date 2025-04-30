@@ -2,6 +2,8 @@ crankshaft
 crankshaft-test
 crankshaft-valgrind.txt
 crankshaft-test-valgrind.txt
+googleKeysCache.json
+a.sqlite
 obj/
 lib/
 build/

@@ -7,6 +7,7 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/param_build.h>
+#include <openssl/core_names.h>
 
 #include <crankshaft/alloc.h>
 #include <crankshaft/logger.h>
@@ -50,12 +51,15 @@ static void privateAddKey( const char *kid, EVP_PKEY *pKey ) {
         if( googleKeychain[ i ].pKey == NULL ) {
             googleKeychain[ i ].keyId = CS_stringCopy( kid );
             googleKeychain[ i ].pKey = pKey;
+            ++nGoogleKeys;
             break;
         }
     }
 }
 
+static bool privateFetchKeys();
 static EVP_PKEY *privateGetKey( const char *kid ) {
+    privateFetchKeys();
     for( int i = 0; i < nGoogleKeys; ++i ) {
         if( googleKeychain[ i ].keyId ) {
             if(strcmp(kid,googleKeychain[i].keyId) == 0) return googleKeychain[i].pKey;
@@ -154,26 +158,50 @@ const char *CS_GS_getClientID() {
 static bool privateFetchKeys() {
     if( googleKeys == NULL || cachedUntil < time(NULL) ) {
         if( googleKeychain ) CS_free( googleKeychain );
+        if( OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS|
+                             OPENSSL_INIT_ADD_ALL_CIPHERS|
+                             OPENSSL_INIT_ADD_ALL_DIGESTS|
+                             OPENSSL_INIT_LOAD_CONFIG,
+                             NULL) != 1 ) {
+            CS_LOG_ERROR("Openssl init fail.");
+            return true;
+        }
+
         pthread_mutex_lock( &googleServicesMutex );
         if( googleKeys == NULL || cachedUntil < time(NULL) ) {
-            struct CS_RequestReply *reply = 
-                CS_httpMakeRequest( CS_HTTP_METHOD_GET,
-                                    googleKeysEndpoint,
-                                    NULL, 0,
-                                    NULL, 0,
-                                    NULL, 0,
-                                    NULL );
-            if( reply == NULL ) goto UNLOCK_MUTEX_ERROR;
-            googleKeys = CS_jsonParseCopy( CS_PP_startOfData(reply->buffer),
-                                           CS_PP_dataSize(reply->buffer),
-                                           DEFAULT_KEY_SIZE );
-            if( googleKeys == NULL ) return true;
+            struct CS_PushPullBuffer *cached = CS_PP_fromFile( "googleKeysCache.json" );
+            if( !cached ) {
+                struct CS_RequestReply *reply = 
+                    CS_httpMakeRequest( CS_HTTP_METHOD_GET,
+                                        googleKeysEndpoint,
+                                        NULL, 0,
+                                        NULL, 0,
+                                        NULL, 0,
+                                        NULL );
+                if( reply == NULL ) goto UNLOCK_MUTEX_ERROR;
+                googleKeys = CS_jsonParseCopy( CS_PP_startOfData(reply->buffer),
+                                               CS_PP_dataSize(reply->buffer),
+                                               DEFAULT_KEY_SIZE );
+                CS_httpCloseRequest( reply );
+                if( googleKeys == NULL ) return true;
+            } else {
+                googleKeys = CS_jsonParseCopy( CS_PP_startOfData( cached ), CS_PP_dataSize( cached ), DEFAULT_KEY_SIZE );
+            }
             if( CS_jsonNodeToUnquoted( googleKeys, true ) == NULL ) {
                 CS_LOG_ERROR("Failed to unquote the reply");
                 CS_jsonFree(googleKeys);
                 goto UNLOCK_MUTEX_ERROR;
             }
-            CS_httpCloseRequest( reply );
+
+            if( !cached ) {
+                CS_LOG_INFO("Print request inner.");
+                char * temp = CS_jsonNodePrintableTemp( googleKeys );
+                FILE *ftemp = fopen( "googleKeysCache.json", "w" );
+                if( ftemp == NULL ) CS_LOG_ERROR("ABOUT TO BLOW UP");
+                fprintf( ftemp, "%s", temp );
+                fclose( ftemp );
+            }
+
             int nKeys = 0;
             struct CS_JsonNode *keysContainer = CS_jsonNodeByPath( googleKeys, "keys" );
             if( keysContainer ) nKeys = keysContainer->nItemsOrLength;
@@ -200,14 +228,33 @@ static bool privateFetchKeys() {
                 }
                 OSSL_PARAM_BLD *param_builder = OSSL_PARAM_BLD_new();
                 if( param_builder ) {
-                    OSSL_PARAM_BLD_push_BN( param_builder, "n", bn );
-                    OSSL_PARAM_BLD_push_BN( param_builder, "e", be );
+                    if( OSSL_PARAM_BLD_push_BN( param_builder, OSSL_PKEY_PARAM_RSA_N, bn ) != 1 ) {
+                        CS_LOG_ERROR("Failed to push n onto the param builder.");
+                        break;
+                    }
+                    if( OSSL_PARAM_BLD_push_BN( param_builder, OSSL_PKEY_PARAM_RSA_E, be ) != 1 ) {
+                        CS_LOG_ERROR("Failed to push e onto the param builder.");
+                        break;
+                    }
                     OSSL_PARAM *param = OSSL_PARAM_BLD_to_param( param_builder );
                     if( param ) {
-                        EVP_PKEY *pkey;
                         EVP_PKEY_CTX *pkey_context = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
-                        EVP_PKEY_fromdata( pkey_context, &pkey, EVP_PKEY_PUBLIC_KEY, param );
-                        privateAddKey( kid->stringValue, pkey );
+
+                        if( pkey_context != NULL ) {
+                            if( EVP_PKEY_fromdata_init( pkey_context ) != 1 ) {
+                                CS_LOG_ERROR("Failed fromdata init.");
+                            } else {
+                                EVP_PKEY *pkey = NULL;
+                                if( EVP_PKEY_fromdata( pkey_context, &pkey, EVP_PKEY_PUBLIC_KEY, param ) == 1 ) {
+                                    privateAddKey( kid->stringValue, pkey );
+                                } else {
+                                    CS_LOG_ERROR("Failed to create a pkey from a context.");
+                                }
+                            }
+                            EVP_PKEY_CTX_free( pkey_context );
+                        } else {
+                            CS_LOG_ERROR("Failed to create a pkey context.");
+                        }
                         OSSL_PARAM_free( param );
                     }
                     OSSL_PARAM_BLD_free( param_builder );

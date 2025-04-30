@@ -14,6 +14,8 @@
 #include <crankshaft/html.h>
 #include <crankshaft/googleservices.h>
 #include <crankshaft/mime.h>
+#include <crankshaft/jwt.h>
+#include <crankshaft/json.h>
 
 int acceptSocket = 0;
 
@@ -133,9 +135,48 @@ void dcCallback( struct CS_ClientInfo *info ) {
     CS_LOG_TRACE("Disconnecting.");
 }
 
+bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt );
+bool loginPageReturn( struct CS_ClientInfo *info );
+bool cookieFilter( struct CS_ClientInfo *info ) {
+    return loginPageReturn(info);
+}
+
 bool googleLogin( struct CS_ClientInfo *info ) {
+    const char *g_csrf_header = CS_serverGetRequestCookie(info, "g_csrf_token");
+    if( !g_csrf_header ) {
+        CS_LOG_ERROR( "Login missing csrf token header." );
+        return loginPageReturn(info);
+    }
+    const char *g_csrf_form = CS_serverGetRequestFormParameter(info, "g_csrf_token");
+    if( !g_csrf_form ) {
+        CS_LOG_ERROR( "Login missing csrf token form." );
+        return loginPageReturn(info);
+    }
+    if( strcmp( g_csrf_header, g_csrf_form ) != 0 ) {
+        CS_LOG_ERROR( "Login csrf different from form csrf." );
+        return loginPageReturn(info);
+    }
+    const char *credential = CS_serverGetRequestFormParameter(info, "credential");
+    if( !credential ) {
+        CS_LOG_ERROR( "Login missing credential." );
+        return loginPageReturn(info);
+    }
+    int nLen = strlen(credential);
+    const struct CS_Jwt *jwt = CS_jwtParse( credential, nLen, 1024 );
+    if( !jwt ) {
+        CS_LOG_ERROR( "Failed to parse a jwt out of the credential." );
+        return loginPageReturn(info);
+    }
+    if( !CS_GS_verifyJwt(jwt) ) {
+        CS_LOG_ERROR( "Failed to verify a jwt." );
+        return loginPageReturn(info);
+    }
+
+    bool returnValue = jwtInfoReturn(info, jwt);
+
+    CS_jwtFree( jwt );
     
-    return CS_serverDiagnostic200(info);
+    return returnValue;
 }
 
 bool fudge( struct CS_ClientInfo *info ) {
@@ -150,16 +191,53 @@ bool doQuit( struct CS_ClientInfo *info ) {
     return CS_serverDiagnostic200(info);
 }
 
+bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt ) {
+    struct CS_HtmlNode *root = CS_htmlCreateRoot("html",2048);
+    struct CS_HtmlNode *head = CS_htmlAddContainerAfter( root, "head" );
+    struct CS_HtmlNode *meta = CS_htmlAddContainerAfter( head, "meta" );
+    CS_htmlAddAttribute( meta, "charset", "utf-8" );
+    struct CS_HtmlNode *title = CS_htmlAddContainerAfter( head, "title" );
+    CS_htmlSetContents( title, CS_tempBuffSnprintf(1024, "JWT info page", serverName ) );
+    struct CS_HtmlNode *body = CS_htmlAddContainerAfter( root, "body" );
+    struct CS_HtmlNode *div1 = CS_htmlAddContainerAfter( body, "div" );
+    struct CS_HtmlNode *header = CS_htmlAddContainerAfter( div1, "h4" );
+    CS_htmlSetContents( header, "JWT Header" );
+    struct CS_HtmlNode *code = CS_htmlAddContainerAfter( div1, "code" );
+    if( jwt->jsonHeader != NULL ) {
+        CS_htmlSetContents( code, CS_jsonNodePrintableTemp( jwt->jsonHeader ) );
+    } else {
+        CS_htmlSetContents( code, "Json Header is null!" );
+    }
+    struct CS_HtmlNode *div2 = CS_htmlAddNext( div1, "div" );
+    struct CS_HtmlNode *header2 = CS_htmlAddContainerAfter( div2, "h4" );
+    CS_htmlSetContents( header2, "JWT Payload" );
+    struct CS_HtmlNode *code2 = CS_htmlAddContainerAfter( div2, "code" );   
+    if( jwt->jsonPayload != NULL ) {
+        CS_htmlSetContents( code2, CS_jsonNodePrintableTemp( jwt->jsonPayload ) );
+    } else {
+        CS_htmlSetContents( code2, "Json Header is null!" );
+    }
+    struct CS_StringBuilder *sb = CS_htmlToStringBuilder( root, 2048 );
+    struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_HTML, CS_SB_buffer( sb ), CS_SB_size( sb ) );
+    CS_serverDoReply( info, reply );
+    CS_serverReturnReply( info, reply );
+    CS_SB_free( sb );
+    CS_htmlFree( root );
+    return true;
+}
+
 bool loginPageReturn( struct CS_ClientInfo *info ) {
     struct CS_HtmlNode *root = CS_htmlCreateRoot("html",2048);
-    CS_LOG("HEAD");
     struct CS_HtmlNode *head = CS_htmlAddContainerAfter( root, "head" );
+    struct CS_HtmlNode *meta = CS_htmlAddContainerAfter( head, "meta" );
+    CS_htmlAddAttribute( meta, "charset", "utf-8" );
+    struct CS_HtmlNode *title = CS_htmlAddContainerAfter( head, "title" );
+    CS_htmlSetContents( title, CS_tempBuffSnprintf(1024, "%s login page", serverName ) );
     struct CS_HtmlNode *body = CS_htmlAddContainerAfter( root, "body" );
     struct CS_HtmlNode *script = CS_htmlAddContainerAfter(body, "script");
     CS_htmlAddAttribute( script, "async", NULL );
     CS_htmlAddAttribute( script, "src", "https://accounts.google.com/gsi/client" );
     struct CS_HtmlNode *div = CS_htmlAddContainerAfter( body, "div" );
-    CS_LOG("id");
     CS_htmlAddAttribute( div, "id", "g_id_onload" );
     CS_htmlAddAttribute( div, "data-client_id", CS_GS_getClientID() );
 
@@ -189,6 +267,7 @@ bool loginPageReturn( struct CS_ClientInfo *info ) {
 struct CS_Route serverRoutes[] = {
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", googleLogin},
     { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", googleLogin},
+    { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_FILTER, 0, "", cookieFilter},
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/api", fudge },
     { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, 0, "/api", fudge },
     { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, 0, "", CS_serverFileServer },

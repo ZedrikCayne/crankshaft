@@ -15,7 +15,6 @@ static int testSucceeded = 0;
 
 bool test_googleservices(void) {
     //Tests go here:
-    /*
     CS_FAIL_ON_TRUE( CS_GS_getKeys(), "Get public google keys.", "Failed to grab them." );
     struct CS_StringBuilder *sb = CS_GS_getKeysDesc();
 
@@ -24,7 +23,6 @@ bool test_googleservices(void) {
         CS_LOG_INFO("%s", CS_SB_buffer( sb ) );
         CS_SB_free(sb);
     }
-    */
 
     return testCount !=
            testSucceeded;

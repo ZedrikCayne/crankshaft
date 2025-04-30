@@ -4,11 +4,17 @@
 
 echo Generating test test/autogen-test.c
 OUT="test/autogen-test.cpp"
+EMIT_TEMP=1
 
 if [ -z ${1} ]; then
     FILES=`find test -mindepth 1 -name "test-*" | sort`
 else
-    FILES=`for I in $*; do echo $I; done`
+    if [ "${1}" = "NONE" ]; then
+        FILES=""
+        EMIT_TEMP=0
+    else
+        FILES=`for I in $*; do echo $I; done`
+    fi
 fi
 
 BASES=`echo "${FILES}" | sed 's/^test\///' | sed 's/\.c$//' | sed 's/\.cpp$//' | sed 's/-/_/g' `
@@ -27,7 +33,9 @@ done
 echo ""                                                   >> ${OUT}
 echo "bool TEST_AUTO() {"                                 >> ${OUT}
 echo "    bool returnValue = false;"                      >> ${OUT}
-echo "    bool temp = false;"                             >> ${OUT}
+if [ ${EMIT_TEMP} -eq 1 ]; then
+    echo "    bool temp = false;"                         >> ${OUT}
+fi
 for I in ${BASES}; do
     echo "    CS_testResetGlobalRandSeed();"              >> ${OUT}
     echo "    temp = ${I}();"                             >> ${OUT} 

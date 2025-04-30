@@ -5,6 +5,9 @@
 #include <string.h>
 #include <errno.h>
 #include <openssl/ssl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <crankshaft/alloc.h>
 #include <crankshaft/pushpull.h>
@@ -20,6 +23,26 @@ struct CS_PushPullBuffer *CS_PP_defaultAlloc(int initialSize) {
 
 struct CS_PushPullBuffer *CS_PP_onStaticBuffer(int initialSize, char *buff) {
     return internalInitAndAlloc(initialSize, true, buff);
+}
+
+struct CS_PushPullBuffer *CS_PP_fromFile(char *fileName) {
+    struct stat fileStat = {0};
+    if( stat(fileName, &fileStat) != 0 ) return NULL;
+    struct CS_PushPullBuffer *returnValue = NULL;
+
+    int readFile = open(fileName,0);
+    if( readFile >= 0 ) {
+        returnValue = CS_PP_defaultAlloc( fileStat.st_size );
+        if( returnValue ) {
+            if( CS_PP_readFromFile( returnValue, readFile ) < 0 ) {
+                CS_PP_defaultFree( returnValue );
+                returnValue = NULL;
+            }
+        }
+        close(readFile);
+    }
+
+    return returnValue;
 }
 
 void CS_PP_init(struct CS_PushPullBuffer *buffer, int initialSize, char *buff) {

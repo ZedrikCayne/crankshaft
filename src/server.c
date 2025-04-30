@@ -968,6 +968,7 @@ const char *CS_serverGetRequestCookie( struct CS_ClientInfo *info, const char *c
     while( (current = strtok_r( cookieCopy, ";", &savePtrOuter )) ) {
         cookieCopy = NULL;
         innerCurrent = strtok_r( current, "=", &savePtrInner );
+        while( *innerCurrent == ' ' ) ++innerCurrent;
         if( strcmp( cookie, innerCurrent ) == 0 ) {
             innerCurrent = strtok_r( NULL, "=", &savePtrInner );
             return innerCurrent;
@@ -980,7 +981,7 @@ const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const 
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int i = 0; i < request->numFormParameters; ++i ) {
         if( strncmp(name,request->formParameters[i].name,HEADER_MAX) == 0 ) {
-            return request->parameters[i].value;
+            return request->formParameters[i].value;
         }
     }
     return NULL;
