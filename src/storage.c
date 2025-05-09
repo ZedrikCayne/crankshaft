@@ -338,10 +338,17 @@ static int sqlCallback( void *storagePointer, int numberOfColumns, char **column
     return 0;
 }
 
+void sqlite_log_receiver(void *context, int code, const char *message)
+{
+    CS_LOG_LOUD("SQLITE LOG [%d] %s", code, message);
+}
+
 static struct privateSqliteData *privateCreateSqliteFromConfig( const char *config ) {
     struct privateSqliteData *returnValue = (struct privateSqliteData *)CS_allocZero( sizeof( struct privateSqliteData ) );
     struct CS_StringBuilder *sb = NULL;
     char *errorMessage = NULL;
+    char *vfsName = NULL;
+    bool insertTrace = false;
     if( returnValue ) {
         returnValue->sb = CS_SB_create( 4096 );
         returnValue->tableName = NULL;
@@ -361,6 +368,11 @@ static struct privateSqliteData *privateCreateSqliteFromConfig( const char *conf
                     } else if ( strcmp( key, "table" ) == 0 ) {
                         if( returnValue->tableName ) CS_stringFree( returnValue->tableName );
                         returnValue->tableName = CS_stringCopy( val );
+                    } else if ( strcmp( key, "vfs" ) == 0 ) {
+                        if( vfsName ) CS_stringFree( vfsName );
+                        vfsName = CS_stringCopy( val );
+                    } else if ( strcmp( key, "trace" ) == 0 ) {
+                        insertTrace = strcmp( val, "true" ) == 0;
                     }
                 }
             } while( (nextItem = strtok_r( NULL, ",", &commasStorage )) != NULL );
@@ -368,7 +380,9 @@ static struct privateSqliteData *privateCreateSqliteFromConfig( const char *conf
         if( returnValue->tableName == NULL ) returnValue->tableName = CS_stringCopy( sqliteDefaultTableName );
         if( returnValue->dbFile == NULL ) returnValue->dbFile = CS_stringCopy( sqliteDefaultDbFile );
 
-        if( sqlite3_open_v2( returnValue->dbFile, &returnValue->connection, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX, NULL ) != SQLITE_OK ) {
+        if( insertTrace ) sqlite3_config(SQLITE_CONFIG_LOG, sqlite_log_receiver, NULL);
+
+        if( sqlite3_open_v2( returnValue->dbFile, &returnValue->connection, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX, vfsName ) != SQLITE_OK ) {
             CS_LOG_ERROR("Failed to open sqlite db %s", returnValue->dbFile);
             goto FAIL;
         }
