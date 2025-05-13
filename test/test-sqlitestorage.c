@@ -18,8 +18,8 @@ extern bool util_test_generic_storage( const struct CS_Storage *storage );
 
 bool test_sqlitestorage(void) {
     //Tests go here:
-    unlink("a.sqlite");
-    const struct CS_Storage *storage = CS_storageOpen("Test", "file=a.sqlite", CS_STORAGE_BACKEND_SQLITE );
+    unlink("/tmp/a.sqlite");
+    const struct CS_Storage *storage = CS_storageOpen("Test", "file=/tmp/a.sqlite", CS_STORAGE_BACKEND_SQLITE );
 
     CS_FAIL_ON_NULL( storage, "Create sqlite storage with no config.", "Failed");
 
