@@ -169,37 +169,23 @@ static bool privateFetchKeys() {
 
         pthread_mutex_lock( &googleServicesMutex );
         if( googleKeys == NULL || cachedUntil < time(NULL) ) {
-            struct CS_PushPullBuffer *cached = CS_PP_fromFile( "googleKeysCache.json" );
-            if( !cached ) {
-                struct CS_RequestReply *reply = 
-                    CS_httpMakeRequest( CS_HTTP_METHOD_GET,
-                                        googleKeysEndpoint,
-                                        NULL, 0,
-                                        NULL, 0,
-                                        NULL, 0,
-                                        NULL );
-                if( reply == NULL ) goto UNLOCK_MUTEX_ERROR;
-                googleKeys = CS_jsonParseCopy( CS_PP_startOfData(reply->buffer),
-                                               CS_PP_dataSize(reply->buffer),
-                                               DEFAULT_KEY_SIZE );
-                CS_httpCloseRequest( reply );
-                if( googleKeys == NULL ) return true;
-            } else {
-                googleKeys = CS_jsonParseCopy( CS_PP_startOfData( cached ), CS_PP_dataSize( cached ), DEFAULT_KEY_SIZE );
-            }
+            struct CS_RequestReply *reply = 
+                CS_httpMakeRequest( CS_HTTP_METHOD_GET,
+                                    googleKeysEndpoint,
+                                    NULL, 0,
+                                    NULL, 0,
+                                    NULL, 0,
+                                    NULL );
+            if( reply == NULL ) goto UNLOCK_MUTEX_ERROR;
+            googleKeys = CS_jsonParseCopy( CS_PP_startOfData(reply->buffer),
+                                           CS_PP_dataSize(reply->buffer),
+                                           DEFAULT_KEY_SIZE );
+            CS_httpCloseRequest( reply );
+            if( googleKeys == NULL ) return true;
             if( CS_jsonNodeToUnquoted( googleKeys, true ) == NULL ) {
                 CS_LOG_ERROR("Failed to unquote the reply");
                 CS_jsonFree(googleKeys);
                 goto UNLOCK_MUTEX_ERROR;
-            }
-
-            if( !cached ) {
-                CS_LOG_INFO("Print request inner.");
-                char * temp = CS_jsonNodePrintableTemp( googleKeys );
-                FILE *ftemp = fopen( "googleKeysCache.json", "w" );
-                if( ftemp == NULL ) CS_LOG_ERROR("ABOUT TO BLOW UP");
-                fprintf( ftemp, "%s", temp );
-                fclose( ftemp );
             }
 
             int nKeys = 0;
