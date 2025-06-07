@@ -29,7 +29,7 @@ static bool initTempBuff(struct TempBuffStorage *storage,
         CS_LOG_ERROR("OOM for temp buff named '%s'", name);
         return true;
     };
-    strncpy(storage->name, name, CS_MAX_TEMP_BUFF_TEMP_NAME);
+    strncpy(storage->name, name, CS_MAX_TEMP_BUFF_TEMP_NAME-1);
     storage->size = totalSize;
     storage->current = buffer;
     storage->buffer = buffer;

@@ -79,7 +79,7 @@ static int privateEncode( const void *toEncode, int encodeLength, void *encodeBu
     const unsigned char *end = input + encodeLength;
     char *outputEnd = output + outputLength;
 
-    unsigned int threeBytes;
+    unsigned int threeBytes = 0;
     while( input < end - 3 ) {
         threeBytes = *input++ << 16;
         threeBytes += *input++ << 8;

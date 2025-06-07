@@ -82,11 +82,12 @@ void privateReturnStorageItem(struct CS_StorageItem *item) {
     if( storageItemSlabAllocator ) CS_slabReturn( storageItemSlabAllocator, item );
 }
 
-struct CS_StorageItem *privateGetStorageItemWithCopyData( const char *key, int cas, int size, const void *data ) {
+struct CS_StorageItem *privateGetStorageItemWithCopyData( const char *key, int cas, int size, time_t expires, const void *data ) {
     struct CS_StorageItem *item = privateGetStorageItem();
     if( item ) {
         item->cas = cas;
         item->size = size;
+        item->expires = expires;
         item->key = CS_stringCopy(key);
         if( key == NULL ) {
             privateReturnStorageItem(item);
@@ -102,7 +103,7 @@ struct CS_StorageItem *privateGetStorageItemWithCopyData( const char *key, int c
 }
 
 struct CS_StorageItem *privateDeepCopyStorageItem( const struct CS_StorageItem *item ) {
-    return privateGetStorageItemWithCopyData( item->key, item->cas, item->size, item->value );
+    return privateGetStorageItemWithCopyData( item->key, item->cas, item->size, item->expires, item->value );
 }
 
 static struct CS_HashTable *storageHashTable = NULL;
@@ -252,12 +253,12 @@ struct CS_StorageItem *CS_storageUpdate( const struct CS_Storage *storage, struc
     return returnValue;
 }
 
-struct CS_StorageItem *CS_storagePut( const struct CS_Storage *storage, const char *key, const void *value, int size, struct CS_StorageItem **outPresent ) {
+struct CS_StorageItem *CS_storagePut( const struct CS_Storage *storage, const char *key, const void *value, int size, time_t expires, struct CS_StorageItem **outPresent ) {
     if( storage == NULL ) {
         CS_LOG_ERROR("CS_storagePut NULL storage.");
         return NULL;
     }
-    struct CS_StorageItem *newItem = privateGetStorageItemWithCopyData( key, 0, size, value);
+    struct CS_StorageItem *newItem = privateGetStorageItemWithCopyData( key, 0, size, expires, value);
     if( newItem == NULL ) {
         CS_LOG_ERROR("Failed to create a new storage item.");
         return NULL;
@@ -265,7 +266,11 @@ struct CS_StorageItem *CS_storagePut( const struct CS_Storage *storage, const ch
     struct CS_StorageItem *returnValue = storage->backend->put( storage, newItem );
     if( returnValue != newItem ) {
         privateReturnStorageItem( newItem );
-        if( outPresent ) *outPresent = returnValue; else privateReturnStorageItem( returnValue );
+        if( outPresent ) {
+            *outPresent = returnValue;
+        } else {
+            if( returnValue != NULL ) privateReturnStorageItem( returnValue );
+        }
         returnValue = NULL;
     } else {
         if( outPresent ) *outPresent = NULL;
@@ -277,19 +282,20 @@ struct CS_StorageItem *CS_storageDuplicateItem( struct CS_StorageItem *item ) {
     return privateDeepCopyStorageItem( item );
 }
 
-struct CS_StorageItem *CS_storageCreateItemDataCopy( const char *key, unsigned long cas, unsigned int size, const void *data ) {
-    return privateGetStorageItemWithCopyData( key, cas, size, data );
+struct CS_StorageItem *CS_storageCreateItemDataCopy( const char *key, unsigned long cas, unsigned int size, time_t expires, const void *data ) {
+    return privateGetStorageItemWithCopyData( key, cas, size, expires, data );
 }
 
 void CS_storageReturnItem( struct CS_StorageItem *item ) {
     if( !item ) return;
     privateReturnStorageItem(item);
 }
-struct CS_StorageItem *CS_storageItemChangeData( struct CS_StorageItem *item, unsigned int size, const void *data ) {
+struct CS_StorageItem *CS_storageItemChangeData( struct CS_StorageItem *item, unsigned int size, const time_t expires, void *data ) {
     void *newData = CS_allocDuplicate( data, size );
     if( !newData ) return NULL;
     void *oldData = item->value;
     CS_free( oldData );
+    item->expires = expires;
     item->value = newData;
     item->size = size;
     return item;
@@ -300,6 +306,7 @@ struct privateSqliteData {
     sqlite3 *connection;
     sqlite3_stmt *get;
     sqlite3_stmt *update;
+    sqlite3_stmt *forceUpdate;
     sqlite3_stmt *put;
     sqlite3_stmt *remove;
     const char *tableName;
@@ -316,6 +323,7 @@ static void privateFreeSqlite( struct privateSqliteData *sqliteData ) {
         IF_DO_NULL(sqliteData->put,sqlite3_finalize);
         IF_DO_NULL(sqliteData->get,sqlite3_finalize);
         IF_DO_NULL(sqliteData->update,sqlite3_finalize);
+        IF_DO_NULL(sqliteData->forceUpdate,sqlite3_finalize);
         IF_DO_NULL(sqliteData->remove,sqlite3_finalize);
         IF_DO_NULL(sqliteData->connection,sqlite3_close);
         IF_DO_NULL(sqliteData->tableName,CS_stringFree);
@@ -391,6 +399,7 @@ static struct privateSqliteData *privateCreateSqliteFromConfig( const char *conf
         CS_SB_printf( sb, "CREATE TABLE IF NOT EXISTS %s (\n", returnValue->tableName );
         CS_SB_printf( sb, "    key TEXT(128) PRIMARY KEY,\n" );
         CS_SB_printf( sb, "    cas INT(11),\n" );
+        CS_SB_printf( sb, "    expires INT(20),\n" );
         CS_SB_printf( sb, "    value BLOB ) WITHOUT ROWID" );
 
         sqlite3_exec( returnValue->connection, sb->buffer, sqlCallback, (void*)returnValue, &errorMessage );
@@ -399,19 +408,25 @@ static struct privateSqliteData *privateCreateSqliteFromConfig( const char *conf
         }
 
         CS_SB_reset( sb );
-        CS_SB_printf(sb, "SELECT cas, value FROM %s WHERE key = ?", returnValue->tableName);
+        CS_SB_printf(sb, "SELECT cas, expires, value FROM %s WHERE key = ?", returnValue->tableName);
         if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->get, NULL ) != SQLITE_OK ) {
             goto FAIL;
         }
 
         CS_SB_reset( sb );
-        CS_SB_printf(sb, "UPDATE %s SET cas = ?, value = ? WHERE key = ? AND cas = ?", returnValue->tableName);
+        CS_SB_printf(sb, "UPDATE %s SET cas = ?, value = ?, expires = ? WHERE key = ? AND cas = ?", returnValue->tableName);
         if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->update, NULL ) != SQLITE_OK ) {
             goto FAIL;
         }
 
         CS_SB_reset( sb );
-        CS_SB_printf(sb, "INSERT INTO %s ( key, cas, value ) VALUES (?, ?, ?)", returnValue->tableName );
+        CS_SB_printf(sb, "UPDATE %s SET cas = ?, value = ?, expires = ? WHERE key = ?", returnValue->tableName);
+        if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->forceUpdate, NULL ) != SQLITE_OK ) {
+            goto FAIL;
+        }
+
+        CS_SB_reset( sb );
+        CS_SB_printf(sb, "INSERT INTO %s ( key, cas, expires, value ) VALUES (?, ?, ?, ?)", returnValue->tableName );
         if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->put, NULL ) != SQLITE_OK ) {
             goto FAIL;
         }
@@ -458,9 +473,14 @@ static struct CS_StorageItem *privateSqliteGet(const struct CS_Storage *storage,
     struct CS_StorageItem *returnValue = NULL;
     if( sqlite3_step( sqliteData->get ) == SQLITE_ROW ) {
         unsigned int cas = sqlite3_column_int( sqliteData->get, 0 );
-        const void *value = sqlite3_column_blob( sqliteData->get, 1 );
-        unsigned int size = sqlite3_column_bytes( sqliteData->get, 1 );
-        returnValue = privateGetStorageItemWithCopyData( key, cas, size, value );
+        time_t expires = sqlite3_column_int64( sqliteData->get, 1 );
+        const void *value = sqlite3_column_blob( sqliteData->get, 2 );
+        unsigned int size = sqlite3_column_bytes( sqliteData->get, 2 );
+        if( expires == 0 || expires > time(NULL) ) {
+            returnValue = privateGetStorageItemWithCopyData( key, cas, size, expires, value );
+        } else {
+            privateSqliteRemove( storage, key );
+        }
     }
     sqlite3_reset( sqliteData->get );
     return returnValue;
@@ -474,28 +494,53 @@ static struct CS_StorageItem *privateSqlitePut(const struct CS_Storage *storage,
         //Key, Cas, Value
         sqlite3_bind_text( sqliteData->put, 1, item->key, -1, SQLITE_STATIC );
         sqlite3_bind_int( sqliteData->put, 2, item->cas );
-        sqlite3_bind_blob( sqliteData->put, 3, item->value, item->size, SQLITE_STATIC );
+        sqlite3_bind_int64( sqliteData->put, 3, item->expires );
+        sqlite3_bind_blob( sqliteData->put, 4, item->value, item->size, SQLITE_STATIC );
         toStep = sqliteData->put;
     } else {
-        //Cas, Value, Key, OldCas
+        //Cas, Value, Expires, Key, OldCas
         sqlite3_bind_int( sqliteData->update, 1, item->cas );
         sqlite3_bind_blob( sqliteData->update, 2, item->value, item->size, SQLITE_STATIC );
-        sqlite3_bind_text( sqliteData->update, 3, item->key, -1, SQLITE_STATIC );
-        sqlite3_bind_int( sqliteData->update, 4, item->cas - 1 );
+        sqlite3_bind_int64( sqliteData->update, 3, item->expires );
+        sqlite3_bind_text( sqliteData->update, 4, item->key, -1, SQLITE_STATIC );
+        sqlite3_bind_int( sqliteData->update, 5, item->cas - 1 );
         toStep = sqliteData->update;
     }
-    if( sqlite3_step( toStep ) != SQLITE_DONE )
+    if( sqlite3_step( toStep ) != SQLITE_DONE ) {
         returnValue = NULL;
+    }
     sqlite3_reset( toStep );
     //If the add or update failed, return the item in question.
-    if( returnValue == NULL ) return privateSqliteGet( storage, item->key );
+    if( returnValue == NULL ) {
+        struct CS_StorageItem *oldValue = privateSqliteGet( storage, item->key );
+
+        //Re-insert
+        if( oldValue == NULL && item->cas == 1 ) {
+            //Key, Cas, Value
+            sqlite3_bind_text( sqliteData->put, 1, item->key, -1, SQLITE_STATIC );
+            sqlite3_bind_int( sqliteData->put, 2, item->cas );
+            sqlite3_bind_int64( sqliteData->put, 3, item->expires );
+            sqlite3_bind_blob( sqliteData->put, 4, item->value, item->size, SQLITE_STATIC );
+            if( sqlite3_step( sqliteData->put ) != SQLITE_DONE ) {
+                returnValue = NULL;
+            } else {
+                returnValue = item;
+            }
+            sqlite3_reset( sqliteData->put );
+            return returnValue;
+        }
+
+        return oldValue;
+    }
     return item;
 }
 static bool privateSqliteRemove(const struct CS_Storage *storage, const char *key) {
     bool returnValue = false;
     struct privateSqliteData *sqliteData = (struct privateSqliteData*)storage->storageData;
     sqlite3_bind_text( sqliteData->remove, 1, key, -1, SQLITE_STATIC );
-    if( sqlite3_step( sqliteData->remove ) != SQLITE_DONE ) returnValue = true;
+    if( sqlite3_step( sqliteData->remove ) != SQLITE_DONE ) {
+        returnValue = true;
+    }
     sqlite3_reset( sqliteData->remove );
     return returnValue || sqlite3_changes(sqliteData->connection) != 1;
 }
@@ -535,7 +580,14 @@ static struct CS_StorageItem *privateHashtableGet(const struct CS_Storage *stora
     struct CS_HashTable *table = (struct CS_HashTable *)storage->storageData;
     const void *maybe = CS_hashtableGet( table, key );
     if( maybe == CS_HASHTABLE_ERROR ) return NULL;
-    return privateDeepCopyStorageItem( (const struct CS_StorageItem *)maybe );
+    const struct CS_StorageItem *old = (const struct CS_StorageItem *)maybe;
+    if( old->expires == 0 || old->expires > time(NULL) ) {
+        return privateDeepCopyStorageItem( (const struct CS_StorageItem *)maybe );
+    } else {
+        struct CS_StorageItem *item = (struct CS_StorageItem *)CS_hashtableRemove( table, key );
+        if( item ) privateReturnStorageItem( item );
+        return NULL;
+    }
 }
 struct _checkContext {
     const struct CS_Storage *storage;
@@ -548,10 +600,16 @@ static int privateHashtableCheckPutMaybe( void *context, const void *previousIte
     const struct CS_StorageItem *oldItem = (const struct CS_StorageItem *)previousItemInTable;
     if( checkContext->casToCheck == 0 ) {
         if( previousItemInTable && previousItemInTable != CS_HASHTABLE_ERROR ) {
-            //Trying to insert, but there was something there already. Return a copy of
-            //what's in the table. 
-            checkContext->oldItemCopy = privateDeepCopyStorageItem( oldItem );
-            return CS_HASHTABLE_MAYBE_RETURN_ERROR;
+            if( oldItem->expires == 0 || oldItem->expires > time(NULL) ) {
+                //Trying to insert, but there was something there already. Return a copy of
+                //what's in the table. 
+                checkContext->oldItemCopy = privateDeepCopyStorageItem( oldItem );
+                return CS_HASHTABLE_MAYBE_RETURN_ERROR;
+            } else {
+                //Old item was expired, get rid of it.
+                //Const cast to return item.
+                privateReturnStorageItem( (struct CS_StorageItem*)oldItem );
+            }
         }
         //We can insert our current thing.
         return CS_HASHTABLE_MAYBE_PUT_RETURN_NULL;

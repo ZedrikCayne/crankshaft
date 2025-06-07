@@ -267,8 +267,11 @@ const char *CS_httpMethodEnumToString( int methodEnum ) {
 static int comp(const void *a, const void *b) {
     struct CodeToReturnString *as = (struct CodeToReturnString *)a;
     struct CodeToReturnString *bs = (struct CodeToReturnString *)b;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
     if( as->code < bs->code ) return -1;
     if( as->code > bs->code ) return 1;
+#pragma GCC diagnostic pop
     return 0;
 }
 
@@ -710,7 +713,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         CS_LOG_ERROR("CS_httpMakeRequest() OOM getting a reply" );
         return NULL;
     }
-    strncpy( address, tempAddress, 128 );
+    strncpy( address, tempAddress, 127 );
     struct addrinfo *addrInfos = CS_httpLookupAddress( address, portNum );
     //Lookup already has a log with it.
     if( addrInfos == NULL ) return NULL;

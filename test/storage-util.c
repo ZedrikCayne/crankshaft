@@ -119,7 +119,7 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
             for( int i = 0; i < NUM_THINGS; ++i ) {
                 char *key = CS_tempBuffSnprintf( 64, "Index %d", i );
                 struct CS_StorageItem *putIn =
-                    CS_storagePut( storage, key, stored[i]->buffer, stored[i]->size, NULL );
+                    CS_storagePut( storage, key, stored[i]->buffer, stored[i]->size, 0, NULL );
                 CS_FAIL_ON_NULL( putIn, CS_tempBuffSnprintf(64, "Adding 'Index %d'",i), "Failed." );
                 if( putIn ) CS_storageReturnItem( putIn );
             }
@@ -130,7 +130,7 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
             for( int i = 0; i < NUM_THINGS; ++i ) {
                 char *key = CS_tempBuffSnprintf( 64, "Index %d", i );
                 struct CS_StorageItem *putInFalse =
-                    CS_storagePut( storage, key, stored[0]->buffer, stored[0]->size, &alreadyThere  );
+                    CS_storagePut( storage, key, stored[0]->buffer, stored[0]->size, 0, &alreadyThere  );
                 CS_FAIL_ON_NOT_NULL( putInFalse, CS_tempBuffSnprintf( 64, "Trying to put '%s' in again.", key), "Should have failed." );
                 CS_FAIL_ON_NULL( alreadyThere, CS_tempBuffSnprintf( 64, "We should have a pointer to the original '%s'", key), "This is null..bad.");
                 CS_FAIL_ON_FALSE( strcmp(alreadyThere->key, key) == 0, CS_tempBuffSnprintf( 64, "Returned item should be keyed '%s'", key), "Item key was %s", alreadyThere->key );
@@ -150,7 +150,7 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
                 if( taken ) {
                     CS_FAIL_ON_FALSE( compareThingToStorageItem( stored[i],taken ), CS_tempBuffSnprintf(64, "Comparing modified original %s", key), "They ended up the same?" );
                     CS_FAIL_ON_TRUE( compareThingToStorageItem( stored2[i],taken ), CS_tempBuffSnprintf(64, "Comparing against copy of original %s", key), "They ended up different?" );
-                    CS_FAIL_ON_NULL( CS_storageItemChangeData( taken, stored[i]->size, stored[i]->buffer), CS_tempBuffSnprintf(64, "Setting the data on '%s' to new modified data.", key), "Failed." );
+                    CS_FAIL_ON_NULL( CS_storageItemChangeData( taken, stored[i]->size, 0, stored[i]->buffer), CS_tempBuffSnprintf(64, "Setting the data on '%s' to new modified data.", key), "Failed." );
                     struct CS_StorageItem *updated = CS_storageUpdate( storage, taken );
                     CS_FAIL_ON_TRUE( updated != taken, CS_tempBuffSnprintf( 64, "Update '%s'", key ), "Failed to update." );
                     if( updated != taken ) CS_storageReturnItem( updated );
@@ -175,6 +175,22 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
                 CS_FAIL_ON_FALSE( CS_storageRemove( storage, key ), CS_tempBuffSnprintf( 64, "Removing '%s'", key), "Failed." );
             }
 
+            //Re adding everything with a timeout in the past.
+            for( int i = 0; i < NUM_THINGS; ++i ) {
+                char *key = CS_tempBuffSnprintf( 64, "Index %d", i );
+                struct CS_StorageItem *putIn =
+                    CS_storagePut( storage, key, stored[i]->buffer, stored[i]->size, 1, NULL );
+                CS_FAIL_ON_NULL( putIn, CS_tempBuffSnprintf(64, "Adding 'Index %d' past timeout",i), "Failed." );
+                if( putIn ) CS_storageReturnItem( putIn );
+            }
+            //Putting it in a second time should succeed...
+            for( int i = 0; i < NUM_THINGS; ++i ) {
+                char *key = CS_tempBuffSnprintf( 64, "Index %d", i );
+                struct CS_StorageItem *putIn =
+                    CS_storagePut( storage, key, stored[i]->buffer, stored[i]->size, 1, NULL );
+                CS_FAIL_ON_NULL( putIn, CS_tempBuffSnprintf(64, "Adding 'Index %d' past timeout 2",i), "Failed." );
+                if( putIn ) CS_storageReturnItem( putIn );
+            }
         }
     }
 

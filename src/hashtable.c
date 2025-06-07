@@ -226,7 +226,10 @@ int CS_hashtableDefaultStringVoidEntryInit( struct CS_HashTable *table, struct C
     void *newKey = CS_allocB( table->flags&CS_HASHTABLE_FLAG_MALLOC, nLen + 1 );
     if( !newKey ) return -1;
     strcpy( newKey, key );
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
     strncpy( (char*)entry->keyPrefix, key, sizeof( entry->keyPrefix ) );
+#pragma GCC diagnostic pop
     entry->keyHash = hash;
     entry->fullKey = newKey;
     entry->value = value;
