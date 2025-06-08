@@ -14,7 +14,6 @@
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/logger.h>
 
-#pragma GCC diagnostic ignored "-Wunused-function"
 
 #define JSON_NODE_ALIGNMENT 8
 
@@ -631,6 +630,8 @@ static int privateParseNumber( struct JsonToken *out, const char *input, int inp
     return enumValue;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 #define PRINTABLE_CHAR_LENGTH 32
 static char *printableStringOfThisChar(char *thisChar) {
     char * returnValue = CS_tempBuff(PRINTABLE_CHAR_LENGTH);
@@ -641,6 +642,7 @@ static char *printableStringOfThisChar(char *thisChar) {
     }
     return returnValue;
 }
+#pragma GCC diagnostic pop
 
 static int privateParseNext( struct JsonToken *out, const char *input, int inputLength) {
     const char *current = input;

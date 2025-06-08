@@ -29,7 +29,10 @@ static bool initTempBuff(struct TempBuffStorage *storage,
         CS_LOG_ERROR("OOM for temp buff named '%s'", name);
         return true;
     };
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
     strncpy(storage->name, name, CS_MAX_TEMP_BUFF_TEMP_NAME-1);
+#pragma GCC diagnostic pop
     storage->size = totalSize;
     storage->current = buffer;
     storage->buffer = buffer;
