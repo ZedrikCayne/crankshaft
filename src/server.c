@@ -1067,6 +1067,7 @@ struct CS_Reply *CS_serverCreateReply(struct CS_ClientInfo *info, int responseEn
     returnValue->returnStatusEnum = responseEnum;
     returnValue->contentTypeEnum = mimeEnum;
     returnValue->numHeaders = 0;
+    returnValue->numCookies = 0;
     returnValue->outputBuffer = outputBuffer;
     returnValue->outputLength = outputLength;
     return returnValue;
