@@ -2,6 +2,12 @@
 #define __crankshafthashdoth__
 #include <stdbool.h>
 
+/********************************************************************
+ *
+ * Basic hash stuff... not terribly good but good enough.
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

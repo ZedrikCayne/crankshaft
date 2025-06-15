@@ -2,6 +2,13 @@
 #define __crankshaftstackdoth__
 #include <stdbool.h>
 
+/********************************************************************
+ *
+ * Generic stack. Pushes and pops pointers and copies data. All items
+ * are assumed to be the same size.
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

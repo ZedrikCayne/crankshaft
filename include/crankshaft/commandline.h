@@ -1,6 +1,32 @@
 #ifndef __crankshaftcommandlinedoth__
 #define __crankshaftcommandlinedoth__
 
+/********************************************************************
+ *
+ * Command line handling. Check main.cpp for an example.
+ *
+ * In your main.cpp:
+ *
+ * static bool wantHelp;
+ *
+ * CS_ARG_DEF(wantHelp,CS_ARG_CMP("-?","-help","--help"),"Prints this help");
+ *
+ * const struct CS_ArgElement myArgs[] =
+ *  { CS_ARG_ELEMENT(wantHelp,CS_BOOL_ARG) };
+ *
+ * struct CS_ArgTable myCS_ArgTable = { sizeof(myArgs)/sizeof(CS_ArgElement), 0, NULL, myArgs };
+ *
+ * int main(int argc, char *argv[] ) {
+ *    const char * error = CS_argsParse(argc, argv, &myCS_ArgTable);
+ *    if( error != NULL || wantHelp ) {
+ *        if( error ) printf( error );
+ *        CS_argsPrint( myCS_ArgTable );
+ *    }
+ *    <PROGRAM HERE>
+ * }
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

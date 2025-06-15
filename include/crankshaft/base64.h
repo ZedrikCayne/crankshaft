@@ -4,6 +4,17 @@
 
 #include <crankshaft/stringbuilder.h>
 
+/********************************************************************
+ *
+ * Base 64 encoding/decoding utilities.
+ *
+ * Functions ending in 'Temp' will use the global temp buffers as
+ * the output, no need to free the results. The ones postpended
+ * with LinearAlloc tack the output results onto a linear allocator.
+ * Freeing these pointers will just blow up.
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -7,6 +7,13 @@
 #include <crankshaft/storage.h>
 #include <crankshaft/list.h>
 
+/********************************************************************
+ *
+ * JWT keychain and cache. Caches responses from public key providers
+ * and provides keys by 'kid'
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

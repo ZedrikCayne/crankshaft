@@ -2,6 +2,13 @@
 #define __crankshaftjwtdoth__
 #include <stdbool.h>
 
+/********************************************************************
+ *
+ * Basic JWT decoding. Signature verification example in
+ * CS_GS_verifyJwt
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

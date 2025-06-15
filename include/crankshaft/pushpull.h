@@ -25,7 +25,7 @@ struct CS_PushPullBuffer {
 
 /**********************************
  *
- * Creation methods. Default malloc.
+ * Creation methods. Default uses CS_alloc
  * 
  * Allocates a single block with the buffer off the end
  * and initializes the buff pointer.

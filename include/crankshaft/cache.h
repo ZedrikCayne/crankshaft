@@ -5,6 +5,16 @@
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/storage.h>
 
+/********************************************************************
+ *
+ * Generic cache. Backing onto one of our generic storage types.
+ *
+ * You feed a 'fetch' function to seed the cache. See the
+ * jwtkeychain for a basic usage. (Basic web response cache example
+ * in there)
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

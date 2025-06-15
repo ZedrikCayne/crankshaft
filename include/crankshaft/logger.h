@@ -2,6 +2,27 @@
 #define __crankshaftloggerdoth__
 #include <stdio.h>
 #include <stdbool.h>
+
+/********************************************************************
+ *
+ * Basic engine logging support. Levels are as follows:
+ *
+ * ERROR,LOG,WARN,TRACE,INFO,VERBOSE. Each of which are toggle-able
+ * (If for some reason you only want trace logs, but not errors,
+ * go nuts) In main.cpp you are provided with an example of how you
+ * can mix and match. (For example, we allow regular logs but do not
+ * log errors)
+ *
+ * LOG_LOUD logs all the time except if you #define
+ * CRANKSHAFT_ERROR_LOGS_ONLY which will squelch anything other than
+ * an error during compile time.
+ *
+ * You can also #define CRANKSHAFT_NO_LOGS to completely quiet the
+ * logging system except for explicit calls to
+ * CS_log(__FILE__,__LINE__)
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,8 +33,6 @@ extern bool CS_LOG_WARN_BOOL;
 extern bool CS_LOG_TRACE_BOOL;
 extern bool CS_LOG_INFO_BOOL;
 extern bool CS_LOG_VERBOSE_BOOL;
-
-
 #if defined(CRANKSHAFT_NO_LOGS)
 #define CS_LOG_STDERR(...) {}
 #define CS_LOG_ERROR(...) {}

@@ -6,6 +6,16 @@
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/random.h>
 
+/********************************************************************
+ *
+ * Test harness support. Mostly all built for internal use on the
+ * engine files, but might be useful somewhere else or supporting
+ * you on creating tests for your own thing.
+ *
+ * Check main.cpp on how we approach the testing in crankshaft.
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

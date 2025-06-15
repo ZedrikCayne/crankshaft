@@ -3,6 +3,14 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+/********************************************************************
+ *
+ * Generic hashtable. Init function takes basic functions for each
+ * operation (Hash the key, compare keys, key entry creation/removal
+ * etc...) And a couple basic examples used within the main library
+ * (string to malloc'd void* and UUID to malloc'd void*)
+ *
+ ********************************************************************/
 #ifdef __cplusplus
 extern "C" {
 #endif

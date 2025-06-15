@@ -5,6 +5,13 @@
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/jwt.h>
 
+/********************************************************************
+ *
+ * Google services structures. Built for handling the current oauth
+ * login stuff. Check main.cpp for an example on that.
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

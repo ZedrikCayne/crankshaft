@@ -2,6 +2,20 @@
 #define __crankshaftuuiddoth__
 #include <stdbool.h>
 
+/********************************************************************
+ *
+ * Generic UUID handling, deals with both the textual and binary
+ * versions of type 4 UUIDs of the form
+ * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+ *
+ * Functions ending in Temp return values in the global temp buffer
+ * that do not require freeing. Functions ending in Out require
+ * you to have a buffer for it to write to.
+ *
+ * Any others you should free using CS_uuidFreeString or CS_uuidFree
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -6,6 +6,14 @@
 
 #include <crankshaft/list.h>
 
+/********************************************************************
+ *
+ * Generic key value storage definitions. Included are one based on
+ * the hashtable and one based on sqlite. Roll your own if you need
+ * to.
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -28,6 +36,7 @@ struct CS_Storage;
 //    -> was 0, it's 'new' otherwise it's an update. if the cas doesn't match it'll return
 //    -> a new storage item that we can update.
 //remove -> removes old item, returns true on error
+//keys -> returns all the keys in the storage
 struct CS_StorageBackend {
     const char *name;
     struct CS_Storage *(*open)(struct CS_Storage *storage);

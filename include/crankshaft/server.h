@@ -9,6 +9,15 @@
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/http.h>
 
+/********************************************************************
+ *
+ * Basic HTTP(s) server. Handles HTTP 1.1.
+ *
+ * Will self-sign a certificate for https serving if told to do so
+ * otherwise will accept ye olde certificates in pem formats.
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

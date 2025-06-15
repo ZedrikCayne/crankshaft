@@ -1,6 +1,25 @@
 #ifndef __crankshaftallocdoth__
 #define __crankshaftallocdoth__
 #ifdef __cplusplus
+/********************************************************************
+ *
+ * Allocator system, mostly wrappers around malloc.
+ *
+ * If you define CS_ALLOC_USE_MALLOC the system will just skip the
+ * pretenses and just use malloc everywhere you would use CS_alloc
+ *
+ * If you devine CS_ALLOC_TRACKING then you'll get a lightweight
+ * allocation tracker, warning about double frees, and memory
+ * free/allocation locality (When you allocate items in one file,
+ * and free them in another. You can disable these errors/warnings
+ * with the initialization flags.
+ *
+ * The basics have a B format, which will switch at runtime between
+ * using malloc and free vs the more private allocs. (The memory 
+ * tracking bits use it so that the tracking bits won't be considered
+ * as tracked allocations)
+ *
+ ********************************************************************/
 extern "C" {
 #endif
 

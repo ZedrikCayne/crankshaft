@@ -6,6 +6,13 @@
 #include <crankshaft/pushpull.h>
 #include <crankshaft/stringbuilder.h>
 
+/********************************************************************
+ *
+ * Basic HTTP support for making requests. Server also depends on
+ * this for creating replies and responding to requests.
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

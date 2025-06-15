@@ -3,6 +3,14 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
+/********************************************************************
+ *
+ * Generic string builder, patterned after a java string builder.
+ * reallocs its own buffer as you grow it, grows in increments of 
+ * the original size so choose wisely on init.
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

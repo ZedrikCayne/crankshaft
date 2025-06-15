@@ -2,6 +2,12 @@
 #define __crankshaftmimedoth__
 #include <stdbool.h>
 
+/********************************************************************
+ *
+ * MIME types handling for http handling
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

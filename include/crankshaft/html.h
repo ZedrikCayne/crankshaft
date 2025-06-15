@@ -4,6 +4,17 @@
 
 #include <crankshaft/stringbuilder.h>
 
+
+/********************************************************************
+ *
+ * Basic HTML generation. All based on a linear allocator so values
+ * are always copied in. No individual item's size may exceed the
+ * initial alloc of the root node.
+ *
+ * See main.cpp for an example or two.
+ *
+ ********************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif

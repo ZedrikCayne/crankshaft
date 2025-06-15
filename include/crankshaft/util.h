@@ -2,6 +2,14 @@
 #define __crankshaftutildoth__
 #include <stdbool.h>
 
+/********************************************************************
+ *
+ * Static alignment bits because we use them sprinkled everywhere
+ * in memory allocation bits that get called often enough that
+ * the extra calls are/were significant.
+ *
+ *******************************************************************/
+
 #ifdef __cplusplus
 extern "C" {
 #endif
