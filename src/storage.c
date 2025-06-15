@@ -19,18 +19,27 @@
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/stringbuilder.h>
 
+struct CS_Storage {
+    const char *name;
+    const char *config;
+    const struct CS_StorageBackend *backend;
+    const void *storageData;
+};
+
 //Engine define storage bits.
 static struct CS_Storage     *privateSqliteOpen(struct CS_Storage *storage);
 static bool                   privateSqliteClose(struct CS_Storage *storage);
 static struct CS_StorageItem *privateSqliteGet(const struct CS_Storage *storage, const char *key);
 static struct CS_StorageItem *privateSqlitePut(const struct CS_Storage *storage, struct CS_StorageItem *item );
 static bool                   privateSqliteRemove(const struct CS_Storage *storage, const char *key);
+static struct CS_List        *privateSqliteList(const struct CS_Storage *storage);
 
 static struct CS_Storage     *privateHashtableOpen(struct CS_Storage *storage);
 static bool                   privateHashtableClose(struct CS_Storage *storage);
 static struct CS_StorageItem *privateHashtableGet(const struct CS_Storage *storage, const char *key);
 static struct CS_StorageItem *privateHashtablePut(const struct CS_Storage *storage, struct CS_StorageItem *item );
 static bool                   privateHashtableRemove(const struct CS_Storage *storage, const char *key);
+static struct CS_List        *privateHashtableList(const struct CS_Storage *storage);
 
 static const struct CS_StorageBackend _CS_STORAGE_BACKEND_SQLITE = {
     "SQLITE",
@@ -38,7 +47,8 @@ static const struct CS_StorageBackend _CS_STORAGE_BACKEND_SQLITE = {
     privateSqliteClose,
     privateSqliteGet,
     privateSqlitePut,
-    privateSqliteRemove
+    privateSqliteRemove,
+    privateSqliteList
 };
 static const struct CS_StorageBackend _CS_STORAGE_BACKEND_HASHTABLE = {
     "HASHTABLE",
@@ -46,7 +56,8 @@ static const struct CS_StorageBackend _CS_STORAGE_BACKEND_HASHTABLE = {
     privateHashtableClose,
     privateHashtableGet,
     privateHashtablePut,
-    privateHashtableRemove
+    privateHashtableRemove,
+    privateHashtableList
 };
 
 const struct CS_StorageBackend *CS_STORAGE_BACKEND_SQLITE = &_CS_STORAGE_BACKEND_SQLITE;
@@ -118,6 +129,7 @@ struct CS_HashTable *getStorageHashTable( void ) {
     return storageHashTable;
 }
 
+static bool privateStorageClose(const struct CS_Storage *closeMe, bool lockTable);
 void CS_storageTeardown(void) {
     pthread_mutex_lock( &storageHashTableMutex );
     struct CS_Stack *stack = CS_stackAllocPointer( 50 );
@@ -126,7 +138,7 @@ void CS_storageTeardown(void) {
     };
     void *aVal;
     while( (aVal = CS_stackPopPointer( stack )) != NULL ) {
-        CS_storageClose((struct CS_Storage *)aVal);
+        privateStorageClose((struct CS_Storage *)aVal, false);
     }
     CS_stackFree( stack );
     CS_hashtableFree( storageHashTable );
@@ -206,7 +218,7 @@ UNLOCK_MUTEX:
     return NULL;
 }
 
-bool CS_storageClose(const struct CS_Storage *closeMe) {
+bool privateStorageClose(const struct CS_Storage *closeMe, bool lockTable) {
     if( closeMe == NULL ) {
         CS_LOG_ERROR("Null parameter.");
         return true;
@@ -214,17 +226,21 @@ bool CS_storageClose(const struct CS_Storage *closeMe) {
     if( storageHashTable == NULL ) {
         CS_LOG_ERROR("Trying to close a storage when the storage system is toast.");
     } else {
-        pthread_mutex_lock(&storageHashTableMutex);
+        if( lockTable ) pthread_mutex_lock(&storageHashTableMutex);
         struct CS_Storage *removed = (struct CS_Storage *)CS_hashtableRemove( storageHashTable, closeMe->name );
         if( removed != closeMe ) {
             CS_hashtablePut( storageHashTable, closeMe->name, removed );
             CS_LOG_ERROR("We've asked to close a storage that wasn't under our control. What?");
         }
-        pthread_mutex_unlock(&storageHashTableMutex);
+        if( lockTable ) pthread_mutex_unlock(&storageHashTableMutex);
     }
     bool returnValue = closeMe->backend->close( (struct CS_Storage *)closeMe );
     privateFreeStorageStruct( closeMe );
     return returnValue;
+}
+
+bool CS_storageClose(const struct CS_Storage *closeMe) {
+    return privateStorageClose( closeMe, true );
 }
 
 struct CS_StorageItem *CS_storageGet(const struct CS_Storage *storage, const char *key ) {
@@ -309,6 +325,7 @@ struct privateSqliteData {
     sqlite3_stmt *forceUpdate;
     sqlite3_stmt *put;
     sqlite3_stmt *remove;
+    sqlite3_stmt *list;
     const char *tableName;
     const char *dbFile;
     struct CS_StringBuilder *sb;
@@ -325,6 +342,7 @@ static void privateFreeSqlite( struct privateSqliteData *sqliteData ) {
         IF_DO_NULL(sqliteData->update,sqlite3_finalize);
         IF_DO_NULL(sqliteData->forceUpdate,sqlite3_finalize);
         IF_DO_NULL(sqliteData->remove,sqlite3_finalize);
+        IF_DO_NULL(sqliteData->list,sqlite3_finalize);
         IF_DO_NULL(sqliteData->connection,sqlite3_close);
         IF_DO_NULL(sqliteData->tableName,CS_stringFree);
         IF_DO_NULL(sqliteData->dbFile,CS_stringFree);
@@ -437,6 +455,12 @@ static struct privateSqliteData *privateCreateSqliteFromConfig( const char *conf
             goto FAIL;
         }
 
+        CS_SB_reset( sb );
+        CS_SB_printf(sb, "SELECT key FROM %s WHERE expires > ?", returnValue->tableName );
+        if( sqlite3_prepare_v2( returnValue->connection, sb->buffer, -1, &returnValue->list, NULL ) != SQLITE_OK ) {
+            goto FAIL;
+        }
+
         CS_SB_free( sb );
         sb = NULL;
     }
@@ -544,6 +568,19 @@ static bool privateSqliteRemove(const struct CS_Storage *storage, const char *ke
     sqlite3_reset( sqliteData->remove );
     return returnValue || sqlite3_changes(sqliteData->connection) != 1;
 }
+static struct CS_List *privateSqliteList(const struct CS_Storage *storage) {
+    struct privateSqliteData *sqliteData = (struct privateSqliteData*)storage->storageData;
+    sqlite3_bind_int64( sqliteData->list, 1, time(NULL) );
+    struct CS_List *returnList = CS_listCreate( 1024 );
+    if( returnList != NULL ) {
+        while( sqlite3_step( sqliteData->list ) == SQLITE_ROW ) {
+            const void *key = sqlite3_column_blob( sqliteData->get, 0 );
+            unsigned int keySize = sqlite3_column_bytes( sqliteData->get, 0 );
+            CS_listPushTail( returnList, key, keySize );
+        }
+    }
+    return returnList;
+}
 /******************************************************************************************/
 static struct CS_Storage *privateHashtableOpen(struct CS_Storage *storage) {
     long initialCapacity = 50;
@@ -646,3 +683,18 @@ static bool privateHashtableRemove(const struct CS_Storage *storage, const char 
     if( oldItem && oldItem != CS_HASHTABLE_ERROR ) privateReturnStorageItem( oldItem );
     return oldItem==CS_HASHTABLE_ERROR?true:false;
 }
+static struct CS_List *privateHashtableList(const struct CS_Storage *storage) {
+    struct CS_HashTable *table = (struct CS_HashTable *)storage->storageData;
+    struct CS_List *returnList = CS_listCreate( 1024 );
+    CS_hashtableGrabMutex( table );
+
+    CS_HASHTABLE_ITER(table,item) {
+        const char *key = table->keyToTempString( table, item );
+        int byteLength = strlen(key) + 1;
+        CS_listPushTail( returnList, key, byteLength );
+    }
+
+    CS_hashtableReleaseMutex( table );
+    return returnList;
+}
+

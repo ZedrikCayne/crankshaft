@@ -19,13 +19,15 @@
 extern "C" {
 #endif
 
-void *CS_linearTake(void *voidAllocator, int size, int alignment );
-void *CS_linearTakeZero( void *linearAllocator, int size, int alignment );
-char *CS_linearCopyString( void *linearAllocator, const char *string );
-void CS_linearReset(void *voidAllocator);
+struct CS_LinearAllocator;
 
-void *CS_linearInit( int size );
-void CS_linearFree( void *voidAllocator );
+void *CS_linearTake(struct CS_LinearAllocator *linearAllocator, int size, int alignment );
+void *CS_linearTakeZero(struct CS_LinearAllocator *linearAllocator, int size, int alignment );
+char *CS_linearCopyString(struct CS_LinearAllocator *linearAllocator, const char *string );
+void CS_linearReset(struct CS_LinearAllocator *linearAllocator);
+
+struct CS_LinearAllocator *CS_linearInit( int size );
+void CS_linearFree( struct CS_LinearAllocator *voidAllocator );
 
 #ifdef __cplusplus
 }

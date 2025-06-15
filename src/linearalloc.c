@@ -8,18 +8,18 @@
 #include <crankshaft/alloc.h>
 #include <crankshaft/util.h>
 
-struct LinearAllocator {
+struct CS_LinearAllocator {
     int size;
     int current;
-    struct LinearAllocator *next;
+    struct CS_LinearAllocator *next;
 };
 
-static struct LinearAllocator *privateAlloc(int size) {
+static struct CS_LinearAllocator *privateAlloc(int size) {
     if( size < 0 ) {
         CS_LOG_ERROR("Size must be bigger than 0 on a linear allocator.");
         return NULL;
     }
-    struct LinearAllocator *returnValue = CS_alloc(sizeof(struct LinearAllocator) + size);
+    struct CS_LinearAllocator *returnValue = CS_alloc(sizeof(struct CS_LinearAllocator) + size);
     if( returnValue == NULL ) {
         CS_LOG_ERROR("OOM Allocating a linear allocator.");
         return NULL;
@@ -31,7 +31,7 @@ static struct LinearAllocator *privateAlloc(int size) {
     return returnValue;
 }
 
-inline static void *privateTake(struct LinearAllocator *linearAllocator, int size, int alignment ) {
+inline static void *privateTake(struct CS_LinearAllocator *linearAllocator, int size, int alignment ) {
     char *root = (char*)(linearAllocator + 1);
     char *base = root + linearAllocator->current;
     char *aligned = (char*)CS_alignVoid(base, alignment);
@@ -40,8 +40,7 @@ inline static void *privateTake(struct LinearAllocator *linearAllocator, int siz
     return aligned;
 }
 
-void *CS_linearTake(void *voidAllocator, int size, int alignment ) {
-    struct LinearAllocator *linearAllocator = (struct LinearAllocator *)voidAllocator;
+void *CS_linearTake(struct CS_LinearAllocator *linearAllocator, int size, int alignment ) {
     if( size > linearAllocator->size ) {
         CS_LOG_ERROR("Cannot take %d out of an allocator sized of %d", size, linearAllocator->size);
     }
@@ -60,33 +59,31 @@ void *CS_linearTake(void *voidAllocator, int size, int alignment ) {
     return returnValue;
 }
 
-void *CS_linearTakeZero(void *voidAllocator, int size, int alignment ) {
-    void *returnValue = CS_linearTake( voidAllocator, size, alignment );
+void *CS_linearTakeZero(struct CS_LinearAllocator *linearAllocator, int size, int alignment ) {
+    void *returnValue = CS_linearTake( linearAllocator, size, alignment );
     if( returnValue ) memset( returnValue, 0, size );
     return returnValue;
 }
 
-char *CS_linearCopyString(void *voidAllocator, const char *string ) {
+char *CS_linearCopyString(struct CS_LinearAllocator *linearAllocator, const char *string ) {
     int len = strlen( string );
-    void *returnValue = CS_linearTake( voidAllocator, len+1, sizeof(void*) );
+    void *returnValue = CS_linearTake( linearAllocator, len+1, sizeof(void*) );
     if( returnValue ) strcpy( returnValue, string );
     return returnValue;
 }
 
-void CS_linearReset(void *voidAllocator) {
-    struct LinearAllocator *linearAllocator = (struct LinearAllocator *)voidAllocator;
+void CS_linearReset( struct CS_LinearAllocator *linearAllocator ) {
     while(linearAllocator) {
         linearAllocator->current = 0;
         linearAllocator = linearAllocator->next;
     }
 }
 
-void *CS_linearInit( int size ) {
+struct CS_LinearAllocator *CS_linearInit( int size ) {
     return privateAlloc(size);
 }
 
-void CS_linearFree( void *voidAllocator ) {
-    struct LinearAllocator *linearAllocator = (struct LinearAllocator *)voidAllocator;
+void CS_linearFree( struct CS_LinearAllocator *linearAllocator ) {
     while(linearAllocator) {
         void *freeMe = (void*)linearAllocator;
         linearAllocator = linearAllocator->next;

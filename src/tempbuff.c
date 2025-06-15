@@ -123,20 +123,24 @@ void *CS_tempMemCopy( const void *from, int size ) {
 }
 
 bool CS_tempAllocateGlobal(int globalSize) {
-    CS_LOG_TRACE("Temp buffers allocated with %d", globalSize);
-        
-    char tempBufferName[CS_MAX_TEMP_BUFF_TEMP_NAME];
-    snprintf(tempBufferName,
-             CS_MAX_TEMP_BUFF_TEMP_NAME,
-             "Default Temp Buff: %d bytes",
-             globalSize );
-    return initTempBuff(&_TempBuffStorage,
-                     tempBufferName,
-                     globalSize );
+    if( _TempBuffStorage.size == 0 ) {
+        CS_LOG_TRACE("Temp buffers allocated size %d", globalSize);
+            
+        char tempBufferName[CS_MAX_TEMP_BUFF_TEMP_NAME];
+        snprintf(tempBufferName,
+                 CS_MAX_TEMP_BUFF_TEMP_NAME,
+                 "Default Temp Buff: %d bytes",
+                 globalSize );
+        return initTempBuff(&_TempBuffStorage,
+                         tempBufferName,
+                         globalSize );
+    }
+    return false;
 }
 
 bool CS_tempFreeGlobal() {
     if( _TempBuffStorage.size != 0 ) {
+        CS_LOG_TRACE("Temp buffers de-allocated size %d", _TempBuffStorage.size);
         freeTempBuff(&_TempBuffStorage);
     }
     return false;

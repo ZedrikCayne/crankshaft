@@ -16,6 +16,8 @@
 #include <crankshaft/mime.h>
 #include <crankshaft/jwt.h>
 #include <crankshaft/json.h>
+#include <crankshaft/storage.h>
+#include <crankshaft/jwtkeychain.h>
 
 int acceptSocket = 0;
 
@@ -317,6 +319,8 @@ int main(int argc, char *argv[] ) {
         }
         bool testMain = CS_testMain();
         if( logFile != NULL ) CS_logKill();
+        CS_GS_kill();
+        CS_tempFreeGlobal();
         exit(testMain?255:0);
     }
 
@@ -328,6 +332,8 @@ int main(int argc, char *argv[] ) {
     signal(SIGTERM, terminateHandler);
 
     CS_LOG_INFO("Starting web server.");
+    const struct CS_Storage *keysCacheBackingStorage = CS_storageOpen( "KEY_WEB_CACHE", "file=/tmp/crankshaft_key.sqlite", CS_STORAGE_BACKEND_SQLITE );
+    CS_jwtkeychainInit( keysCacheBackingStorage );
 
     struct CS_WebServer *server = CS_serverStart( portNum, certFile, keyFile, selfSignHostname, fileServingDir, fileServingFile, cacheTimeInSeconds, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
     if( server != NULL ) {
@@ -342,6 +348,7 @@ int main(int argc, char *argv[] ) {
     }
 
     if( logFile != NULL ) CS_logKill();
+    CS_GS_kill();
     CS_tempFreeGlobal();
     return 0;
 }

@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+#include <crankshaft/list.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -33,14 +35,9 @@ struct CS_StorageBackend {
     struct CS_StorageItem *(*get)(const struct CS_Storage *storage, const char *key);
     struct CS_StorageItem *(*put)(const struct CS_Storage *storage, struct CS_StorageItem *item);
     bool (*remove)(const struct CS_Storage *storage, const char *key);
+    struct CS_List *(*keys)(const struct CS_Storage *storage);
 };
 
-struct CS_Storage {
-    const char *name;
-    const char *config;
-    const struct CS_StorageBackend *backend;
-    const void *storageData;
-};
 
 const struct CS_Storage *CS_storageGetStorage( const char *storageName );
 const struct CS_Storage *CS_storageOpen(const char *storageName, const char *config, const struct CS_StorageBackend *backend);

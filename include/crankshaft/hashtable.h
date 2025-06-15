@@ -29,6 +29,7 @@ struct CS_HashTable {
     int (*entryInitFunction)( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value );
     int (*entryRemoveFunction)( struct CS_HashTable *table, struct CS_HashTableEntry *entry );
     int (*cleanupFunction)( struct CS_HashTable *table );
+    const char *(*keyToTempString)( struct CS_HashTable *table, const struct CS_HashTableEntry *entry );
     struct CS_HashTableEntry **entries;
     void *hashTableEntrySlabAllocator;
     void *applicationSpecificData;
@@ -46,7 +47,9 @@ struct CS_HashTable *CS_hashtableCreateCustom( int capacity, unsigned int flags,
         int (*keyCompareFunction)(struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *rightKey, int rightKeyHash),
         int (*entryInitFunction)(struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value),
         int (*entryRemoveFunction)(struct CS_HashTable *table, struct CS_HashTableEntry *entry),
-        int (*cleanupFunction)(struct CS_HashTable *table) );
+        const char *(*keyToTempString)(struct CS_HashTable *table, const struct CS_HashTableEntry *entry),
+        int (*cleanupFunction)(struct CS_HashTable *table)
+        );
 
 void CS_hashtableFree( struct CS_HashTable *table );
 
@@ -55,15 +58,17 @@ int CS_hashtableDefaultStringVoidEntryInit( struct CS_HashTable *table, struct C
 int CS_hashtableDefaultStringVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry );
 int CS_hashtableDefaultStringKeyHash( struct CS_HashTable *table, const void *key );
 int CS_hashtableDefaultStringKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int hash );
+const char *CS_hashtableDefaultStringKeyToTempString( struct CS_HashTable *table, const struct CS_HashTableEntry *entry );
 
 int CS_hashtableDefaultUuidVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value );
 int CS_hashtableDefaultUuidVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry );
 int CS_hashtableDefaultUuidKeyHash( struct CS_HashTable *table, const void *key );
 int CS_hashtableDefaultUuidKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int hash );
 int CS_hashtableDefaultUuidCleanup( struct CS_HashTable *table );
+const char *CS_hahstableDefaultUuidKeyToTempString( struct CS_HashTable *table, const struct CS_HashTableEntry *entry );
 
-#define CS_HASHTABLE_STRING_VOID(__CAPACITY,__FLAGS) CS_hashtableCreateCustom(__CAPACITY,__FLAGS,NULL,CS_hashtableDefaultStringKeyHash,CS_hashtableDefaultStringKeyCompare,CS_hashtableDefaultStringVoidEntryInit,CS_hashtableDefaultStringVoidEntryRemove,NULL)
-#define CS_HASHTABLE_UUID_VOID(__CAPACITY,__FLAGS,__KEY_SLAB_ALLOC) CS_hashtableCreateCustom(__CAPACITY,__FLAGS,__KEY_SLAB_ALLOC,CS_hashtableDefaultUuidKeyHash,CS_hashtableDefaultUuidKeyCompare,CS_hashtableDefaultUuidVoidEntryInit,CS_hashtableDefaultUuidVoidEntryRemove,CS_hashtableDefaultUuidCleanup)
+#define CS_HASHTABLE_STRING_VOID(__CAPACITY,__FLAGS) CS_hashtableCreateCustom(__CAPACITY,__FLAGS,NULL,CS_hashtableDefaultStringKeyHash,CS_hashtableDefaultStringKeyCompare,CS_hashtableDefaultStringVoidEntryInit,CS_hashtableDefaultStringVoidEntryRemove,CS_hashtableDefaultStringKeyToTempString,NULL)
+#define CS_HASHTABLE_UUID_VOID(__CAPACITY,__FLAGS,__KEY_SLAB_ALLOC) CS_hashtableCreateCustom(__CAPACITY,__FLAGS,__KEY_SLAB_ALLOC,CS_hashtableDefaultUuidKeyHash,CS_hashtableDefaultUuidKeyCompare,CS_hashtableDefaultUuidVoidEntryInit,CS_hashtableDefaultUuidVoidEntryRemove,CS_hahstableDefaultUuidKeyToTempString,CS_hashtableDefaultUuidCleanup)
 
 struct CS_HashTable *CS_hashtableResize( struct CS_HashTable *hashTable, int newCapacity );
 
@@ -81,6 +86,7 @@ const void *CS_hashtablePut( struct CS_HashTable *table, const void *key, const 
 const void *CS_hashtablePutMaybe( struct CS_HashTable *table, const void *key, const void *value, void *context, int (*maybe)(void *context, const void *oldValue) );
 const void *CS_hashtableRemove( struct CS_HashTable *table, const void *key );
 const void *CS_hashtableGet( struct CS_HashTable *table, const void *key );
+struct CS_List *CS_hashtableGetKeys( struct CS_HashTable *table );
 
 #ifdef __cplusplus
 }

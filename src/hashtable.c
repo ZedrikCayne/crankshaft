@@ -8,6 +8,8 @@
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/uuid.h>
 #include <crankshaft/hash.h>
+#include <crankshaft/tempbuff.h>
+#include <crankshaft/list.h>
 
 #include <crankshaft/hashtable.h>
 
@@ -20,6 +22,7 @@ struct CS_HashTable *CS_hashtableCreateCustom( int capacity, unsigned int flags,
         int (*keyCompareFunction)(struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *rightKey, int rightKeyHash),
         int (*entryInitFunction)(struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value),
         int (*entryRemoveFunction)(struct CS_HashTable *table, struct CS_HashTableEntry *entry),
+        const char *(*keyToTempString)(struct CS_HashTable *table, const struct CS_HashTableEntry *entry),
         int (*cleanupFunction)(struct CS_HashTable *table) ) {
     struct CS_HashTable *returnValue = CS_allocB( flags&CS_HASHTABLE_FLAG_MALLOC,sizeof( struct CS_HashTable ) );
     if( returnValue ) {
@@ -42,6 +45,7 @@ struct CS_HashTable *CS_hashtableCreateCustom( int capacity, unsigned int flags,
         returnValue->entryInitFunction = entryInitFunction;
         returnValue->entryRemoveFunction = entryRemoveFunction;
         returnValue->cleanupFunction = cleanupFunction;
+        returnValue->keyToTempString = keyToTempString;
     }
     return returnValue;
 
@@ -264,6 +268,10 @@ int CS_hashtableDefaultStringKeyHash( struct CS_HashTable *table, const void *ke
     return CS_hash( key );
 }
 
+const char *CS_hashtableDefaultStringKeyToTempString( struct CS_HashTable *table, const struct CS_HashTableEntry *entry ) {
+    return CS_tempStringCopy( entry->fullKey );
+}
+
 int CS_hashtableDefaultUuidVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value ) {
     const struct CS_UUID *keyUuid = (const struct CS_UUID *)key;
     struct CS_UUID *uuid = CS_slabTake(table->applicationSpecificData);
@@ -284,6 +292,11 @@ int CS_hashtableDefaultUuidKeyHash( struct CS_HashTable *table, const void *key 
     return CS_hashBin(key, sizeof(struct CS_UUID));
 }
 
+const char *CS_hahstableDefaultUuidKeyToTempString( struct CS_HashTable *table, const struct CS_HashTableEntry *entry ) {
+    return CS_uuidToStringTemp( entry->fullKey );
+}
+
+
 int CS_hashtableDefaultUuidKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int hash ) {
     if( entry->keyHash == hash ) {
         if( table->flags & CS_HASHTABLE_FLAG_PEDANTIC ) {
@@ -303,9 +316,21 @@ int CS_hashtableDefaultUuidKeyCompare( struct CS_HashTable *table, const struct 
     return 1;
 }
 
+
 int CS_hashtableDefaultUuidCleanup( struct CS_HashTable *table ) {
     CS_slabFree( table->applicationSpecificData );
     return 0;
+}
+
+struct CS_List *CS_hashtableGetKeys( struct CS_HashTable *table ) {
+    struct CS_List *returnList = CS_listCreate(1024);
+    if( returnList ) {
+        CS_HASHTABLE_ITER( table, tableItem ) {
+            const char *tempKey = table->keyToTempString( table, tableItem );
+            CS_listPushTail( returnList, tempKey, strlen(tempKey) + 1 );
+        }
+    }
+    return returnList;
 }
 
 void CS_hashtableGrabMutex( struct CS_HashTable *table ) {
