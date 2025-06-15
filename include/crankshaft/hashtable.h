@@ -31,7 +31,7 @@ struct CS_HashTable {
     int (*cleanupFunction)( struct CS_HashTable *table );
     const char *(*keyToTempString)( struct CS_HashTable *table, const struct CS_HashTableEntry *entry );
     struct CS_HashTableEntry **entries;
-    void *hashTableEntrySlabAllocator;
+    struct CS_SlabAllocator *hashTableEntrySlabAllocator;
     void *applicationSpecificData;
 };
 

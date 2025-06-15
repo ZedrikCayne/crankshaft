@@ -7,19 +7,19 @@
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/logger.h>
 
-struct CrankshaftSlabAllocItem {
-    struct CrankshaftSlabAllocItem *next;
+struct SlabAllocItem {
+    struct SlabAllocItem *next;
 };
 
-#define MIN_ITEM_SIZE sizeof( struct CrankshaftSlabAllocItem )
+#define MIN_ITEM_SIZE sizeof( struct SlabAllocItem )
 
 #pragma GCC diagnostic ignored "-Wformat-truncation"
 #define SLAB_NAME_MAX 32
-struct CrankshaftSlabAlloc {
+struct CS_SlabAllocator {
     int size;
     int capacity;
-    struct CrankshaftSlabAllocItem *head;
-    struct CrankshaftSlabAlloc *nextSlab;
+    struct SlabAllocItem *head;
+    struct CS_SlabAllocator *nextSlab;
     char *buffer;
     char *bufferEnd;
     pthread_mutex_t slabMutex;
@@ -27,9 +27,9 @@ struct CrankshaftSlabAlloc {
     bool useMalloc;
 };
 
-static bool freeSlab( struct CrankshaftSlabAlloc *slab ) {
-    struct CrankshaftSlabAlloc *slabToFree = slab;
-    struct CrankshaftSlabAlloc *nextSlab;
+static bool freeSlab( struct CS_SlabAllocator *slab ) {
+    struct CS_SlabAllocator *slabToFree = slab;
+    struct CS_SlabAllocator *nextSlab;
     while( slabToFree != NULL ) {
         nextSlab = slabToFree->nextSlab;
         slabToFree->nextSlab = NULL;
@@ -41,13 +41,13 @@ static bool freeSlab( struct CrankshaftSlabAlloc *slab ) {
     return false;
 }
 
-#define ALLOC_ITEM(_SLAB,_ITEM) ((struct CrankshaftSlabAllocItem*)(((_SLAB)->buffer)+((_ITEM)*((_SLAB)->size))))
+#define ALLOC_ITEM(_SLAB,_ITEM) ((struct SlabAllocItem*)(((_SLAB)->buffer)+((_ITEM)*((_SLAB)->size))))
 
-static struct CrankshaftSlabAlloc *initSlabAlloc( int size, int count, int alignment, bool useMalloc ) {
+static struct CS_SlabAllocator *initSlabAlloc( int size, int count, int alignment, bool useMalloc ) {
     int realSize = (size % alignment == 0) ?
         size :
         size + ( alignment - (size % alignment) );
-    struct CrankshaftSlabAlloc *returnValue = useMalloc?malloc( sizeof(struct CrankshaftSlabAlloc) ):CS_alloc( sizeof(struct CrankshaftSlabAlloc) );
+    struct CS_SlabAllocator *returnValue = useMalloc?malloc( sizeof(struct CS_SlabAllocator) ):CS_alloc( sizeof(struct CS_SlabAllocator) );
     if( returnValue == NULL ) {
         return NULL;
     }
@@ -59,28 +59,28 @@ static struct CrankshaftSlabAlloc *initSlabAlloc( int size, int count, int align
     }
     returnValue->size = realSize;
     returnValue->capacity = count;
-    returnValue->head = (struct CrankshaftSlabAllocItem *)returnValue->buffer;
+    returnValue->head = (struct SlabAllocItem *)returnValue->buffer;
     returnValue->nextSlab = NULL;
     returnValue->bufferEnd = returnValue->buffer + ( returnValue->size * returnValue->capacity );
     returnValue->useMalloc = useMalloc;
 
     for( int i = 0; i < count; ++i ) { 
-        struct CrankshaftSlabAllocItem *current = ALLOC_ITEM(returnValue,i);
-        struct CrankshaftSlabAllocItem *next = (i+1>=count)?NULL:ALLOC_ITEM(returnValue,i+1);
+        struct SlabAllocItem *current = ALLOC_ITEM(returnValue,i);
+        struct SlabAllocItem *next = (i+1>=count)?NULL:ALLOC_ITEM(returnValue,i+1);
         current->next = next;
     }
 
     return returnValue;
 }
 
-static void *privateSlabInit( const char *name, int size, int count, int alignment, bool useMalloc );
-void *CS_slabInitMalloc( const char *name, int size, int count, int alignment ) {
+static struct CS_SlabAllocator *privateSlabInit( const char *name, int size, int count, int alignment, bool useMalloc );
+struct CS_SlabAllocator *CS_slabInitMalloc( const char *name, int size, int count, int alignment ) {
     return privateSlabInit(name,size,count,alignment,true);
 }
-void *CS_slabInit( const char *name, int size, int count, int alignment ) {
+struct CS_SlabAllocator *CS_slabInit( const char *name, int size, int count, int alignment ) {
     return privateSlabInit(name,size,count,alignment,false);
 }
-static void *privateSlabInit( const char *name, int size, int count, int alignment, bool useMalloc ) {
+static struct CS_SlabAllocator *privateSlabInit( const char *name, int size, int count, int alignment, bool useMalloc ) {
     if( alignment % CRANKSHAFT_MIN_ALIGNMENT ) {
         CS_LOG_ERROR("Alignment on a slab alloc must be a multiple of CRANKSHAFT_MIN_ALIGNMENT:%d", CRANKSHAFT_MIN_ALIGNMENT);
         return NULL;
@@ -94,7 +94,7 @@ static void *privateSlabInit( const char *name, int size, int count, int alignme
         CS_LOG_ERROR("Name of slab must be less than CRANKSHAFT_SLAB_NAME_MAX:%d", CRANKSHAFT_SLAB_NAME_MAX);
         return NULL;
     }
-    struct CrankshaftSlabAlloc *returnValue = initSlabAlloc( size, count, alignment, useMalloc );
+    struct CS_SlabAllocator *returnValue = initSlabAlloc( size, count, alignment, useMalloc );
     if( returnValue != NULL ) {
         if( pthread_mutex_init( &returnValue->slabMutex, NULL ) < 0 ) {
             freeSlab( returnValue );
@@ -107,17 +107,17 @@ static void *privateSlabInit( const char *name, int size, int count, int alignme
     return returnValue;
 }
 
-bool CS_slabFree( void *allocation ) {
-    struct CrankshaftSlabAlloc *toFree = (struct CrankshaftSlabAlloc *)allocation;
+bool CS_slabFree( struct CS_SlabAllocator *allocation ) {
+    struct CS_SlabAllocator *toFree = (struct CS_SlabAllocator *)allocation;
     pthread_mutex_destroy( &toFree->slabMutex );
     return freeSlab( toFree );
 }
 
-void *CS_slabTake(void *voidSlab ) {
-    struct CrankshaftSlabAlloc *slab = (struct CrankshaftSlabAlloc *)voidSlab;
-    struct CrankshaftSlabAlloc *currentSlab = slab;
+void *CS_slabTake(struct CS_SlabAllocator *voidSlab ) {
+    struct CS_SlabAllocator *slab = (struct CS_SlabAllocator *)voidSlab;
+    struct CS_SlabAllocator *currentSlab = slab;
     pthread_mutex_lock(&slab->slabMutex);
-    struct CrankshaftSlabAllocItem *returnValue = currentSlab->head;
+    struct SlabAllocItem *returnValue = currentSlab->head;
     int slabDeep = 0;
     while( returnValue == NULL ) {
         ++slabDeep;
@@ -140,14 +140,14 @@ RELEASE_LOCK:
     return returnValue;
 }
 
-bool CS_slabReturn(void *voidSlab, void *toReturn) {
+bool CS_slabReturn(struct CS_SlabAllocator *voidSlab, void *toReturn) {
     if( toReturn == NULL ) {
         CS_LOG_ERROR("Trying to free up a NULL");
         return true;
     }
-    struct CrankshaftSlabAlloc *slab = (struct CrankshaftSlabAlloc *)voidSlab;
-    struct CrankshaftSlabAlloc *currentSlab = slab;
-    struct CrankshaftSlabAllocItem *itemToReturn = (struct CrankshaftSlabAllocItem *)toReturn;
+    struct CS_SlabAllocator *slab = (struct CS_SlabAllocator *)voidSlab;
+    struct CS_SlabAllocator *currentSlab = slab;
+    struct SlabAllocItem *itemToReturn = (struct SlabAllocItem *)toReturn;
 
     while( currentSlab != NULL && ((char*)toReturn < currentSlab->buffer || (char*)toReturn >= currentSlab->bufferEnd) ) {
         currentSlab = currentSlab->nextSlab;
@@ -169,8 +169,8 @@ bool CS_slabReturn(void *voidSlab, void *toReturn) {
     return false;
 }
 
-const char *CS_slabDesc( void *allocation ) {
-    struct CrankshaftSlabAlloc *slab = (struct CrankshaftSlabAlloc *)allocation;
+const char *CS_slabDesc( struct CS_SlabAllocator *allocation ) {
+    struct CS_SlabAllocator *slab = (struct CS_SlabAllocator *)allocation;
     struct CS_StringBuilder *sb = CS_SB_create( 2048 );
     if( sb == NULL ) return NULL;
     pthread_mutex_lock(&slab->slabMutex);
@@ -178,10 +178,10 @@ const char *CS_slabDesc( void *allocation ) {
     int slabCount = 0;
     int totalFree = 0;
     int totalCapacity = 0;
-    struct CrankshaftSlabAlloc *current = slab;
-    struct CrankshaftSlabAllocItem *currentItem = NULL;
+    struct CS_SlabAllocator *current = slab;
+    struct SlabAllocItem *currentItem = NULL;
     while( current ) {
-        totalSize += (current->size * current->capacity) + sizeof(struct CrankshaftSlabAlloc);
+        totalSize += (current->size * current->capacity) + sizeof(struct CS_SlabAllocator);
         ++slabCount;
         totalCapacity += current->capacity;
         currentItem = current->head;

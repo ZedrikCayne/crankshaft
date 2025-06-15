@@ -24,17 +24,19 @@
 extern "C" {
 #endif
 
+struct CS_SlabAllocator;
+
 #define CRANKSHAFT_SLAB_NAME_MAX 20
 #define CRANKSHAFT_MIN_ALIGNMENT sizeof(void*)
 
-void *CS_slabTake(void *slab);
-bool CS_slabReturn(void *slab, void *toReturn);
+void *CS_slabTake(struct CS_SlabAllocator *slab);
+bool CS_slabReturn(struct CS_SlabAllocator *slab, void *toReturn);
 
-void *CS_slabInit( const char *name, int size, int count, int alignment );
-void *CS_slabInitMalloc( const char *name, int size, int count, int alignment );
-bool CS_slabFree( void *allocation );
+struct CS_SlabAllocator *CS_slabInit( const char *name, int size, int count, int alignment );
+struct CS_SlabAllocator *CS_slabInitMalloc( const char *name, int size, int count, int alignment );
+bool CS_slabFree( struct CS_SlabAllocator *allocation );
 
-const char *CS_slabDesc( void *allocation );
+const char *CS_slabDesc( struct CS_SlabAllocator *allocation );
 
 #ifdef __cplusplus
 }

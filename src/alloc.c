@@ -18,7 +18,7 @@ struct CS_AllocInfo {
 };
 
 static pthread_mutex_t trackingSystemMutex = PTHREAD_MUTEX_INITIALIZER;
-static void *trackingSystemSlabAllocator = NULL;
+static CS_SlabAllocator *trackingSystemSlabAllocator = NULL;
 static struct CS_HashTable *trackingSystemHashTable = NULL;
 static unsigned int trackingFlags = 0;
 

@@ -79,6 +79,7 @@ void CS_log(const char *file, int line, const char *fmt, ... ) {
     if( loggingInitialized ) {
         pthread_mutex_lock(&logMutex);
         va_list ap;
+        fprintf( outputFile, "%s:%d | ", file, line );
         va_start(ap, fmt);
         vfprintf( outputFile, fmt, ap );
         va_end(ap);

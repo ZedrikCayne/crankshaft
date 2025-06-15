@@ -318,9 +318,9 @@ int main(int argc, char *argv[] ) {
             CS_testSetRandomSeed(testSeed);
         }
         bool testMain = CS_testMain();
-        if( logFile != NULL ) CS_logKill();
         CS_GS_kill();
         CS_tempFreeGlobal();
+        if( logFile != NULL ) CS_logKill();
         exit(testMain?255:0);
     }
 

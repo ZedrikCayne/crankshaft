@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <openssl/ssl.h>
 
+#include <crankshaft/slaballoc.h>
 #include <crankshaft/http.h>
 
 #ifdef __cplusplus
@@ -24,7 +25,7 @@ struct CS_WebServer {
     const char *defaultFileServingPath;
     const char *defaultFileServingFile;
     int defaultFileServingCacheControlMaxAge;
-    void *replyStack;
+    struct CS_SlabAllocator *replyStack;
     int routeNumbers[CS_MAX_HTTP_METHODS];
     struct CS_Route *routes[CS_MAX_HTTP_METHODS];
     SSL_CTX *sslctx;

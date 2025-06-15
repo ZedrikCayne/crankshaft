@@ -30,6 +30,7 @@
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/http.h>
 #include <crankshaft/mime.h>
+#include <crankshaft/slaballoc.h>
 
 static const char *dayOfWeek[ 7 ] = {
     "Sun","Mon","Tue","Wed","Thu","Fri","Sat"
