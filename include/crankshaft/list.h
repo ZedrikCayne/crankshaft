@@ -4,15 +4,23 @@
 
 #include <crankshaft/linearalloc.h>
 
+/********************************************************************
+ *
+ * CS_List
+ *
+ * Growable list. Based on a linear allocator. Copies all data
+ * in. Returns static *items.
+ *
+ ********************************************************************/
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct CS_ListItem {
-    void *what;
+    const void *what;
     const struct CS_ListItem *next;
     const struct CS_ListItem *last;
-    int size;
+    const int size;
 };
 
 struct CS_List;
