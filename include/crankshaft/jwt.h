@@ -31,6 +31,7 @@ struct CS_Jwt {
 
 const struct CS_Jwt *CS_jwtParse( const char *jwt, int jwtLength, int allocatorSize );
 void CS_jwtFree( const struct CS_Jwt *jwt );
+bool CS_jwtVerify( const struct CS_Jwt *jwt );
 
 #ifdef __cplusplus
 }

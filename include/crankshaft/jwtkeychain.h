@@ -29,6 +29,7 @@ bool CS_jwtkeychainFetchPublicKeys( const char *urlToFetchKeysFrom );
 EVP_PKEY *CS_jwtkeychainGetKey( const char *keyId );
 
 struct CS_List *CS_jwtkeychainGetKeyIds();
+struct CS_StringBuilder *CS_jwtkeychainGetKeyDesc(void);
 
 #ifdef __cplusplus
 }

@@ -20,7 +20,7 @@ bool test_googleservices(void) {
     CS_jwtkeychainInit( keysCacheBackingStorage );
     //Tests go here:
     CS_FAIL_ON_TRUE( CS_GS_getKeys(), "Get public google keys.", "Failed to grab them." );
-    struct CS_StringBuilder *sb = CS_GS_getKeysDesc();
+    struct CS_StringBuilder *sb = CS_jwtkeychainGetKeyDesc();
 
     CS_FAIL_ON_NULL( sb, "Failed to get key desc.", "Oops." );
     if( sb ) {

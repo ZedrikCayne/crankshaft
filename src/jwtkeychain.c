@@ -52,12 +52,10 @@ static struct CS_StorageItem *privateWebCache( const struct CS_Cache *cache, con
                     commaOrEnd = 0;
                 }
                 expireTime = time(NULL) + atoi(restOfString);
-                CS_LOG_LOUD("Got expired time as %ld", expireTime);
             }
         }
     }
     if( expireTime == 0 ) expireTime = time(NULL) + 3600;
-    CS_LOG_LOUD("Adding to cache with expired time %ld", expireTime);
     struct CS_StorageItem *returnValue = CS_cachePut( cache, key, CS_PP_startOfData(reply->buffer), CS_PP_dataSize(reply->buffer), expireTime );
 
     CS_httpCloseRequest( reply );
@@ -195,5 +193,21 @@ EVP_PKEY *CS_jwtkeychainGetKey( const char *keyId ) {
 
 struct CS_List *CS_jwtkeychainGetKeyIds() {
     return CS_hashtableGetKeys( keyIdToEVP_PKEY );
+}
+
+struct CS_StringBuilder *CS_jwtkeychainGetKeyDesc(void) {
+    struct CS_List *keys = CS_jwtkeychainGetKeyIds();
+    if( keys == NULL ) return NULL;
+    struct CS_StringBuilder *sb = CS_SB_create(1024);
+    bool addComma = false;
+    CS_LIST_ITER(keys, listItem) {
+        if( listItem->size > 0 ) {
+            if( addComma ) CS_SB_appendChar( sb, ',' );
+            CS_SB_append( sb, (char*)listItem->what );
+            addComma = true;
+        }
+    }
+    CS_listDestroy( keys );
+    return sb;
 }
 

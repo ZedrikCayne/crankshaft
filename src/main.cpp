@@ -137,7 +137,7 @@ void dcCallback( struct CS_ClientInfo *info ) {
     CS_LOG_TRACE("Disconnecting.");
 }
 
-bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt );
+bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt, const char *csrf );
 bool loginPageReturn( struct CS_ClientInfo *info );
 bool cookieFilter( struct CS_ClientInfo *info ) {
     return loginPageReturn(info);
@@ -169,12 +169,12 @@ bool googleLogin( struct CS_ClientInfo *info ) {
         CS_LOG_ERROR( "Failed to parse a jwt out of the credential." );
         return loginPageReturn(info);
     }
-    if( !CS_GS_verifyJwt(jwt) ) {
+    if( !CS_GS_jwtVerify(jwt) ) {
         CS_LOG_ERROR( "Failed to verify a jwt." );
         return loginPageReturn(info);
     }
 
-    bool returnValue = jwtInfoReturn(info, jwt);
+    bool returnValue = jwtInfoReturn(info, jwt, g_csrf_header );
 
     CS_jwtFree( jwt );
     
@@ -193,7 +193,7 @@ bool doQuit( struct CS_ClientInfo *info ) {
     return CS_serverDiagnostic200(info);
 }
 
-bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt ) {
+bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt, const char *csrf ) {
     struct CS_HtmlNode *root = CS_htmlCreateRoot("html",2048);
     struct CS_HtmlNode *head = CS_htmlAddContainerAfter( root, "head" );
     struct CS_HtmlNode *meta = CS_htmlAddContainerAfter( head, "meta" );
@@ -218,6 +218,15 @@ bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt ) {
         CS_htmlSetContents( code2, CS_jsonNodePrintableTemp( jwt->jsonPayload ) );
     } else {
         CS_htmlSetContents( code2, "Json Header is null!" );
+    }
+    struct CS_HtmlNode *div3 = CS_htmlAddNext( div2, "div" );
+    struct CS_HtmlNode *header3 = CS_htmlAddContainerAfter( div3, "h4" );
+    CS_htmlSetContents( header3, "CSRF value" );
+    struct CS_HtmlNode *code3 = CS_htmlAddContainerAfter( div3, "code" );
+    if( csrf != NULL ) {
+        CS_htmlSetContents( code3, csrf );
+    } else {
+        CS_htmlSetContents( code3, "NULL" );
     }
     struct CS_StringBuilder *sb = CS_htmlToStringBuilder( root, 2048 );
     struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_HTML, CS_SB_buffer( sb ), CS_SB_size( sb ) );
