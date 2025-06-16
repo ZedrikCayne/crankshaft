@@ -25,7 +25,6 @@
 #define DEFAULT_KEY_SIZE 8192
 
 const struct CS_Cache *webCache = NULL;
-static bool initedSSL = false;
 struct CS_HashTable *keyIdToEVP_PKEY = NULL;
 
 static struct CS_StorageItem *privateWebCache( const struct CS_Cache *cache, const char *key ) {
@@ -86,16 +85,6 @@ bool CS_jwtkeychainTeardown() {
 }
 
 bool CS_jwtkeychainFetchPublicKeys( const char *urlToFetchKeysFrom ) {
-    if( !initedSSL ) {
-        if( OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS|
-                             OPENSSL_INIT_ADD_ALL_CIPHERS|
-                             OPENSSL_INIT_ADD_ALL_DIGESTS|
-                             OPENSSL_INIT_LOAD_CONFIG,
-                             NULL) != 1 ) {
-            CS_LOG_ERROR("Openssl init fail.");
-            return true;
-        }
-    }
     struct CS_StorageItem *keysJsonItem = CS_cacheGet( webCache, urlToFetchKeysFrom );
     struct CS_JsonNode *keysJson = NULL;
 

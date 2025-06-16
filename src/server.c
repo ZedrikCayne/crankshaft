@@ -31,6 +31,7 @@
 #include <crankshaft/http.h>
 #include <crankshaft/mime.h>
 #include <crankshaft/slaballoc.h>
+#include <crankshaft/ssl.h>
 
 static const char *dayOfWeek[ 7 ] = {
     "Sun","Mon","Tue","Wed","Thu","Fri","Sat"
@@ -217,6 +218,10 @@ static bool privateMakeSelfSign(const char *hostname) {
 }
 
 static bool InitSSL(struct CS_WebServer *server, const char *certFile, const char *keyFile, const char *selfSignHostname ) {
+    if( CS_sslInit() ) {
+        CS_LOG_ERROR("We're trying to use SSL after we've killed SSL.");
+        return true;
+    }
     const SSL_METHOD *method;
     method = TLS_server_method();
     server->sslctx = SSL_CTX_new(method);

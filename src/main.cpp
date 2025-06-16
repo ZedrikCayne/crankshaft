@@ -18,6 +18,7 @@
 #include <crankshaft/json.h>
 #include <crankshaft/storage.h>
 #include <crankshaft/jwtkeychain.h>
+#include <crankshaft/ssl.h>
 
 int acceptSocket = 0;
 
@@ -315,6 +316,8 @@ int main(int argc, char *argv[] ) {
         }
     }
 
+    CS_sslInit();
+
     CS_tempAllocateGlobal(2*1024*1024);
 
     if( CS_GS_initWithEnvironmentVariable( "GOOGLE_JSON" ) ) {
@@ -329,6 +332,7 @@ int main(int argc, char *argv[] ) {
         bool testMain = CS_testMain();
         CS_GS_kill();
         CS_tempFreeGlobal();
+        CS_sslKill();
         if( logFile != NULL ) CS_logKill();
         exit(testMain?255:0);
     }
@@ -358,6 +362,7 @@ int main(int argc, char *argv[] ) {
 
     if( logFile != NULL ) CS_logKill();
     CS_GS_kill();
+    CS_sslKill();
     CS_tempFreeGlobal();
     return 0;
 }
