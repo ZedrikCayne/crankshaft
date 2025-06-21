@@ -250,7 +250,7 @@ struct CS_HtmlNode *CS_htmlAddBefore(struct CS_HtmlNode *node, const char *name)
 
 struct CS_HtmlNode *CS_htmlAddContainerBefore(struct CS_HtmlNode *node, const char *name) {
     if( !privateCheckOk( name ) ) {
-        CS_LOG_ERROR("Cannot craete html node with bad name.");
+        CS_LOG_ERROR("Cannot create html node with bad name.");
         return NULL;
     }
     if( !node || !node->linearAllocator ) return NULL;
@@ -270,7 +270,7 @@ struct CS_HtmlNode *CS_htmlAddContainerBefore(struct CS_HtmlNode *node, const ch
 
 struct CS_HtmlNode *CS_htmlAddContainerAfter(struct CS_HtmlNode *node, const char *name) {
     if( !privateCheckOk( name ) ) {
-        CS_LOG_ERROR("Cannot craete html node with bad name.");
+        CS_LOG_ERROR("Cannot create html node with bad name.");
         return NULL;
     }
     if( !node || !node->linearAllocator ) return NULL;

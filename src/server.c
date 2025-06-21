@@ -801,7 +801,7 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     size_t bytesAvailable = CS_PP_dataSize(info->buffer);
     //If there's anything left after the headers, set the internal file pointer ahead.
     if( bytesRequiredForHeaders < bytesAvailable ) CS_PP_write(info->buffer,bytesRequiredForHeaders);
-    CS_LOG_INFO("Request: %s %s",info->requestInfo.method,info->requestInfo.uri);
+    CS_LOG_VERBOSE("Request: %s %s",info->requestInfo.method,info->requestInfo.uri);
     int requestEnum = info->requestInfo.requestMethodEnum;
     int nRoutes = info->server->routeNumbers[ requestEnum ];
     struct CS_Route *routes = info->server->routes[ requestEnum ];

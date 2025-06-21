@@ -26,6 +26,9 @@ __inline__ static void *CS_alignVoid(void *root, int alignment) {
     return (void *)((char*)(root + (alignment - mod)));
 }
 
+#define CS_ARRAY_SIZE(__ARRAY) ((sizeof(__ARRAY)/sizeof(__ARRAY[0])))
+
+
 #ifdef __cplusplus
 }
 #endif

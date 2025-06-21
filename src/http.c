@@ -16,6 +16,7 @@
 #include <crankshaft/mime.h>
 #include <crankshaft/http.h>
 #include <crankshaft/slaballoc.h>
+#include <crankshaft/util.h>
 
 static SSL_CTX *globalClientCTX = NULL;
 static pthread_mutex_t sslCTXMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -277,7 +278,7 @@ static int comp(const void *a, const void *b) {
 
 int CS_httpResponseCodeToEnum( int code ) {
     struct CodeToReturnString *response;
-    response = (struct CodeToReturnString *)bsearch( &code, codeToString, sizeof(codeToString)/sizeof(codeToString[0]), sizeof(codeToString[0]), comp);
+    response = (struct CodeToReturnString *)bsearch( &code, codeToString, CS_ARRAY_SIZE(codeToString), sizeof(codeToString[0]), comp);
 
     if( response == NULL ) return CS_RESPONSE_INVALID;
 
@@ -729,10 +730,10 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
     CS_SB_printf(sb, "%s %s %s%c%c", method, rest, "HTTP/1.1", CR, LF);
 
     defaultHeadersValue[HOST_INDEX] = address;
-    for( int i = 0; i < (sizeof(defaultHeaders)/sizeof(defaultHeaders[0])); ++i ) {
+    for( int i = 0; i < (CS_ARRAY_SIZE(defaultHeaders)); ++i ) {
         privateAppendHeader( sb, headers, numHeaders, defaultHeaders[ i ], defaultHeadersValue[ i ] );
     }
-    privateAppendOthers( sb, headers, numHeaders, defaultHeaders, (sizeof(defaultHeaders)/sizeof(defaultHeaders[0])) );
+    privateAppendOthers( sb, headers, numHeaders, defaultHeaders, CS_ARRAY_SIZE(defaultHeaders) );
 
     if( formParameters != NULL && numFormParameters > 0 ) {
         char *empty = "";

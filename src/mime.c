@@ -4,6 +4,7 @@
 
 #include <crankshaft/alloc.h>
 #include <crankshaft/logger.h>
+#include <crankshaft/util.h>
 
 #include <crankshaft/mime.h>
 
@@ -15,7 +16,7 @@ struct ExtensionToMIME {
 #include <crankshaft/mimevalues.h>
 
 int CS_mimeFileExtensionToEnum(const char *extension ) {
-    for( int i = 0; i < sizeof(extensions)/sizeof(extensions[0]); ++i ) {
+    for( int i = 0; i < CS_ARRAY_SIZE(extensions); ++i ) {
         if( strcmp( extension, extensions[ i ].extension ) == 0 ) {
             return i;
         }

@@ -19,6 +19,7 @@
 #include <crankshaft/storage.h>
 #include <crankshaft/jwtkeychain.h>
 #include <crankshaft/ssl.h>
+#include <crankshaft/util.h>
 
 int acceptSocket = 0;
 
@@ -90,7 +91,7 @@ const struct CS_ArgElement myArgs[] =
       CS_ARG_ELEMENT(selfSignHostname,CS_STRING_ARG)
     };
 
-struct CS_ArgTable myCS_ArgTable = { sizeof(myArgs)/sizeof(CS_ArgElement), 0, NULL, myArgs };
+struct CS_ArgTable myCS_ArgTable = { CS_ARRAY_SIZE(myArgs), 0, NULL, myArgs };
 
 void PrintHelp() {
     CS_argsPrint(&myCS_ArgTable);
@@ -189,6 +190,13 @@ bool fudge( struct CS_ClientInfo *info ) {
     return CS_serverDiagnostic200(info);
 }
 
+bool websocket( struct CS_ClientInfo *info ) {
+    if( info->disconnectCallback == NULL ) {
+        info->disconnectCallback = dcCallback;
+    }
+    return CS_serverDiagnostic200(info);
+}
+
 bool doQuit( struct CS_ClientInfo *info ) {
     GotInterrupt = true;
     return CS_serverDiagnostic200(info);
@@ -280,6 +288,7 @@ struct CS_Route serverRoutes[] = {
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", googleLogin},
     { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, 0, "/googlelogin", googleLogin},
     { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_FILTER, 0, "", cookieFilter},
+    { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_EXACT, 0, "/ws", websocket},
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/api", fudge },
     { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, 0, "/api", fudge },
     { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, 0, "", CS_serverFileServer },
