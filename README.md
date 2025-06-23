@@ -6,14 +6,16 @@ Step 1: HTTP server. Stupid basic.
 Step 2: HTTPS server.                                
 Step 2.5: JSON support                 
 Step 2.5.5: Storage
-Step 2.6: General support for an oauth.              <---- you are here
-Step 3: WEBRTC plumbing for connectionless sockets.
+Step 2.6: General support for an oauth.
+Step 3: WEBRTC plumbing for connectionless sockets.  <---- you are here
 Step 4: Game goes here.
 ```
 
 Building a web server from the ground up because I can. Building it up the way I think it should be done. Hopefully not making too too many mistakes along the way. The entire thing is very opinionated.
 
 We're getting there. Finally got outgoing http connections working. Took a detour to get some hard storage plugged in so I can do stuff like...save state.
+
+Took another detour to add websockets. Server is complete enough that I'd use it for something simple.
 
 ##Basics
 ```
