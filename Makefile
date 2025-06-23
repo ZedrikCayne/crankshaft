@@ -15,7 +15,7 @@ VERSION=0.2.0
 OS=$(shell uname -o)
 
 ifeq ($(OS),Darwin)
-SSL_LOCATION=/opt/homebrew/Cellar/openssl@3/3.3.1
+SSL_LOCATION=/opt/homebrew/Cellar/openssl@3/3.5.0
 CFLAGS:=$(CFLAGS) -Wno-unknown-warning-option -Wno-unused-command-line-argument -I$(SSL_LOCATION)/include -L$(SSL_LOCATION)/lib
 endif
 
