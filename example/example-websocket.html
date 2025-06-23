@@ -1,0 +1,66 @@
+<head>
+</head>
+<body>
+    <h4>To Send</h4>
+    <input id="inputBox" type="text"><br></br>
+    <button onclick="sendBox()">Send</button>
+    <h4>Got Back</h4>
+    <code id="outputDiv"></code>
+
+    <script>
+        let globalWebsocket = null;
+        let oldTextToSend = null;
+
+        inputBox.addEventListener( "keypress", function (event) {
+            if( event.key == "Enter" ) {
+                event.preventDefault();
+                sendBox();
+            }
+        }) ;
+
+
+        function messageEvent( event ) {
+            console.log( event.data );
+            outputDiv.innerHTML = event.data;
+        }
+
+        function openEvent( event ) {
+            if( oldTextToSend != null ) sendText( oldTextToSend );
+            oldTextToSend = null;
+        }
+
+        function closeEvent( event ) {
+            console.log( event );
+            closeWebsocket();
+        }
+
+        function sendBox() {
+            sendText( inputBox.value );
+        }
+
+        function startWebsocket() {
+            if( globalWebsocket === null ) {
+                globalWebsocket = new WebSocket("/ws");
+                globalWebsocket.addEventListener( "message", messageEvent );
+                globalWebsocket.addEventListener( "open", openEvent );
+                globalWebsocket.addEventListener( "close", closeEvent );
+            } 
+        }
+
+        function sendText( theText ) {
+            if( globalWebsocket == null ) startWebsocket();
+            if( oldTextToSend != null ) outputDiv.innerHTML = "Hold Your Horses...connecting.";
+            globalWebsocket.send( theText );
+        }
+
+        function closeWebsocket() {
+            if( globalWebsocket !== null ) {
+                globalWebsocket.close();
+                globalWebsocket = null;
+            }
+        }
+
+        document.onload = startWebsocket;
+        window.onload = startWebsocket;
+    </script>
+</body>

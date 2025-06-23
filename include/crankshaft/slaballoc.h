@@ -30,6 +30,7 @@ struct CS_SlabAllocator;
 #define CRANKSHAFT_MIN_ALIGNMENT sizeof(void*)
 
 void *CS_slabTake(struct CS_SlabAllocator *slab);
+void *CS_slabTakeZero(struct CS_SlabAllocator *slab);
 bool CS_slabReturn(struct CS_SlabAllocator *slab, void *toReturn);
 
 struct CS_SlabAllocator *CS_slabInit( const char *name, int size, int count, int alignment );

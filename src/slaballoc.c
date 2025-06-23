@@ -140,6 +140,12 @@ RELEASE_LOCK:
     return returnValue;
 }
 
+void *CS_slabTakeZero(struct CS_SlabAllocator *voidSlab ) {
+    void *returnValue = CS_slabTake( voidSlab );
+    if( returnValue ) memset( returnValue, 0, voidSlab->size );
+    return returnValue;
+}
+
 bool CS_slabReturn(struct CS_SlabAllocator *voidSlab, void *toReturn) {
     if( toReturn == NULL ) {
         CS_LOG_ERROR("Trying to free up a NULL");

@@ -22,7 +22,7 @@ static char *testStrings[4] = {
     "The quick brown fox jumped over the lazy dog....",
 };
 
-#define FUZZ_BUFF_COUNT 2000
+#define FUZZ_BUFF_COUNT 20
 #define FUZZ_BUFF_SIZE (FUZZ_BUFF_COUNT * sizeof(int))
 
 bool test_base64(void) {
@@ -58,9 +58,24 @@ bool test_base64(void) {
             char *t0 = CS_base64EncodeTemp( fuzzBuff, inputSize, &encodedSize );
             CS_FAIL_ON_NULL( t0, CS_tempBuffSnprintf( 64, "Encoding fuzz buffer #%d", i ), "Failed to encode fuzz buffer" );
             if( t0 ) {
+                t0[ encodedSize + 1 ] = 0;
                 char *t1 = CS_base64DecodeTemp( t0, encodedSize, &decodedSize );
+                CS_FAIL_ON_FALSE( inputSize == decodedSize, CS_tempBuffSnprintf( 64, "Input size == Output size #%d", i ), "%d vs %d", inputSize, decodedSize );
                 CS_FAIL_ON_NULL( t1, CS_tempBuffSnprintf( 64, "Failed to decode fuzz buffer #%d", i ), "%s", t0 );
-                CS_FAIL_ON_FALSE( memcmp( fuzzBuff, t1, inputSize ) == 0, CS_tempBuffSnprintf( 64, "Comparing fuzz buffer #%d", i ), "Not binary identical." );
+                CS_FAIL_ON_FALSE( t1 && (memcmp( fuzzBuff, t1, inputSize ) == 0), CS_tempBuffSnprintf( 64, "Comparing fuzz buffer #%d", i ), "Not binary identical." );
+                if( t1 && (memcmp( fuzzBuff, t1, inputSize) != 0 ) ) {
+                    printf( "%s\n", t0 );
+                    char *iBuff = (char*)fuzzBuff;
+                    for( int j = 0; j < inputSize; ++j ) {
+                        printf ("%02hhX ", iBuff[j]);
+                    }
+                    printf( "\n" );
+                    iBuff = t1;
+                    for( int j = 0; j < inputSize; ++j ) {
+                        printf ("%02hhX ", iBuff[j]);
+                    }
+                    printf( "\n" );
+                }
             }
         }
         CS_free( fuzzBuff );

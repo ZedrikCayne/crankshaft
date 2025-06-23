@@ -148,9 +148,7 @@ static void *clientThread(void *var) {
         clientInfo->ssl = NULL;
     }
     while(true) {
-        ssize_t bytesRead = clientInfo->ssl?
-            CS_PP_readFromSSL(clientInfo->buffer,clientInfo->ssl):
-            CS_PP_readFromFile(clientInfo->buffer,clientInfo->clientSocket);
+        int bytesRead = CS_serverFillIncomingBuffer( clientInfo );
         
         if( bytesRead <= 0 ) {
             break;
@@ -709,9 +707,7 @@ static int parseRequest(struct CS_ClientInfo *info) {
                             CS_LOG_ERROR("Header + Payload for urlencoded form too big.");
                             return -1;
                         }
-                        ssize_t bytesRead = info->ssl?
-                            CS_PP_readFromSSL(info->buffer,info->ssl):
-                            CS_PP_readFromFile(info->buffer,info->clientSocket);
+                        int bytesRead = CS_serverFillIncomingBuffer( info );
                         if( bytesRead < 0 ) return -1;
                         endOfData = CS_PP_endOfData(info->buffer);
                     }
@@ -798,9 +794,9 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     //Message starts:
     int bytesRequiredForHeaders = parseRequest(info);
     if( bytesRequiredForHeaders < 0 ) return true;
-    size_t bytesAvailable = CS_PP_dataSize(info->buffer);
-    //If there's anything left after the headers, set the internal file pointer ahead.
-    if( bytesRequiredForHeaders < bytesAvailable ) CS_PP_write(info->buffer,bytesRequiredForHeaders);
+    //Consume the bytes for the headers. Might cause the incoming buffer to reset
+    //But that should be just fine at this point.
+    CS_PP_write(info->buffer,bytesRequiredForHeaders);
     CS_LOG_VERBOSE("Request: %s %s",info->requestInfo.method,info->requestInfo.uri);
     int requestEnum = info->requestInfo.requestMethodEnum;
     int nRoutes = info->server->routeNumbers[ requestEnum ];
@@ -1126,27 +1122,35 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     }
     CS_PP_printf( info->output, "\r\n" );
 
+    int bytesWritten = 0;
     if( reply->outputBuffer != NULL ) {
         int bytesToWrite = reply->outputLength;
-        int bytesWritten = 0;
         int bytesPutInBuff = 0;
         int totalBytesTaken = 0;
 
         do {
             bytesPutInBuff = CS_PP_readFromBuffer( info->output, ((char*)reply->outputBuffer) + totalBytesTaken, reply->outputLength - totalBytesTaken );
             totalBytesTaken += bytesPutInBuff;
-            bytesWritten = info->ssl?
-                CS_PP_writeToSSL( info->output, info->ssl ):
-                CS_PP_writeToFile( info->output, info->clientSocket );
+            bytesWritten = CS_serverWriteOutputBuffer( info );
             bytesToWrite -= bytesWritten;
         } while( bytesToWrite > 0 && bytesWritten > 0 );
         //And stuff out the last two bytes.
         CS_PP_printf( info->output, "\r\n" );
-        bytesWritten = info->ssl?
-            CS_PP_writeToSSL( info->output, info->ssl ):
-            CS_PP_writeToFile( info->output, info->clientSocket );
     }
+    bytesWritten = CS_serverWriteOutputBuffer( info );
     CS_serverReturnReply(info, reply);
-    return false;
+    return bytesWritten < 0;
 }
 
+int CS_serverFillIncomingBuffer( struct CS_ClientInfo *info ) {
+    if( info == NULL ) return -1;
+    return info->ssl?
+        CS_PP_readFromSSL(info->buffer,info->ssl):
+        CS_PP_readFromFile(info->buffer,info->clientSocket);
+}
+
+int CS_serverWriteOutputBuffer( struct CS_ClientInfo *info ) {
+    return info->ssl?
+        CS_PP_writeToSSL( info->output, info->ssl ):
+        CS_PP_writeToFile( info->output, info->clientSocket );
+}

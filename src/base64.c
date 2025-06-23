@@ -72,12 +72,22 @@ static int requiredSpaceToDecode( int inputBufferSize ) {
 
 static int privateEncode( const void *toEncode, int encodeLength, void *encodeBuffer, int encodeBufferLength ) {
     int outputLength = requiredSpaceToEncode( encodeLength );
+    int endingEquals = 0;
     if( outputLength > encodeBufferLength ) return -1;
+    switch( encodeLength % 3 ) {
+        case 0:
+            break;
+        case 1:
+            endingEquals = 2;
+            break;
+        case 2:
+            endingEquals = 1;
+            break;
+    }
 
     char *output = encodeBuffer;
     const unsigned char *input = (const unsigned char *)toEncode;
     const unsigned char *end = input + encodeLength;
-    char *outputEnd = output + outputLength;
 
     unsigned int threeBytes = 0;
     while( input < end - 3 ) {
@@ -89,6 +99,7 @@ static int privateEncode( const void *toEncode, int encodeLength, void *encodeBu
         *output++ = encoding_table[ (threeBytes >>  6) & 0x3F ];
         *output++ = encoding_table[ (threeBytes      ) & 0x3F ];
     }
+    threeBytes = 0;
     if( input < end ) threeBytes = *input++;
     threeBytes <<= 8;
     if( input < end ) threeBytes += *input++;
@@ -96,9 +107,11 @@ static int privateEncode( const void *toEncode, int encodeLength, void *encodeBu
     if( input < end ) threeBytes += *input++;
     *output++ = encoding_table[ (threeBytes >> 18) ];
     *output++ = encoding_table[ (threeBytes >> 12) & 0x3F ];
-    *output++ = encoding_table[ (threeBytes >>  6) & 0x3F ];
-    *output++ = encoding_table[ (threeBytes      ) & 0x3F ];
-    while( output < outputEnd ) *output++ = '=';
+    *output++ = endingEquals == 2?'=':encoding_table[ (threeBytes >>  6) & 0x3F ];
+    *output++ = endingEquals >= 1?'=':encoding_table[ (threeBytes      ) & 0x3F ];
+/*    for( int i = 0; i < endingEquals; ++i ) {
+        *--output = '=';
+    } */
 
     return outputLength;
 }
@@ -148,7 +161,7 @@ static int privateDecode( void *toDecode, int decodeLength, void *decodedBuffer,
 
 char *CS_base64Encode( void *toEncode, int length, int *outputLength ) {
     int requiredSpace = requiredSpaceToEncode( length );
-    char *output = CS_alloc( requiredSpace + 1 );
+    char *output = CS_alloc( requiredSpace + 2 );
     if( output == NULL ) return NULL;
     int outLength = privateEncode( toEncode, length, output, requiredSpace );
     if( outLength < 0 ) {
@@ -160,7 +173,7 @@ char *CS_base64Encode( void *toEncode, int length, int *outputLength ) {
 }
 char *CS_base64EncodeTemp( void *toEncode, int length, int *outputLength ) {
     int requiredSpace = requiredSpaceToEncode(length);
-    char *output = CS_tempBuff(requiredSpace + 1);
+    char *output = CS_tempBuff(requiredSpace + 2 );
     if( output == NULL ) return NULL;
     int outLength = privateEncode( toEncode, length, output, requiredSpace );
     if( outLength < 0 ) return NULL;
