@@ -23,7 +23,7 @@ __inline__ static int CS_align(int root, int alignment) {
 __inline__ static void *CS_alignVoid(void *root, int alignment) {
     int mod = ((long long)root) % alignment;
     if( mod == 0 ) return root;
-    return (void *)((char*)(root + (alignment - mod)));
+    return (void *)(((char*)root) + (alignment - mod));
 }
 
 #define CS_ARRAY_SIZE(__ARRAY) ((sizeof(__ARRAY)/sizeof(__ARRAY[0])))
