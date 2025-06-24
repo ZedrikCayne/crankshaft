@@ -1,4 +1,4 @@
-#Crankshaft: The thing around which the world turns.
+# Crankshaft: The thing around which the world turns.
 
 ```
 Step 0: Makefile
@@ -17,7 +17,7 @@ We're getting there. Finally got outgoing http connections working. Took a detou
 
 Took another detour to add websockets. Server is complete enough that I'd use it for something simple.
 
-##Basics
+## Basics
 ```
 scripts/gentest
 make clean test
@@ -38,15 +38,15 @@ Builds a lib, and tarball packaged with the include directory and associated .a 
 
 The main.cpp app has lots of switches and twiddles, check out the --help.
 
-##Mac Users
+## Mac Users
 
 The Makefile contains a line for the SSL_LOCATION where your openssl libs (version 3) are installed. Currently homebrew puts them in /opt/homebrew/Cellar/openssl@3/<version> but depending on the age of your mac, phase of the moon and how recently you sacrificed a chicken to the gods this might not be correct. So far openssl is the only third party library that we use that is not included other than sqlite (We download a version that we know to be good directly from the sqlite folks and compile it in) 
 
-##Windows Users
+## Windows Users
 
 So far this works in WSL. We don't have plans to make a version that compiles natively to non-posix systems. (It might work in mingw, but no promises)
 
-##clang users
+## clang users
 
 Should work if you substitute clang for gcc. Not tested it, not planning on it.
 
