@@ -17,9 +17,9 @@
 #include <crankshaft/http.h>
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/util.h>
+#include <crankshaft/network.h>
+#include <crankshaft/ssl.h>
 
-static SSL_CTX *globalClientCTX = NULL;
-static pthread_mutex_t sslCTXMutex = PTHREAD_MUTEX_INITIALIZER;
 static void *requestSlabAlloc = NULL;
 static pthread_mutex_t slabAllocMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -40,34 +40,15 @@ static void privateReturnReply( struct CS_RequestReply *toReturn ) {
     CS_slabReturn(requestSlabAlloc, toReturn);
 }
 
-static bool InitSSL() {
-    pthread_mutex_lock(&sslCTXMutex);
-    if( globalClientCTX ) {
-        pthread_mutex_unlock(&sslCTXMutex);
-        return false;
-    }
-    const SSL_METHOD *method = TLS_client_method();
-    globalClientCTX = SSL_CTX_new(method);
-    pthread_mutex_unlock(&sslCTXMutex);
-    return globalClientCTX == NULL;
-}
-
-static void KillSSL() {
-    pthread_mutex_lock(&sslCTXMutex);
-    if( globalClientCTX ) {
-        SSL_CTX_free( globalClientCTX );
-        globalClientCTX = NULL;
-    }
-    pthread_mutex_unlock(&sslCTXMutex);
-}
-
 static SSL *newSSL( int socket ) {
-    if( !globalClientCTX && InitSSL() ) return NULL;
-    SSL *returnValue = SSL_new( globalClientCTX );
+    SSL *returnValue = CS_sslNew(false);
     if( returnValue ) {
         SSL_set_fd( returnValue, socket );
         if( SSL_connect( returnValue ) <= 0 ) {
-            CS_LOG_ERROR("Failed negotiate SSL.");
+            unsigned long err_code = ERR_get_error();
+            char err_buf[256];
+            ERR_error_string(err_code, err_buf);
+            CS_LOG_LOUD("Failed negotiate SSL. %s", err_buf);
             SSL_free( returnValue );
             returnValue = NULL;
         }
@@ -459,27 +440,36 @@ int CS_httpUrlEncodeBinary( const void *toEncode, int encodeBufferLength, void *
     return privateEncode( (const char *)toEncode, encodeBufferLength, output, outputBufferLength );
 }
 
-int privateParseUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
-    int len = strlen(uri);
-    char *tempUri = CS_tempStringCopy( uri );
-    char *currentPoint = tempUri;
-    char *endOfData = tempUri + len;
-    bool wantSSL = false;
-    char *portChar = NULL;
+enum WhatKindOfUri {
+    URI_UNKNOWN,
+    URI_HTTP,
+    URI_TELNET,
+    URI_SSL
+};
 
-    if( uri == NULL ) return -1;
+struct UriPrefixToKind {
+    const char *prefix;
+    int prefixLength;
+    int whatKindOfUri;
+};
 
-    REQUIRE_CHAR('h');
-    REQUIRE_CHAR('t');
-    REQUIRE_CHAR('t');
-    REQUIRE_CHAR('p');
-    if( *currentPoint == 's' ) {
-        wantSSL = true;
-        ++currentPoint;
+static struct UriPrefixToKind uriPrefixToKind[] = {
+    { "http", 4, URI_HTTP },
+    { "telnet", 6, URI_TELNET },
+    { "ssl", 3, URI_SSL },
+};
+
+static int matchUriToType( const char *uri ) {
+    for( int i = 0; i < CS_ARRAY_SIZE(uriPrefixToKind); ++i ) {
+        if( strncmp( uri, uriPrefixToKind[i].prefix, uriPrefixToKind[i].prefixLength ) == 0 ) {
+            return uriPrefixToKind[i].whatKindOfUri;
+        }
     }
-    REQUIRE_CHAR(':');
-    REQUIRE_CHAR('/');
-    REQUIRE_CHAR('/');
+    return URI_UNKNOWN;
+}
+
+static int privateParseAddressAndPort( const char *uri, char *baseUri, char *currentPoint, char *endOfData, char **address, int *port, bool *ssl, const char **rest, bool wantSSL, int defaultSSLPort, int defaultNonSSLPort ) {
+    char *portChar = NULL;
     *address = currentPoint;
     while( currentPoint < endOfData && !(*currentPoint == ':' || *currentPoint == '/') ) ++currentPoint;
     if( *currentPoint == ':' ) {
@@ -494,34 +484,93 @@ int privateParseUri( const char *uri, char **address, int *port, bool *ssl, cons
     if( portChar != NULL ) {
         *port = atoi( portChar ); 
     } else {
-        *port = wantSSL?443:80;
+        *port = wantSSL?defaultSSLPort:defaultNonSSLPort;
     }
     *ssl = wantSSL;
+
     if( currentPoint >= endOfData ) {
         *rest = NULL;
     } else {
-        *rest = uri + (currentPoint - tempUri);
+        *rest = uri + (currentPoint - baseUri);
     }
+
     return 0;
 }
 
-struct addrinfo *CS_httpLookupAddress( const char *address, int portNum ) {
-    struct addrinfo hints = { 0 };
-    char portNumString[64];
-    snprintf( portNumString, 64, "%d", portNum );
-    hints.ai_flags = AI_PASSIVE|AI_ADDRCONFIG;
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    struct addrinfo *addrInfos;
-    if( getaddrinfo(address,portNum > 0?portNumString:NULL,&hints,&addrInfos) != 0 ) {
-        CS_LOG_WARN("CS_httpLookupAddress() Address lookup fail: %s", address);
-        return NULL;
+static int privateParseHttpUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
+    int len = strlen(uri);
+    char *tempUri = CS_tempStringCopy( uri );
+    char *currentPoint = tempUri;
+    char *endOfData = tempUri + len;
+    bool wantSSL = false;
+
+    if( uri == NULL ) return -1;
+
+    REQUIRE_CHAR('h');
+    REQUIRE_CHAR('t');
+    REQUIRE_CHAR('t');
+    REQUIRE_CHAR('p');
+    if( *currentPoint == 's' ) {
+        wantSSL = true;
+        ++currentPoint;
     }
-    return addrInfos;
+    REQUIRE_CHAR(':');
+    REQUIRE_CHAR('/');
+    REQUIRE_CHAR('/');
+    return privateParseAddressAndPort( uri, tempUri, currentPoint, endOfData, address, port, ssl, rest, wantSSL, 443, 80 );
 }
 
-void CS_httpReleaseAddressInfos( struct addrinfo *infos ) {
-    freeaddrinfo( infos );
+static int privateParseTelnetUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
+    if( uri == NULL ) return -1;
+
+    int len = strlen(uri);
+    char *tempUri = CS_tempStringCopy( uri );
+    char *currentPoint = tempUri;
+    char *endOfData = tempUri + len;
+
+    REQUIRE_CHAR('t');
+    REQUIRE_CHAR('e');
+    REQUIRE_CHAR('l');
+    REQUIRE_CHAR('n');
+    REQUIRE_CHAR('e');
+    REQUIRE_CHAR('t');
+    REQUIRE_CHAR(':');
+    REQUIRE_CHAR('/');
+    REQUIRE_CHAR('/');
+    return privateParseAddressAndPort( uri, tempUri, currentPoint, endOfData, address, port, ssl, rest, false, 22, 23 );
+}
+
+static int privateParseSslUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
+    if( uri == NULL ) return -1;
+
+    int len = strlen(uri);
+    char *tempUri = CS_tempStringCopy( uri );
+    char *currentPoint = tempUri;
+    char *endOfData = tempUri + len;
+
+    REQUIRE_CHAR('s');
+    REQUIRE_CHAR('s');
+    REQUIRE_CHAR('l');
+    REQUIRE_CHAR(':');
+    REQUIRE_CHAR('/');
+    REQUIRE_CHAR('/');
+    return privateParseAddressAndPort( uri, tempUri, currentPoint, endOfData, address, port, ssl, rest, true, 22, 23 );
+}
+
+static int privateParseUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
+    int uriType = matchUriToType( uri );
+    switch( uriType ) {
+        case URI_HTTP:
+            return privateParseHttpUri( uri, address, port, ssl, rest );
+            break;
+        case URI_TELNET:
+            return privateParseTelnetUri( uri, address, port, ssl, rest );
+            break;
+        case URI_SSL:
+            return privateParseSslUri( uri, address, port, ssl, rest );
+            break;
+    }
+    return -1;
 }
 
 static const char *headerHas( struct CS_RequestHeader *headers, int numHeaders, const char *which ) {
@@ -715,7 +764,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         return NULL;
     }
     strncpy( address, tempAddress, 127 );
-    struct addrinfo *addrInfos = CS_httpLookupAddress( address, portNum );
+    struct addrinfo *addrInfos = CS_networkLookupAddress( address, portNum );
     //Lookup already has a log with it.
     if( addrInfos == NULL ) return NULL;
 
@@ -786,7 +835,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
 
     if( returnValue->remoteSocket < 0 || connectValue != 0 )
         goto CLEANUP;
-    CS_httpReleaseAddressInfos( addrInfos );
+    CS_networkReleaseAddressInfos( addrInfos );
     addrInfos = NULL;
 
     returnValue->ssl = NULL;
@@ -879,7 +928,7 @@ CLEANUP:
     if( sb ) CS_SB_free(sb);
     if( pp ) CS_PP_defaultFree(pp);
     
-    if( addrInfos ) CS_httpReleaseAddressInfos( addrInfos );
+    if( addrInfos ) CS_networkReleaseAddressInfos( addrInfos );
     return NULL;
 }
 
@@ -900,14 +949,6 @@ const char *CS_httpReplyHeader( struct CS_RequestReply *reply, const char *heade
             return reply->replyHeaders[ i ].values;
     }
     return NULL;
-}
-
-bool CS_httpInitSSL() {
-    return InitSSL();
-}
-
-void CS_httpKillSSL() {
-    KillSSL();
 }
 
 void CS_httpCleanupReplies() {

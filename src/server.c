@@ -187,31 +187,28 @@ static void freeRoutes(struct CS_WebServer *server) {
     }
 }
 
-static EVP_PKEY *ss_pkey = NULL;
-static X509 *ss_X509 = NULL;
-
-static bool privateMakeSelfSign(const char *hostname) {
+static bool privateMakeSelfSign(struct CS_WebServer *server, const char *hostname) {
     EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
     if( ctx == NULL ) return true;
     if( EVP_PKEY_keygen_init(ctx) <= 0 ) return true;
     if( EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 2048) <= 0 ) return true;
-    if( EVP_PKEY_keygen( ctx, &ss_pkey ) <= 0 ) return true;
+    if( EVP_PKEY_keygen( ctx, &server->ss_pkey ) <= 0 ) return true;
     EVP_PKEY_CTX_free(ctx);
-    ss_X509 = X509_new();
-    ASN1_INTEGER_set(X509_get_serialNumber(ss_X509),1);
-    X509_gmtime_adj(X509_get_notBefore(ss_X509), 0);
-    X509_gmtime_adj(X509_get_notAfter(ss_X509), 31536000L);
-    X509_set_pubkey(ss_X509, ss_pkey);
+    server->ss_X509 = X509_new();
+    ASN1_INTEGER_set(X509_get_serialNumber(server->ss_X509),1);
+    X509_gmtime_adj(X509_get_notBefore(server->ss_X509), 0);
+    X509_gmtime_adj(X509_get_notAfter(server->ss_X509), 31536000L);
+    X509_set_pubkey(server->ss_X509, server->ss_pkey);
     X509_NAME * name;
-    name = X509_get_subject_name(ss_X509);
+    name = X509_get_subject_name(server->ss_X509);
     X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC,
                                        (unsigned char *)"US", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC,
                                        (unsigned char *)"Just Add Hippo Inc.", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
                                        (unsigned char *)hostname, -1, -1, 0);
-    X509_set_issuer_name(ss_X509, name);
-    X509_sign( ss_X509, ss_pkey, EVP_sha256() );
+    X509_set_issuer_name(server->ss_X509, name);
+    X509_sign( server->ss_X509, server->ss_pkey, EVP_sha256() );
     return false;
 }
 
@@ -225,12 +222,12 @@ static bool InitSSL(struct CS_WebServer *server, const char *certFile, const cha
     server->sslctx = SSL_CTX_new(method);
     if( server->sslctx ) {
         if( selfSignHostname ) {
-            if(privateMakeSelfSign( selfSignHostname )) return true;
-            if( SSL_CTX_use_certificate( server->sslctx, ss_X509 ) <= 0 ) {
+            if(privateMakeSelfSign( server, selfSignHostname )) return true;
+            if( SSL_CTX_use_certificate( server->sslctx, server->ss_X509 ) <= 0 ) {
                 ERR_print_errors_fp(stderr);
                 return true;
             }
-            if( SSL_CTX_use_PrivateKey( server->sslctx, ss_pkey ) <= 0 ) {
+            if( SSL_CTX_use_PrivateKey( server->sslctx, server->ss_pkey ) <= 0 ) {
                 ERR_print_errors_fp(stderr);
                 return true;
             }
@@ -250,10 +247,10 @@ static bool InitSSL(struct CS_WebServer *server, const char *certFile, const cha
 
 static bool DestroySSL(struct CS_WebServer *server) {
     if( server->sslctx ) { 
-        if( ss_X509 ) X509_free( ss_X509 );
-        ss_X509 = NULL;
-        if( ss_pkey ) EVP_PKEY_free( ss_pkey );
-        ss_pkey = NULL;
+        if( server->ss_X509 ) X509_free( server->ss_X509 );
+        server->ss_X509 = NULL;
+        if( server->ss_pkey ) EVP_PKEY_free( server->ss_pkey );
+        server->ss_pkey = NULL;
         SSL_CTX_free(server->sslctx);
         server->sslctx = NULL;
     }
@@ -302,7 +299,7 @@ struct CS_WebServer *CS_serverStart(int portNum,
                                            int fileServingCacheControlMaxAge,
                                            struct CS_Route *routes,
                                            int numberOfRoutes ) {
-    struct CS_WebServer *returnValue = CS_alloc( sizeof( struct CS_WebServer ) );
+    struct CS_WebServer *returnValue = CS_allocZero( sizeof( struct CS_WebServer ) );
     if( returnValue == NULL ) {
         CS_LOG_ERROR("Could not allocate enough for a web server.");
         return NULL;
@@ -960,8 +957,9 @@ const char *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const
 }
 
 const char *CS_serverGetRequestCookie( struct CS_ClientInfo *info, const char *cookie ) {
-    const char *cookieValue = CS_serverGetRequestHeader( info, "Cookie" );
     if( cookie == NULL ) return NULL;
+    const char *cookieValue = CS_serverGetRequestHeader( info, "Cookie" );
+    if( cookieValue == NULL ) return NULL;
     char *cookieCopy = CS_tempStringCopy( cookieValue );
     char *savePtrOuter;
     char *savePtrInner;
@@ -1039,7 +1037,7 @@ static bool PrivateSetReplyHeaderInt( struct CS_Reply *reply, bool overwrite, co
     return PrivateSetReplyHeader( reply, overwrite, header, temp );
 }
 
-static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value ) {
+static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly ) {
     if( cookie == NULL || value == NULL ) {
         CS_LOG_ERROR("Trying to set an invalid value as a cookie... %s=%s",cookie?cookie:"NULL",value?value:"NULL");
         return true;
@@ -1091,8 +1089,8 @@ bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int
 bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value ) {
     return PrivateSetReplyHeaderInt( reply, false, header, value );
 }
-bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value ) {
-    return PrivateSetReplyCookie( reply, cookie, value );
+bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly ) {
+    return PrivateSetReplyCookie( reply, cookie, value, httpOnly );
 }
 
 bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {

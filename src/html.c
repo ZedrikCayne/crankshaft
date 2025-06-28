@@ -290,9 +290,10 @@ struct CS_HtmlNode *CS_htmlAddContainerAfter(struct CS_HtmlNode *node, const cha
     }
 }
 
-struct CS_HtmlNode *CS_htmlSetContents(struct CS_HtmlNode *node, const char *contents) {
+struct CS_HtmlNode *CS_htmlSetContents(struct CS_HtmlNode *node, const char *contents, bool raw) {
     if( !node || !node->linearAllocator ) return NULL;
     node->contents = CS_linearCopyString( node->linearAllocator, contents );
+    node->raw = raw;
     return node->contents?node:NULL;
 }
 
@@ -410,7 +411,7 @@ static struct CS_HtmlNode *privatePrintNodeIntro( struct CS_HtmlNode *node, stru
 }
 
 static struct CS_HtmlNode *privatePrintNodeMid( struct CS_HtmlNode *node, struct CS_StringBuilder *sb ) {
-    char *quoted = privateHtmlQuoted( node->contents );
+    char *quoted = node->raw?node->contents:privateHtmlQuoted( node->contents );
     if( quoted ) CS_SB_append( sb, quoted );
     return node;
 }

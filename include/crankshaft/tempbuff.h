@@ -43,6 +43,8 @@ extern "C" {
 #define CS_TEMPBUFF_MAX_SIZE 16384
 #define CS_TEMPBUFF_ALIGNMENT 8
 
+struct CS_TempBuffer;
+
 void *CS_tempBuff(int size);
 void *CS_tempBuffZero( int size );
 char *CS_tempStringCopy(const char *copyMe);
@@ -54,9 +56,9 @@ char *CS_tempBuffSnprintf(int max, const char *fmt, ...);
 
 #define CS_MAX_TEMP_BUFF_TEMP_NAME 64
 
-void *CS_tempAllocManual(const char *name, int size );
-void *CS_tempGetManual(void *manualTempBuff, int size);
-void CS_tempFreeManual(void *manualTempBuff);
+struct CS_TempBuffer *CS_tempAllocManual(const char *name, int size );
+void *CS_tempGetManual(struct CS_TempBuffer *manualTempBuff, int size, int align);
+void CS_tempFreeManual(struct CS_TempBuffer *manualTempBuff);
 
 #ifdef __cplusplus
 }

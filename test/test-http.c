@@ -72,8 +72,6 @@ bool test_http(void) {
     CS_FAIL_ON_NULL( testServer, "Start web server.", "Failed." );
     snprintf( base, 128, "https://localhost:%d/test", testServer->serverPort );
     if( testServer ) {
-        CS_httpInitSSL();
-
         struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, base, NULL, 0, NULL, 0, NULL, 0, NULL );
         CS_FAIL_ON_NULL( reply, "GET request to /test", "Failed" );
         if( reply ) {
@@ -175,7 +173,6 @@ bool test_http(void) {
             }
             CS_httpCloseRequest( reply );
         }
-        CS_httpKillSSL();
         CS_serverKill( testServer );
     }
     CS_httpCleanupReplies();

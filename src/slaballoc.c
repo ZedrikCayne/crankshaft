@@ -6,6 +6,7 @@
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/logger.h>
+#include <crankshaft/mutex.h>
 
 struct SlabAllocItem {
     struct SlabAllocItem *next;
@@ -13,7 +14,7 @@ struct SlabAllocItem {
 
 #define MIN_ITEM_SIZE sizeof( struct SlabAllocItem )
 
-#pragma GCC diagnostic ignored "-Wformat-truncation"
+//#pragma GCC diagnostic ignored "-Wformat-truncation"
 #define SLAB_NAME_MAX 32
 struct CS_SlabAllocator {
     int size;
@@ -44,6 +45,7 @@ static bool freeSlab( struct CS_SlabAllocator *slab ) {
 #define ALLOC_ITEM(_SLAB,_ITEM) ((struct SlabAllocItem*)(((_SLAB)->buffer)+((_ITEM)*((_SLAB)->size))))
 
 static struct CS_SlabAllocator *initSlabAlloc( int size, int count, int alignment, bool useMalloc ) {
+    if( size < sizeof(struct SlabAllocItem) ) size = sizeof(struct SlabAllocItem);
     int realSize = (size % alignment == 0) ?
         size :
         size + ( alignment - (size % alignment) );
@@ -96,7 +98,7 @@ static struct CS_SlabAllocator *privateSlabInit( const char *name, int size, int
     }
     struct CS_SlabAllocator *returnValue = initSlabAlloc( size, count, alignment, useMalloc );
     if( returnValue != NULL ) {
-        if( pthread_mutex_init( &returnValue->slabMutex, NULL ) < 0 ) {
+        if( pthread_mutex_init( &returnValue->slabMutex, NULL ) ) {
             freeSlab( returnValue );
             returnValue = NULL;
         }
@@ -108,9 +110,9 @@ static struct CS_SlabAllocator *privateSlabInit( const char *name, int size, int
 }
 
 bool CS_slabFree( struct CS_SlabAllocator *allocation ) {
-    struct CS_SlabAllocator *toFree = (struct CS_SlabAllocator *)allocation;
-    pthread_mutex_destroy( &toFree->slabMutex );
-    return freeSlab( toFree );
+    if( allocation == NULL ) return true;
+    pthread_mutex_destroy( &allocation->slabMutex );
+    return freeSlab( allocation );
 }
 
 void *CS_slabTake(struct CS_SlabAllocator *voidSlab ) {
@@ -129,7 +131,7 @@ void *CS_slabTake(struct CS_SlabAllocator *voidSlab ) {
                 CS_LOG_ERROR("Slab %s failed to expand. OOM", currentSlab->name);
                 goto RELEASE_LOCK;
             }
-            snprintf( currentSlab->nextSlab->name, SLAB_NAME_MAX, "%s %d", slab->name, slabDeep );
+            snprintf( currentSlab->nextSlab->name, SLAB_NAME_MAX, "%.*s %d", SLAB_NAME_MAX - 12, slab->name, slabDeep );
         }
         currentSlab = currentSlab->nextSlab;
         returnValue = currentSlab->head;
@@ -146,12 +148,11 @@ void *CS_slabTakeZero(struct CS_SlabAllocator *voidSlab ) {
     return returnValue;
 }
 
-bool CS_slabReturn(struct CS_SlabAllocator *voidSlab, void *toReturn) {
+bool CS_slabReturn(struct CS_SlabAllocator *slab, void *toReturn) {
     if( toReturn == NULL ) {
         CS_LOG_ERROR("Trying to free up a NULL");
         return true;
     }
-    struct CS_SlabAllocator *slab = (struct CS_SlabAllocator *)voidSlab;
     struct CS_SlabAllocator *currentSlab = slab;
     struct SlabAllocItem *itemToReturn = (struct SlabAllocItem *)toReturn;
 

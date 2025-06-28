@@ -289,7 +289,7 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame )
         }
         if( CS_PP_bufferRemaining( pp ) < 32 ) {
             CS_LOG_ERROR("Websocket needs more space to write, far side not reading fast enough.");
-            return NULL;
+            return true;
         }
     }
 

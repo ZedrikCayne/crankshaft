@@ -80,6 +80,7 @@ const char *CS_hahstableDefaultUuidKeyToTempString( struct CS_HashTable *table, 
 
 struct CS_HashTable *CS_hashtableResize( struct CS_HashTable *hashTable, int newCapacity );
 
+//For CS_hashtablePutMaybe's 'maybe' function. You return one of these.
 enum CS_HASHTTABLE_MAYBE {
     CS_HASHTABLE_MAYBE_PUT_RETURN_NEW,
     CS_HASHTABLE_MAYBE_PUT_RETURN_OLD,

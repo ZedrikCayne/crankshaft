@@ -11,6 +11,9 @@
 static bool initedSSL = false;
 static bool killCalled = false;
 
+static SSL_CTX *gSSL_CTX;
+static SSL_CTX *gSSL_TLSV1_CTX;
+
 bool CS_sslInit() {
     if( killCalled )
         return true;
@@ -23,6 +26,9 @@ bool CS_sslInit() {
             CS_LOG_ERROR("ssl: OPENSSL_init_ssl fail.");
             return true;
         }
+        gSSL_CTX = SSL_CTX_new( TLS_method() );
+        gSSL_TLSV1_CTX = SSL_CTX_new( TLS_method() );
+        SSL_CTX_set_security_level( gSSL_TLSV1_CTX, 0 );
         initedSSL = true;
     }
     return false;
@@ -39,3 +45,6 @@ bool CS_sslKill() {
     return false;
 }
 
+SSL *CS_sslNew( bool tlsV1 ) {
+    return SSL_new( tlsV1?gSSL_TLSV1_CTX:gSSL_CTX );
+}

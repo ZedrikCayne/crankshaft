@@ -144,11 +144,11 @@ void dcCallback( struct CS_ClientInfo *info ) {
 bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt, const char *csrf );
 bool loginPageReturn( struct CS_ClientInfo *info );
 bool cookieFilter( struct CS_ClientInfo *info ) {
-    const char *cookieValue = CS_serverGetRequestCookie( info, "session" );
+    /*const char *cookieValue = CS_serverGetRequestCookie( info, "session" );
     if( cookieValue != NULL ) {
         CS_LOG_TRACE("session cookie set %s", cookieValue );
         return false;
-    }
+    }*/
     return loginPageReturn(info);
 }
 
@@ -263,38 +263,38 @@ bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt, const 
     struct CS_HtmlNode *meta = CS_htmlAddContainerAfter( head, "meta" );
     CS_htmlAddAttribute( meta, "charset", "utf-8" );
     struct CS_HtmlNode *title = CS_htmlAddContainerAfter( head, "title" );
-    CS_htmlSetContents( title, CS_tempBuffSnprintf(1024, "JWT info page", serverName ) );
+    CS_htmlSetContents( title, CS_tempBuffSnprintf(1024, "JWT info page", serverName ), false );
     struct CS_HtmlNode *body = CS_htmlAddContainerAfter( root, "body" );
     struct CS_HtmlNode *div1 = CS_htmlAddContainerAfter( body, "div" );
     struct CS_HtmlNode *header = CS_htmlAddContainerAfter( div1, "h4" );
-    CS_htmlSetContents( header, "JWT Header" );
+    CS_htmlSetContents( header, "JWT Header", false );
     struct CS_HtmlNode *code = CS_htmlAddContainerAfter( div1, "code" );
     if( jwt->jsonHeader != NULL ) {
-        CS_htmlSetContents( code, CS_jsonNodePrintableTemp( jwt->jsonHeader ) );
+        CS_htmlSetContents( code, CS_jsonNodePrintableTemp( jwt->jsonHeader ), false );
     } else {
-        CS_htmlSetContents( code, "Json Header is null!" );
+        CS_htmlSetContents( code, "Json Header is null!", false );
     }
     struct CS_HtmlNode *div2 = CS_htmlAddNext( div1, "div" );
     struct CS_HtmlNode *header2 = CS_htmlAddContainerAfter( div2, "h4" );
-    CS_htmlSetContents( header2, "JWT Payload" );
+    CS_htmlSetContents( header2, "JWT Payload", false );
     struct CS_HtmlNode *code2 = CS_htmlAddContainerAfter( div2, "code" );   
     if( jwt->jsonPayload != NULL ) {
-        CS_htmlSetContents( code2, CS_jsonNodePrintableTemp( jwt->jsonPayload ) );
+        CS_htmlSetContents( code2, CS_jsonNodePrintableTemp( jwt->jsonPayload ), false );
     } else {
-        CS_htmlSetContents( code2, "Json Header is null!" );
+        CS_htmlSetContents( code2, "Json Header is null!", false );
     }
     struct CS_HtmlNode *div3 = CS_htmlAddNext( div2, "div" );
     struct CS_HtmlNode *header3 = CS_htmlAddContainerAfter( div3, "h4" );
-    CS_htmlSetContents( header3, "CSRF value" );
+    CS_htmlSetContents( header3, "CSRF value", false );
     struct CS_HtmlNode *code3 = CS_htmlAddContainerAfter( div3, "code" );
     if( csrf != NULL ) {
-        CS_htmlSetContents( code3, csrf );
+        CS_htmlSetContents( code3, csrf, false );
     } else {
-        CS_htmlSetContents( code3, "NULL" );
+        CS_htmlSetContents( code3, "NULL", false );
     }
     struct CS_StringBuilder *sb = CS_htmlToStringBuilder( root, 2048 );
     struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_HTML, CS_SB_buffer( sb ), CS_SB_size( sb ) );
-    CS_serverSetReplyCookie( reply, "session", "Session_GUID_HERE" );
+    CS_serverSetReplyCookie( reply, "session", "Session_GUID_HERE", true );
     CS_serverDoReply( info, reply );
     CS_SB_free( sb );
     CS_htmlFree( root );
@@ -307,7 +307,7 @@ bool loginPageReturn( struct CS_ClientInfo *info ) {
     struct CS_HtmlNode *meta = CS_htmlAddContainerAfter( head, "meta" );
     CS_htmlAddAttribute( meta, "charset", "utf-8" );
     struct CS_HtmlNode *title = CS_htmlAddContainerAfter( head, "title" );
-    CS_htmlSetContents( title, CS_tempBuffSnprintf(1024, "%s login page", serverName ) );
+    CS_htmlSetContents( title, CS_tempBuffSnprintf(1024, "%s login page", serverName ), false );
     struct CS_HtmlNode *body = CS_htmlAddContainerAfter( root, "body" );
     struct CS_HtmlNode *script = CS_htmlAddContainerAfter(body, "script");
     CS_htmlAddAttribute( script, "async", NULL );

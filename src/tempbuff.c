@@ -6,7 +6,7 @@
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/logger.h>
 
-struct TempBuffStorage {
+struct CS_TempBuffer {
     char name[CS_MAX_TEMP_BUFF_TEMP_NAME];
     char *buffer;
     char *current;
@@ -15,7 +15,7 @@ struct TempBuffStorage {
     pthread_mutex_t storageMutex;
 };
 
-static bool initTempBuff(struct TempBuffStorage *storage,
+static bool initTempBuff(struct CS_TempBuffer *storage,
                          const char *name,
                          int totalSize ) {
     CS_LOG_TRACE("Creating temporary buffer stack '%s'", name);
@@ -40,7 +40,7 @@ static bool initTempBuff(struct TempBuffStorage *storage,
     return false;
 }
 
-static void freeTempBuff(struct TempBuffStorage *storage ) {
+static void freeTempBuff(struct CS_TempBuffer *storage ) {
     if( storage != NULL ) {
         pthread_mutex_destroy(&storage->storageMutex);
         if( storage->buffer != NULL ) CS_free(storage->buffer);
@@ -51,12 +51,12 @@ static void freeTempBuff(struct TempBuffStorage *storage ) {
     }
 }
 
-static struct TempBuffStorage _TempBuffStorage = {0};
+static struct CS_TempBuffer TempBufferStorage = {0};
 
-static void *privateAllocate( struct TempBuffStorage *buffer, int size ) {
-    int realSize = size % CS_TEMPBUFF_ALIGNMENT == 0 ?
+static void *privateAllocate( struct CS_TempBuffer *buffer, int size, int align ) {
+    int realSize = size % align == 0 ?
                    size :
-                   size + (CS_TEMPBUFF_ALIGNMENT - (size % CS_TEMPBUFF_ALIGNMENT ));
+                   size + (align - (size % align));
     if( realSize > buffer->size ) return NULL;
     pthread_mutex_lock(&buffer->storageMutex);
     if( buffer->current + realSize > buffer->end ) {
@@ -75,7 +75,7 @@ void *CS_tempBuff(int size) {
         CS_LOG_ERROR( "Not a valid size for a temp buffer allocation %d", size );
         return NULL;
     }
-    void *returnValue = privateAllocate( &_TempBuffStorage, size );
+    void *returnValue = privateAllocate( &TempBufferStorage, size, CS_TEMPBUFF_ALIGNMENT );
     CS_LOG_ERROR_IF(returnValue==NULL,"Attempted to ask for a buffer sized %d. Bigger than the biggest temp buff we have.", size);
     return returnValue;
 }
@@ -123,7 +123,7 @@ void *CS_tempMemCopy( const void *from, int size ) {
 }
 
 bool CS_tempAllocateGlobal(int globalSize) {
-    if( _TempBuffStorage.size == 0 ) {
+    if( TempBufferStorage.size == 0 ) {
         CS_LOG_TRACE("Temp buffers allocated size %d", globalSize);
             
         char tempBufferName[CS_MAX_TEMP_BUFF_TEMP_NAME];
@@ -131,7 +131,7 @@ bool CS_tempAllocateGlobal(int globalSize) {
                  CS_MAX_TEMP_BUFF_TEMP_NAME,
                  "Default Temp Buff: %d bytes",
                  globalSize );
-        return initTempBuff(&_TempBuffStorage,
+        return initTempBuff(&TempBufferStorage,
                          tempBufferName,
                          globalSize );
     }
@@ -139,9 +139,9 @@ bool CS_tempAllocateGlobal(int globalSize) {
 }
 
 bool CS_tempFreeGlobal() {
-    if( _TempBuffStorage.size != 0 ) {
-        CS_LOG_TRACE("Temp buffers de-allocated size %d", _TempBuffStorage.size);
-        freeTempBuff(&_TempBuffStorage);
+    if( TempBufferStorage.size != 0 ) {
+        CS_LOG_TRACE("Temp buffers de-allocated size %d", TempBufferStorage.size);
+        freeTempBuff(&TempBufferStorage);
     }
     return false;
 }
@@ -158,7 +158,7 @@ char *CS_tempBuffSnprintf(int max, const char *fmt, ...) {
     return tBuff;
 }
 
-void *CS_tempAllocManual(const char *name, int size ) {
+struct CS_TempBuffer *CS_tempAllocManual(const char *name, int size ) {
     if( (name == NULL) || (strlen(name) > CS_MAX_TEMP_BUFF_TEMP_NAME-1) ) {
         CS_LOG_ERROR("Trying to create a temporary buffer stack with a bad name. (Must not be null or longer than %d bytes)", CS_MAX_TEMP_BUFF_TEMP_NAME-1);
         return NULL;
@@ -167,7 +167,7 @@ void *CS_tempAllocManual(const char *name, int size ) {
         CS_LOG_ERROR("Trying to create a temporary buffer stack with non positive size");
         return NULL;
     }
-    struct TempBuffStorage *returnValue = CS_alloc(sizeof(struct TempBuffStorage));
+    struct CS_TempBuffer *returnValue = CS_alloc(sizeof(struct CS_TempBuffer));
     if( returnValue == NULL ) {
         CS_LOG_ERROR("OOM allocating a temporary buffer storage named %s.", name);
         return NULL;
@@ -180,15 +180,13 @@ void *CS_tempAllocManual(const char *name, int size ) {
     return returnValue;
 }
 
-void CS_tempFreeManual(void *manualTempBuff) {
-    struct TempBuffStorage *tbuff = (struct TempBuffStorage *)manualTempBuff;
-    CS_LOG_TRACE("Freeing a manual temp buffer %s at %p", tbuff->name, tbuff );
-    freeTempBuff(tbuff);
+void CS_tempFreeManual(struct CS_TempBuffer *manualTempBuff) {
+    CS_LOG_TRACE("Freeing a manual temp buffer %s at %p", manualTempBuff->name, manualTempBuff );
+    freeTempBuff(manualTempBuff);
     CS_free(manualTempBuff);
 }
 
-void *CS_tempGetManual(void *manualTempBuff, int size) {
+void *CS_tempGetManual(struct CS_TempBuffer *manualTempBuff, int size, int align) {
     if( manualTempBuff == NULL ) return NULL;
-    struct TempBuffStorage *storage = (struct TempBuffStorage *)manualTempBuff;
-    return privateAllocate( storage, size );
+    return privateAllocate( manualTempBuff, size, align );
 }

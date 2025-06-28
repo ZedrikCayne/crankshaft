@@ -38,6 +38,8 @@ struct CS_WebServer {
     int routeNumbers[CS_MAX_HTTP_METHODS];
     struct CS_Route *routes[CS_MAX_HTTP_METHODS];
     SSL_CTX *sslctx;
+    EVP_PKEY *ss_pkey;
+    X509 *ss_X509;
 };
 
 
@@ -140,7 +142,7 @@ bool CS_serverSetReplyHeader( struct CS_Reply *reply, const char *header, const 
 bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value );
 bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value );
 bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value );
-bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value );
+bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly );
 
 struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *replyBuffer, int replyLength );
 void CS_serverReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );

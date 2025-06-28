@@ -9,6 +9,8 @@ extern "C" {
 bool CS_sslInit();
 bool CS_sslKill();
 
+SSL *CS_sslNew( bool tlsV1 );
+
 #ifdef __cplusplus
 }
 #endif

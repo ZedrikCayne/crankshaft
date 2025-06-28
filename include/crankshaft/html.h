@@ -38,6 +38,7 @@ struct CS_HtmlNode {
     struct CS_HtmlNode *next;
     struct CS_HtmlNode *last;
     struct CS_HtmlNode *up;
+    bool raw;
     char *contents;
     void *linearAllocator;
 };
@@ -52,7 +53,7 @@ struct CS_HtmlNode *CS_htmlAddNext(struct CS_HtmlNode *node, const char *name);
 struct CS_HtmlNode *CS_htmlAddBefore(struct CS_HtmlNode *node, const char *name);
 struct CS_HtmlNode *CS_htmlAddContainerBefore(struct CS_HtmlNode *node, const char *name);
 struct CS_HtmlNode *CS_htmlAddContainerAfter(struct CS_HtmlNode *node, const char *name);
-struct CS_HtmlNode *CS_htmlSetContents(struct CS_HtmlNode *node, const char *contents);
+struct CS_HtmlNode *CS_htmlSetContents(struct CS_HtmlNode *node, const char *contents, bool raw);
 void CS_htmlFree(struct CS_HtmlNode *node);
 struct CS_StringBuilder *CS_htmlToStringBuilder(struct CS_HtmlNode *node, int initialSize);
 
