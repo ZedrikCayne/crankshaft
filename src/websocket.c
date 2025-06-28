@@ -110,7 +110,7 @@ struct CS_ClientInfo *CS_WS_destroy( struct CS_WebSocket *ws ) {
     return clientInfo;
 }
 
-struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int opcode, bool masked, void *payload, int payloadSize ) {
+struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int opcode, bool masked, const void *payload, int payloadSize ) {
     if( payload && payloadSize <= 0 ) {
         CS_LOG_ERROR( "Trying to put a payload in with no payload supplied." );
         return NULL;

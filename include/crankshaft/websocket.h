@@ -62,7 +62,7 @@ struct CS_ClientInfo *CS_WS_destroy( struct CS_WebSocket *ws );
 void *CS_WS_getApplicationData( struct CS_WebSocket *ws );
 
 //Frame management
-struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int opcode, bool masked, void *payload, int payloadSize );
+struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int opcode, bool masked, const void *payload, int payloadSize );
 struct CS_WebSocketFrame *CS_WS_getEmptyFrame( struct CS_WebSocket *ws );
 bool CS_WS_returnFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame );
 
