@@ -61,8 +61,7 @@ static void *privateAllocate( struct CS_TempBuffer *buffer, int size, int align 
     pthread_mutex_lock(&buffer->storageMutex);
     if( buffer->current + realSize > buffer->end ) {
         CS_LOG_TRACE("Temp Buff %s cycled", buffer->name);
-        buffer->current = buffer->buffer + realSize;
-        return buffer->buffer;
+        buffer->current = buffer->buffer;
     }
     void *returnValue = buffer->current;
     buffer->current += realSize;
