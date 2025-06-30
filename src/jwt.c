@@ -140,10 +140,7 @@ bool CS_jwtVerify( const struct CS_Jwt *jwt ) {
     }
     EVP_PKEY *pkey = CS_jwtkeychainGetKey( keyIdNode->stringValue );
     if( !pkey ) {
-        struct CS_StringBuilder *sb = CS_jwtkeychainGetKeyDesc();
-        CS_LOG_ERROR("jwt: No public key for %s, we have keys for %s", keyIdNode->stringValue, CS_SB_buffer( sb ) );
-        CS_SB_free( sb );
-        
+        CS_LOG_ERROR("googleservices: Missing key for jwt.");
         goto FAIL;
     }
     struct CS_StringBuilder *sb = CS_SB_create( 1024 );
