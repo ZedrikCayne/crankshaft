@@ -8,6 +8,7 @@
 #include <openssl/err.h>
 #include <pthread.h>
 #include <errno.h>
+#include <signal.h>
 
 #include <crankshaft/alloc.h>
 #include <crankshaft/logger.h>
@@ -124,7 +125,7 @@ bool CS_socketClose( struct CS_Socket *socket ) {
 }
 
 bool CS_socketIsClosed( struct CS_Socket *socket ) {
-    if( !socket || !socket->socket < 0 ) return true;
+    if( !socket || socket->socket < 0 ) return true;
     return false;
 }
 
@@ -162,7 +163,11 @@ int CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock ) {
     if( socket == NULL || socket->socket < 0 ) return -1;
     struct CS_PushPullBuffer *pp = lock?CS_socketLockOutputBuffer( socket ):socket->output;
     if( pp == NULL ) return -1;
+    signal(SIGPIPE,SIG_IGN);
     int returnValue = socket->ssl?CS_PP_writeToSSL( pp, socket->ssl ):CS_PP_writeToFile( pp, socket->socket );
+    if( returnValue < 0 ) {
+        CS_socketClose( socket );
+    }
     if( lock ) CS_socketUnlockOutputBuffer( socket );
     return returnValue;
 }
@@ -171,7 +176,11 @@ int CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock ) {
     if( socket == NULL || socket->socket < 0 ) return -1;
     struct CS_PushPullBuffer *pp = lock?CS_socketLockInputBuffer( socket ):socket->buffer;
     if( pp == NULL ) return -1;
+    signal(SIGPIPE,SIG_IGN);
     int returnValue = socket->ssl?CS_PP_readFromSSL( pp, socket->ssl ):CS_PP_readFromFile( pp, socket->socket );
+    if( returnValue < 0 ) {
+        CS_socketClose( socket );
+    }
     if( lock ) CS_socketUnlockInputBuffer( socket );
     return returnValue;
 }

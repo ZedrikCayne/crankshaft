@@ -95,6 +95,7 @@ int CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int fileDescriptor) {
                                   CS_PP_dataSize(buffer) );
         if( bytesWritten < 0 || (bytesWritten == 0 && errno != 0) ) {
             buffer->err = errno;
+            bytesWritten = -1;
         } else {
             buffer->currentWriteOffset += bytesWritten;
         }
@@ -142,6 +143,7 @@ int CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination, int
                                   CS_PP_endOfData(buffer),
                                   CS_PP_bufferRemaining(buffer) );
         if( bytesRead < 0 || (bytesRead == 0 && errno != 0) ) {
+            bytesRead = -1;
             buffer->err = errno;
         } else {
             buffer->currentReadOffset += bytesRead;
@@ -158,6 +160,7 @@ int CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
                                       CS_PP_startOfData(buffer),
                                       CS_PP_dataSize(buffer) );
         if( bytesWritten < 0 || (bytesWritten == 0 && errno != 0) ) {
+            bytesWritten = -1;
             buffer->err = errno;
         } else {
             buffer->currentWriteOffset += bytesWritten;
@@ -178,6 +181,7 @@ int CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
                                CS_PP_bufferRemaining(buffer),
                                file );
         if( bytesRead < 0 || (bytesRead == 0 && errno != 0) ) {
+            bytesRead = -1;
             buffer->err = errno;
         } else {
             buffer->currentReadOffset += bytesRead;
@@ -195,6 +199,7 @@ int CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
                                    CS_PP_dataSize(buffer),
                                    file );
         if( bytesWritten < 0 || (bytesWritten == 0 && errno != 0) ) {
+            bytesWritten = -1;
             buffer->err = errno;
         } else {
             buffer->currentWriteOffset += bytesWritten;
