@@ -44,6 +44,22 @@ static bool freeSlab( struct CS_SlabAllocator *slab ) {
 
 #define ALLOC_ITEM(_SLAB,_ITEM) ((struct SlabAllocItem*)(((_SLAB)->buffer)+((_ITEM)*((_SLAB)->size))))
 
+static void resetItems( struct CS_SlabAllocator *slab ) {
+    int count = slab->capacity;
+    struct CS_SlabAllocator *slabToReset = slab;
+    struct CS_SlabAllocator *nextSlab;
+    while( slabToReset != NULL ) {
+        nextSlab = slabToReset->nextSlab;
+        for( int i = 0; i < count; ++i ) { 
+            struct SlabAllocItem *current = ALLOC_ITEM(slabToReset,i);
+            struct SlabAllocItem *next = (i+1>=count)?NULL:ALLOC_ITEM(slabToReset,i+1);
+            current->next = next;
+        }
+        slab->head = ALLOC_ITEM(slab,0);
+        slabToReset = nextSlab;
+    }
+}
+
 static struct CS_SlabAllocator *initSlabAlloc( int size, int count, int alignment, bool useMalloc ) {
     if( size < sizeof(struct SlabAllocItem) ) size = sizeof(struct SlabAllocItem);
     int realSize = (size % alignment == 0) ?
@@ -66,11 +82,7 @@ static struct CS_SlabAllocator *initSlabAlloc( int size, int count, int alignmen
     returnValue->bufferEnd = returnValue->buffer + ( returnValue->size * returnValue->capacity );
     returnValue->useMalloc = useMalloc;
 
-    for( int i = 0; i < count; ++i ) { 
-        struct SlabAllocItem *current = ALLOC_ITEM(returnValue,i);
-        struct SlabAllocItem *next = (i+1>=count)?NULL:ALLOC_ITEM(returnValue,i+1);
-        current->next = next;
-    }
+    resetItems( returnValue );
 
     return returnValue;
 }
@@ -113,6 +125,15 @@ bool CS_slabFree( struct CS_SlabAllocator *allocation ) {
     if( allocation == NULL ) return true;
     pthread_mutex_destroy( &allocation->slabMutex );
     return freeSlab( allocation );
+}
+
+bool CS_slabReset( struct CS_SlabAllocator *allocation ) {
+    if( allocation == NULL ) return true;
+
+    pthread_mutex_lock( &allocation->slabMutex );
+    resetItems( allocation );
+    pthread_mutex_unlock( &allocation->slabMutex );
+    return false;
 }
 
 void *CS_slabTake(struct CS_SlabAllocator *voidSlab ) {

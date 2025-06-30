@@ -34,12 +34,28 @@ struct CS_List *CS_listCreate( int initialSize ) {
 }
 
 bool CS_listDestroy( struct CS_List *list ) {
+    CS_listReset( list );
     CS_slabFree( list->slabAllocator );
     list->slabAllocator = NULL;
     list->head = NULL;
     list->tail = NULL;
     list->count = 0;
     CS_free( list );
+    return false;
+}
+
+bool CS_listReset( struct CS_List *list ) {
+    struct ListItem *current = list->head;
+    //Free the stuff
+    while( current ) {
+        if( current->what && current->size ) CS_free( (void*)current->what );
+        current = current->next;
+    }
+    //Crush the list
+    CS_slabReset( list->slabAllocator );
+    list->head = 0;
+    list->tail = 0;
+    list->count = 0;
     return false;
 }
 

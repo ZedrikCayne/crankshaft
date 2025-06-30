@@ -27,8 +27,10 @@ static pthread_mutex_t *privateGrabMutex() {
     }
 
     pthread_mutex_t *returnValue = CS_slabTakeZero( mutexes );
+    CS_LOG_TRACE("Grabbign mutex");
     if( pthread_mutex_init( returnValue, NULL ) ) {
         CS_slabReturn( mutexes, returnValue );
+        CS_LOG_TRACE("Fail grabbing mutex");
         return NULL;
     }
     return returnValue;
