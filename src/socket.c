@@ -116,10 +116,22 @@ CLEANUP_CONNECT:
     return NULL;
 }
 
+bool CS_socketClose( struct CS_Socket *socket ) {
+    if( !socket->socket ) return true;
+    if( socket->socket ) close( socket->socket );
+    socket->socket = 0;
+    return false;
+}
+
+bool CS_socketIsClosed( struct CS_Socket *socket ) {
+    if( !socket || !socket->socket ) return true;
+    return false;
+}
+
 bool CS_socketDestroy( struct CS_Socket *socket ) {
     if( !socket ) return true;
+    if( socket->ownSocket && socket->socket > 0 ) close( socket->socket );
     if( socket->ownSocket && socket->ssl ) SSL_free( socket->ssl );
-    if( socket->ownSocket && socket->socket >= 0 ) close( socket->socket );
     if( socket->inputMutex ) CS_mutexReturn( socket->inputMutex );
     if( socket->outputMutex ) CS_mutexReturn( socket->outputMutex );
     if( socket->buffer ) CS_PP_defaultFree( socket->buffer );
@@ -147,7 +159,7 @@ void CS_socketUnlockOutputBuffer( struct CS_Socket *socket ) {
 }
 
 int CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock ) {
-    if( socket == NULL ) return -1;
+    if( socket == NULL || socket->socket == 0 ) return -1;
     struct CS_PushPullBuffer *pp = lock?CS_socketLockOutputBuffer( socket ):socket->output;
     if( pp == NULL ) return -1;
     int returnValue = socket->ssl?CS_PP_writeToSSL( pp, socket->ssl ):CS_PP_writeToFile( pp, socket->socket );
@@ -156,7 +168,7 @@ int CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock ) {
 }
 
 int CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock ) {
-    if( socket == NULL ) return -1;
+    if( socket == NULL || socket->socket == 0 ) return -1;
     struct CS_PushPullBuffer *pp = lock?CS_socketLockInputBuffer( socket ):socket->buffer;
     if( pp == NULL ) return -1;
     int returnValue = socket->ssl?CS_PP_readFromSSL( pp, socket->ssl ):CS_PP_readFromFile( pp, socket->socket );
