@@ -43,9 +43,9 @@ INCLUDES=$(foreach D,$(INCDIRS), $(shell find $(D) -type f -name "*"))
 
 BINOUT=crankshaft
 
-all: $(OBJECTS_DIR) $(BINOUT)
+all: sqlite $(OBJECTS_DIR) $(BINOUT)
 
-library: $(LIB_DIR) $(LIBOUT)
+library: sqlite $(LIB_DIR) $(LIBOUT)
 
 publish: $(BUILD_DIR) $(TAROUT)
 
@@ -78,7 +78,7 @@ debug: all
 #test: CFLAGS:=-DCS_ALLOC_TRACKING $(CFLAGS)
 test: CFLAGS:=-DCS_TEST_SKIP_TESTTEST $(CFLAGS)
 test: CFLAGS:=-DCS_AUTOTEST_ENABLED $(CFLAGS)
-test: $(OBJECTS_DIR) $(BINOUT)-test
+test: sqlite $(OBJECTS_DIR) $(BINOUT)-test
 	./$(BINOUT)-test --test --suppress-errors --only-fails
 
 leaks:
