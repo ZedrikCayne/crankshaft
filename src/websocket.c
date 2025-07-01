@@ -355,6 +355,17 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame )
     return false;
 }
 
+void CS_WS_close( struct CS_WebSocket *ws, int closeCode ) {
+    char closeCodeDataBuffer[ 2 ];
+    closeCodeDataBuffer[0] = (closeCode & 0xFF00) >> 8;
+    closeCodeDataBuffer[1] = (closeCode & 0x00FF);
+    struct CS_WebSocketFrame *closeFrame = CS_WS_createFrame( ws, CS_WS_OPCODE_CLOSE, false, &closeCodeDataBuffer, 2 );
+    CS_WS_pushFrame( ws, closeFrame );
+    //Naughty here closing someone else's socket..probably aok?
+    close( ws->clientInfo->clientSocket );
+}
+
+
 const char *nullFrameError = "NULL FRAME";
 
 const char *CS_WS_describeFrame( struct CS_WebSocketFrame *frame ) {

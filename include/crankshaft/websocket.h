@@ -36,6 +36,22 @@ enum CS_WebSocketFrameOpcode {
     CS_WS_OPCODE_RESERVED9 = 0x0F
 };
 
+enum CS_WebSocketClose {
+    CS_WS_CLOSE_NORMAL           = 1000,
+    CS_WS_CLOSE_GOING_AWAY       = 1001,
+    CS_WS_CLOSE_PROTOCOL_ERROR   = 1002,
+    CS_WS_CLOSE_BAD_DATA         = 1003,
+    CS_WS_CLOSE_RESERVED         = 1004,
+    CS_WS_CLOSE_RESERVED_NO_USE  = 1005,
+    CS_WS_CLOSE_RESERVED_NO_USE2 = 1006,
+    CS_WS_CLOSE_INCONSISTED_DATA = 1007,
+    CS_WS_CLOSE_POLICY_VIOLATION = 1008,
+    CS_WS_CLOSE_TOO_BIG          = 1009,
+    CS_WS_CLOSE_NEED_EXTENSION   = 1010,
+    CS_WS_CLOSE_SERVER_ERROR     = 1011,
+    CS_WS_CLOSE_RESERVED_NO_USE3 = 1015
+};
+
 #define CS_WS_NUM_MASK_BYTES 4
 
 struct CS_WebSocketFrame {
@@ -60,6 +76,7 @@ bool CS_WS_requestWantsWebsocket( struct CS_ClientInfo *clientInfo );
 struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *applicationData );
 struct CS_ClientInfo *CS_WS_destroy( struct CS_WebSocket *ws );
 void *CS_WS_getApplicationData( struct CS_WebSocket *ws );
+void CS_WS_close( struct CS_WebSocket *ws, int closeCode );
 
 //Frame management
 struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int opcode, bool masked, const void *payload, int payloadSize );
