@@ -51,9 +51,9 @@ struct CS_Socket *CS_socketInit( int socket, SSL *ssl, int inputBufferSize, int 
         if( returnValue->buffer == NULL ) goto ERROR_INIT;
     }
 
-    if( inputMutex ) returnValue->inputMutex = CS_mutexGrab();
+    if( inputMutex ) returnValue->inputMutex = CS_mutexTakeNamed("sock input mutex");
     if( inputMutex && returnValue->inputMutex == NULL ) goto ERROR_INIT;
-    if( outputMutex ) returnValue->outputMutex = CS_mutexGrab();
+    if( outputMutex ) returnValue->outputMutex = CS_mutexTakeNamed("sock output mutex");
     if( outputMutex && returnValue->outputMutex == NULL ) goto ERROR_INIT;
     
     return returnValue;
@@ -142,21 +142,21 @@ bool CS_socketDestroy( struct CS_Socket *socket ) {
 }
 
 struct CS_PushPullBuffer *CS_socketLockInputBuffer( struct CS_Socket *socket ) {
-    if( socket->inputMutex ) pthread_mutex_lock( socket->inputMutex );
+    if( socket->inputMutex ) CS_mutexLock( socket->inputMutex );
     return socket->buffer;
 }
 
 void CS_socketUnlockInputBuffer( struct CS_Socket *socket ) {
-    if( socket->inputMutex ) pthread_mutex_unlock( socket->inputMutex );
+    if( socket->inputMutex ) CS_mutexUnlock( socket->inputMutex );
 }
 
 struct CS_PushPullBuffer *CS_socketLockOutputBuffer( struct CS_Socket *socket ) {
-    if( socket->outputMutex ) pthread_mutex_lock( socket->outputMutex );
+    if( socket->outputMutex ) CS_mutexLock( socket->outputMutex );
     return socket->output;
 }
 
 void CS_socketUnlockOutputBuffer( struct CS_Socket *socket ) {
-    if( socket->outputMutex ) pthread_mutex_unlock( socket->outputMutex );
+    if( socket->outputMutex ) CS_mutexUnlock( socket->outputMutex );
 }
 
 int CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock ) {

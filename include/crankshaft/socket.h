@@ -5,6 +5,7 @@
 #include <openssl/ssl.h>
 
 #include <crankshaft/pushpull.h>
+#include <crankshaft/socket.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,8 +30,8 @@ struct CS_Socket {
     bool ownSocket;
     int socket;
     SSL *ssl;
-    pthread_mutex_t *inputMutex;
-    pthread_mutex_t *outputMutex;
+    struct CS_Mutex *inputMutex;
+    struct CS_Mutex *outputMutex;
 
     //Input/output buffers.
     struct CS_PushPullBuffer *buffer;
