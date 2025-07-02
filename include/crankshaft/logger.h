@@ -17,6 +17,13 @@
  * CRANKSHAFT_ERROR_LOGS_ONLY which will squelch anything other than
  * an error during compile time.
  *
+ * All logging has an _IF variant (CS_LOG_LOUD_IF) that takes a
+ * boolean predicate. Be warned, it will not be evaluated if the
+ * particular log type is turned off. So avoid structures like
+ * CS_LOG_INFO( doesWork(), "Did work" ); because if you are not
+ * logging info items, it will not call doesWork() (This should
+ * be avoided in any case as all logging may be stripped)
+ *
  * You can also #define CRANKSHAFT_NO_LOGS to completely quiet the
  * logging system except for explicit calls to
  * CS_log(__FILE__,__LINE__)
