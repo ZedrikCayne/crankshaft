@@ -45,21 +45,16 @@ BINOUT=crankshaft
 
 all: sqlite $(OBJECTS_DIR) $(BINOUT)
 
-library: sqlite $(LIB_DIR) $(LIBOUT)
+lib: sqlite $(LIBOUT)
 
 publish: $(BUILD_DIR) $(TAROUT)
 
-sqlite: $(SQLITE_DIR) $(SQLITE_DIR)/sqlite3.o
+sqlite: $(SQLITE_DIR)/sqlite3.o
 
 install: $(LIBOUT)
 	cp -r include/* /usr/local/include
 	cp $(SQLITE_DIR)/sqlite3.h /usr/local/include/sqlite3.h
 	cp -r lib/* /usr/local/lib
-
-$(SQLITE_DIR):
-	curl -O https://www.sqlite.org/$(SQLITE_YEAR)/$(SQLITE_DIR).zip
-	unzip $(SQLITE_DIR).zip
-	rm $(SQLITE_DIR).zip
 
 clean:
 	@rm -rvf $(BINOUT)* $(OBJECTS_DIR)/*.o $(LIB_DIR)/* $(BUILD_DIR)/*
@@ -91,9 +86,6 @@ valgrind:
 valgrindServer:
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=$(BINOUT)-valgrind.txt ./$(BINOUT) --trace
 
-$(LIB_DIR):
-	mkdir -p $@
-
 $(OBJECTS_DIR):
 	mkdir -p $@
 
@@ -107,6 +99,7 @@ $(TAROUT): $(BUILD_DIR) $(LIBOUT)
 	tar -czf $@ $(LIB_DIR) $(INCDIRS)
 
 $(LIBOUT): $(OBJECTS_C)
+	@mkdir -p $(LIB_DIR)
 	$(AR) rcs $@ $(OBJECTS_C)
 
 $(BINOUT): $(OBJECTS_C) $(OBJECTS_CXX)
