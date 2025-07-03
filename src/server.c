@@ -131,7 +131,6 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info);
 
 static void *clientThread(void *var) {
     struct CS_ClientInfo *clientInfo = (struct CS_ClientInfo *)var;
-    CS_LOG_TRACE("ClientInfo %p starting.", clientInfo );
     if( clientInfo->server->sslctx ) { 
         clientInfo->ssl = SSL_new( clientInfo->server->sslctx );
         if( clientInfo->ssl == NULL ) {
@@ -174,7 +173,6 @@ CLIENT_BAIL_NOSSL:
     CS_PP_defaultFree(clientInfo->buffer);
     CS_PP_defaultFree(clientInfo->output);
     CS_free(clientInfo);
-    CS_LOG_TRACE("ClientInfo stopping %p", clientInfo);
     pthread_exit(NULL);
     return NULL;
 }
@@ -309,6 +307,7 @@ struct CS_WebServer *CS_serverStart(int portNum,
     returnValue->defaultFileServingFile = fileServingFile;
     returnValue->killMe = false;
     returnValue->threadRunning = false;
+    returnValue->logAccess = false;
     returnValue->defaultFileServingCacheControlMaxAge = fileServingCacheControlMaxAge;
     
     int i = 0;
@@ -787,14 +786,25 @@ static int parseRequest(struct CS_ClientInfo *info) {
     return -1;
 }
 
+static const char *inaddrToTempString( struct sockaddr_in *addr ) {
+    return CS_tempBuffSnprintf( 64, "%d.%d.%d.%d",
+            ( addr->sin_addr.s_addr & 0xFF000000 ) >> 24,
+            ( addr->sin_addr.s_addr & 0x00FF0000 ) >> 16,
+            ( addr->sin_addr.s_addr & 0x0000FF00 ) >> 8,
+            ( addr->sin_addr.s_addr & 0x000000FF ) );
+}
+
 static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     //Message starts:
     int bytesRequiredForHeaders = parseRequest(info);
-    if( bytesRequiredForHeaders < 0 ) return true;
+    if( bytesRequiredForHeaders < 0 ) {
+        CS_LOG_ERROR("Malformed Request from: %s", inaddrToTempString( &info->clientSocketAddress ));
+        return true;
+    }
     //Consume the bytes for the headers. Might cause the incoming buffer to reset
     //But that should be just fine at this point.
     CS_PP_write(info->buffer,bytesRequiredForHeaders);
-    CS_LOG_VERBOSE("Request: %s %s",info->requestInfo.method,info->requestInfo.uri);
+    CS_LOG_LOUD_IF(info->server->logAccess, "Request: %s %s %s", inaddrToTempString( &info->clientSocketAddress ), info->requestInfo.method, info->requestInfo.uri);
     int requestEnum = info->requestInfo.requestMethodEnum;
     int nRoutes = info->server->routeNumbers[ requestEnum ];
     struct CS_Route *routes = info->server->routes[ requestEnum ];
@@ -1126,15 +1136,12 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         return true;
 
     if( reply->outputBuffer != NULL ) {
-        CS_LOG_TRACE("Output Buffer");
         int bytesToWrite = reply->outputLength + CS_PP_dataSize( info->output );
         int bytesPutInBuff = 0;
         int totalBytesTaken = 0;
-        CS_LOG_TRACE("Output length %d", bytesToWrite );
 
         do {
             bytesPutInBuff = CS_PP_readFromBuffer( info->output, ((char*)reply->outputBuffer) + totalBytesTaken, reply->outputLength - totalBytesTaken );
-            CS_LOG_TRACE("Added %d to output buffer. Output buffer has %d bytes in it.", bytesPutInBuff, CS_PP_dataSize( info->output ) );
             totalBytesTaken += bytesPutInBuff;
             bytesWritten = CS_serverWriteOutputBuffer( info );
             bytesToWrite -= bytesWritten;

@@ -29,6 +29,7 @@ struct CS_WebServer {
     pthread_t serverThread;
     bool killMe;
     bool threadRunning;
+    bool logAccess;
     const char *keyPath;
     const char *certificatePath;
     const char *defaultFileServingPath;
