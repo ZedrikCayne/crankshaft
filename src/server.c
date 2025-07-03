@@ -1119,23 +1119,28 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         CS_PP_printf( info->output, "\r\n" );
     }
     CS_PP_printf( info->output, "\r\n" );
-
     int bytesWritten = 0;
+    //Stuff out the head;
+    bytesWritten = CS_serverWriteOutputBuffer( info );
+    if( bytesWritten < 0 )
+        return true;
+
     if( reply->outputBuffer != NULL ) {
-        int bytesToWrite = reply->outputLength;
+        CS_LOG_TRACE("Output Buffer");
+        int bytesToWrite = reply->outputLength + CS_PP_dataSize( info->output );
         int bytesPutInBuff = 0;
         int totalBytesTaken = 0;
+        CS_LOG_TRACE("Output length %d", bytesToWrite );
 
         do {
             bytesPutInBuff = CS_PP_readFromBuffer( info->output, ((char*)reply->outputBuffer) + totalBytesTaken, reply->outputLength - totalBytesTaken );
+            CS_LOG_TRACE("Added %d to output buffer. Output buffer has %d bytes in it.", bytesPutInBuff, CS_PP_dataSize( info->output ) );
             totalBytesTaken += bytesPutInBuff;
             bytesWritten = CS_serverWriteOutputBuffer( info );
             bytesToWrite -= bytesWritten;
-        } while( bytesToWrite > 0 && bytesWritten > 0 );
-        //And stuff out the last two bytes.
-        CS_PP_printf( info->output, "\r\n" );
+        } while( totalBytesTaken < reply->outputLength && bytesWritten >= 0 );
+        if( bytesWritten < 0 ) CS_LOG_ERROR("Fail on write.");
     }
-    bytesWritten = CS_serverWriteOutputBuffer( info );
     CS_serverReturnReply(info, reply);
     return bytesWritten < 0;
 }
