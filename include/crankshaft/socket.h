@@ -39,7 +39,7 @@ struct CS_Socket {
 };
 
 struct CS_Socket *CS_socketInit( int socket, SSL *ssl, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex );
-struct CS_Socket *CS_socketConnect( char *address, int port, bool wantSSL, bool TLSv1, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex );
+struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int port, bool wantSSL, bool TLSv1, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex );
 bool CS_socketDestroy( struct CS_Socket *socket );
 bool CS_socketClose( struct CS_Socket *socket );
 bool CS_socketIsClosed( struct CS_Socket *socket );

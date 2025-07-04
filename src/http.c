@@ -879,7 +879,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
 
     int numBytesRead = wantSSL?CS_PP_readFromSSL( returnValue->buffer, returnValue->ssl ):CS_PP_readFromFile( returnValue->buffer, returnValue->remoteSocket );
 
-    if( numBytesRead <= 0 ) {
+    if( numBytesRead < 0 ) {
         CS_LOG_ERROR("Read from remote failed.");
         goto CLEANUP;
     }
@@ -888,6 +888,17 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
     if( numBytesParsed < 0 ) goto CLEANUP;
 
     CS_PP_write( returnValue->buffer, numBytesParsed );
+
+    const char *contentLength = CS_httpReplyHeader( returnValue, "Content-Length" );
+    //If we have any content at all...there's likely to be something out there for us.
+    if( contentLength != NULL ) {
+        int howMuch = atol(contentLength);
+        if( howMuch > CS_PP_dataSize( returnValue->buffer ) ) {
+            int readMore = wantSSL?CS_PP_readFromSSL( returnValue->buffer, returnValue->ssl ):CS_PP_readFromFile( returnValue->buffer, returnValue->remoteSocket );
+            if( readMore < 0 )
+                goto CLEANUP;
+        }
+    }
 
     //At this point, we're at the front of 'data' if we are 'transfer encoded' at all...
     //we're going to probably need more and to 'fix' our data so everything in the buffer

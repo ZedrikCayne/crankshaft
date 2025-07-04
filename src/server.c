@@ -105,6 +105,13 @@ static struct CS_ClientInfo *createClientInfoWithThread( int socket,
         CS_LOG_ERROR( "Out of memory allocating client buffer." );
         goto CLIENT_ERR_OUTPUT_BUFF;
     }
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    //if( setsockopt( socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv) ) < 0 ) {
+    //    CS_LOG_ERROR( "Failed to set socket options." );
+    //    goto CLIENT_ERR_OUTPUT_BUFF;
+    //}
     ci->clientSocket = socket;
     memcpy( &ci->clientSocketAddress, clientSocketAddress, sizeof(struct sockaddr_in) );
     pthread_t newThread;
@@ -1130,10 +1137,6 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     }
     CS_PP_printf( info->output, "\r\n" );
     int bytesWritten = 0;
-    //Stuff out the head;
-    bytesWritten = CS_serverWriteOutputBuffer( info );
-    if( bytesWritten < 0 )
-        return true;
 
     if( reply->outputBuffer != NULL ) {
         int bytesToWrite = reply->outputLength + CS_PP_dataSize( info->output );
@@ -1145,8 +1148,14 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
             totalBytesTaken += bytesPutInBuff;
             bytesWritten = CS_serverWriteOutputBuffer( info );
             bytesToWrite -= bytesWritten;
-        } while( totalBytesTaken < reply->outputLength && bytesWritten >= 0 );
+        } while( bytesToWrite > 0 && bytesWritten >= 0 );
         if( bytesWritten < 0 ) CS_LOG_ERROR("Fail on write.");
+    }
+    //Stuff out everything else.
+    while( CS_PP_dataSize( info->output ) > 0 ) {
+        bytesWritten = CS_serverWriteOutputBuffer( info );
+        if( bytesWritten < 0 )
+            return true;
     }
     CS_serverReturnReply(info, reply);
     return bytesWritten < 0;

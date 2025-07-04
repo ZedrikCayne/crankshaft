@@ -27,7 +27,17 @@ bool test_socket(void) {
     struct CS_WebServer *testServer = CS_serverStart( 0, NULL, NULL, "localhost", "root", "index.html", 0, testRoutes, sizeof(testRoutes)/sizeof(testRoutes[0]) );
     CS_FAIL_ON_NULL( testServer, "Start web server.", "Failed." );
     if( testServer ) {
-        struct CS_Socket *testSocket = CS_socketConnect( "localhost", testServer->serverPort, true, false, 2048, 2048, false, false );
+        struct CS_Socket *testSocket = CS_socketConnect( "localhost", true, testServer->serverPort, true, false, 2048, 2048, false, false );
+        CS_FAIL_ON_NOT_NULL( testSocket, "Connect to localhost with no internal networks set to true", "We can connect to localhost..not good." );
+        if( testSocket ) CS_socketDestroy( testSocket );
+        testSocket = CS_socketConnect( "192.168.1.1", true, testServer->serverPort, true, false, 2048, 2048, false, false );
+        CS_FAIL_ON_NOT_NULL( testSocket, "Connect to 192.168.1.1 should fail.", "Not..good." );
+        if( testSocket ) CS_socketDestroy( testSocket );
+        testSocket = CS_socketConnect( "10.0.0.1", true, testServer->serverPort, true, false, 2048, 2048, false, false );
+        CS_FAIL_ON_NOT_NULL( testSocket, "Connect to 192.168.1.1 should fail.", "Not..good." );
+        if( testSocket ) CS_socketDestroy( testSocket );
+
+        testSocket = CS_socketConnect( "localhost", false, testServer->serverPort, true, false, 2048, 2048, false, false );
         CS_FAIL_ON_NULL( testSocket, "Connect to webserver.", "Failed" );
         if( testSocket ) {
             struct CS_PushPullBuffer *ppOutput = CS_socketLockOutputBuffer( testSocket );
