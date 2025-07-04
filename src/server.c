@@ -888,7 +888,15 @@ bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int 
 
     //Doing this the long way so we have a default set.
     const char *mimeType = CS_mimeFileExtensionToString(extension);
+
+    //If we're using the one we got, we need to put the output buffer in manually so
+    //the do-send will do it's thing.
     struct CS_Reply *reply = useMe?useMe:CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, fileBuffer, fileSize );
+    if( useMe ) {
+        reply->outputBuffer = fileBuffer;
+        reply->outputLength = fileSize;
+    }
+    
     CS_serverSetReplyHeader(reply, "Last-Modified", timeString( lastModified ) );
     CS_serverSetReplyHeader(reply, "Content-Type", mimeType);
     CS_serverSetReplyHeader(reply, "Connection", "close" );
@@ -933,7 +941,7 @@ bool CS_serverFileServer( struct CS_ClientInfo *info ) {
 
     char *fileToOpen = CS_tempBuff(MAX_FILE_PATH);
 
-    int printed = snprintf( fileToOpen, MAX_FILE_PATH, "%s%s/%s", info->server->defaultFileServingPath, path, filename );
+    int printed = snprintf( fileToOpen, MAX_FILE_PATH, "%s%s/%s", info->server->defaultFileServingPath, path, filename?filename:info->server->defaultFileServingFile );
     if( printed == MAX_FILE_PATH ) {
         ERR(info, CS_RESPONSE_403,"Requested file path length too long.");
         goto ERR_SETUP;
