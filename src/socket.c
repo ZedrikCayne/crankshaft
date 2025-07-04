@@ -63,39 +63,6 @@ ERROR_INIT:
     return NULL;
 }
 
-static bool networkRoutable( struct addrinfo *anInfo ) {
-    char local[] = {127,0,0,1};
-    char zeros[] = {0,0,0,0};
-    char big[] = {10,0,0,0};
-    char med[] = {192,168,0,0};
-    char small[] = {172,16,0,0};
-    int bigMask = 0x000000FF;
-    int medMask = 0x0000FFFF;
-    int smallMask = 0x000FFFFF;
-    int noMask = 0xFFFFFFFF;
-    char *bytes;
-    if( anInfo->ai_family == AF_INET ) {
-        struct sockaddr_in *inAddr = (struct sockaddr_in*)anInfo->ai_addr;
-        int address32bit = inAddr->sin_addr.s_addr & noMask;
-        bytes = (char*)&address32bit;
-        if( local[0] == bytes[0] && local[1] == bytes[1] && local[2] == bytes[2] && local[3] == bytes[3] )
-            return false;
-        address32bit = inAddr->sin_addr.s_addr & noMask;
-        if( zeros[0] == bytes[0] && zeros[1] == bytes[1] && zeros[2] == bytes[2] && zeros[3] == bytes[3] )
-            return false;
-        address32bit = inAddr->sin_addr.s_addr & smallMask;
-        if( small[0] == bytes[0] && small[1] == bytes[1] && small[2] == bytes[2])
-            return false;
-        address32bit = inAddr->sin_addr.s_addr & medMask;
-        if( med[0] == bytes[0] && med[1] == bytes[1] )
-            return false;
-        address32bit = inAddr->sin_addr.s_addr & bigMask;
-        if( big[0] == bytes[0] )
-            return false;
-    }
-    return true;
-}
-
 struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int port, bool wantSSL, bool TLSv1, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex ) {
     struct CS_Socket *returnValue = CS_socketInit( -1, NULL, inputBufferSize, outputBufferSize, inputMutex, outputMutex );
     if( returnValue == NULL ) return NULL;
@@ -113,7 +80,8 @@ struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int 
         //Network routable check...if we're on ipv4 and have any of the 3 private ranges we 
         //will want to skip it. (Protect the internal range if we're running from an internal
         //host.
-        if( !noInternalNetworks || networkRoutable( addrInfoIter ) ) {
+
+        if( !noInternalNetworks || CS_networkAddressRoutable( addrInfoIter->ai_addr ) ) {
             returnValue->socket = socket(AF_INET, SOCK_STREAM, 0);
             if( returnValue->socket < 0 ) {
                 CS_LOG_ERROR("Failed to make an outbound socket.");

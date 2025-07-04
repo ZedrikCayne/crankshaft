@@ -32,6 +32,7 @@
 #include <crankshaft/mime.h>
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/ssl.h>
+#include <crankshaft/network.h>
 
 static const char *dayOfWeek[ 7 ] = {
     "Sun","Mon","Tue","Wed","Thu","Fri","Sat"
@@ -88,7 +89,7 @@ static void *clientThread(void *var);
 
 static struct CS_ClientInfo *createClientInfoWithThread( int socket,
                                                       struct CS_WebServer *server,
-                                                      struct sockaddr_in *clientSocketAddress ) {
+                                                      struct sockaddr *clientSocketAddress ) {
     struct CS_ClientInfo *ci = CS_alloc(sizeof(struct CS_ClientInfo));
     if( ci == NULL ) {
         CS_LOG_ERROR( "Out of memory allocating a new client info." );
@@ -105,15 +106,16 @@ static struct CS_ClientInfo *createClientInfoWithThread( int socket,
         CS_LOG_ERROR( "Out of memory allocating client buffer." );
         goto CLIENT_ERR_OUTPUT_BUFF;
     }
-    struct timeval tv;
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
+    //struct timeval tv;
+    //tv.tv_sec = 1;
+    //tv.tv_usec = 0;
     //if( setsockopt( socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv) ) < 0 ) {
     //    CS_LOG_ERROR( "Failed to set socket options." );
     //    goto CLIENT_ERR_OUTPUT_BUFF;
     //}
     ci->clientSocket = socket;
-    memcpy( &ci->clientSocketAddress, clientSocketAddress, sizeof(struct sockaddr_in) );
+    
+    CS_networkCopySockaddr( &ci->clientSocketAddress, clientSocketAddress );
     pthread_t newThread;
     ci->disconnectCallback = NULL;
     ci->persistentData = NULL;
@@ -272,14 +274,14 @@ static void *serverThreadProc(void *var) {
         int pollVal = poll(&pollMe, 1, 500);
         if( pollVal < 0 ) break;
         if( pollVal == 1 && pollMe.revents == POLLIN ) {
-            struct sockaddr_in clientSocketAddress = {0};
+            struct sockaddr *clientSocketAddress = CS_tempBuff( 128 );
             socklen_t addrSize = sizeof(clientSocketAddress);
-            int newSock = accept(server->listenSocket, (struct sockaddr *)&clientSocketAddress, &addrSize);
+            int newSock = accept(server->listenSocket, (struct sockaddr *)clientSocketAddress, &addrSize);
             if( newSock < 0 ) {
                 CS_LOG_ERROR("Socket closed, error %s", strerror(errno));
                 server->threadRunning = false;
             } else {
-                createClientInfoWithThread( newSock, server, &clientSocketAddress );
+                createClientInfoWithThread( newSock, server, clientSocketAddress );
             }
         }
     }
@@ -405,7 +407,6 @@ struct CS_WebServer *CS_serverStart(int portNum,
     }
 
     if( (certFile != NULL && keyFile != NULL) || selfSignHostname != NULL  ) {
-
         if( InitSSL( returnValue, certFile, keyFile, selfSignHostname ) ) {
             CS_LOG_ERROR("Failed to init SSL");
             goto ERR_SOCK;
@@ -793,25 +794,17 @@ static int parseRequest(struct CS_ClientInfo *info) {
     return -1;
 }
 
-static const char *inaddrToTempString( struct sockaddr_in *addr ) {
-    return CS_tempBuffSnprintf( 64, "%d.%d.%d.%d",
-            ( addr->sin_addr.s_addr & 0xFF000000 ) >> 24,
-            ( addr->sin_addr.s_addr & 0x00FF0000 ) >> 16,
-            ( addr->sin_addr.s_addr & 0x0000FF00 ) >> 8,
-            ( addr->sin_addr.s_addr & 0x000000FF ) );
-}
-
 static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     //Message starts:
     int bytesRequiredForHeaders = parseRequest(info);
     if( bytesRequiredForHeaders < 0 ) {
-        CS_LOG_ERROR("Malformed Request from: %s", inaddrToTempString( &info->clientSocketAddress ));
+        CS_LOG_ERROR("Malformed Request from: %s", CS_networkAddressToTempString( &info->clientSocketAddress ));
         return true;
     }
     //Consume the bytes for the headers. Might cause the incoming buffer to reset
     //But that should be just fine at this point.
     CS_PP_write(info->buffer,bytesRequiredForHeaders);
-    CS_LOG_LOUD_IF(info->server->logAccess, "Request: %s %s %s", inaddrToTempString( &info->clientSocketAddress ), info->requestInfo.method, info->requestInfo.uri);
+    CS_LOG_LOUD_IF(info->server->logAccess, "Request: %s %s %s", CS_networkAddressToTempString( &info->clientSocketAddress ), info->requestInfo.method, info->requestInfo.uri);
     int requestEnum = info->requestInfo.requestMethodEnum;
     int nRoutes = info->server->routeNumbers[ requestEnum ];
     struct CS_Route *routes = info->server->routes[ requestEnum ];
@@ -844,52 +837,14 @@ bool CS_serverDiagnostic200( struct CS_ClientInfo *info ) {
     return BASIC_OK(info, info->requestInfo.method);
 }
 
-#define MAX_FILE_PATH 2048
-bool CS_serverFileServer( struct CS_ClientInfo *info ) {
-    struct CS_RequestInfo *request = &info->requestInfo;
-    int lengthOfUri = strlen( request->uri );
-    char *tempBuff = CS_tempBuff( lengthOfUri );
-    strncpy( tempBuff, request->uri, lengthOfUri + 1 );
-    char *path = tempBuff;
-    const char *filename = NULL;
-    const char *extension = NULL;
-    //Check for anyone being sneaky about ..
-    for( int i = 1; i < lengthOfUri - 1; ++i ) {
-        if( tempBuff[i] == '.' && tempBuff[ i - 1 ] == '.' ) {
-            ERR(info,CS_RESPONSE_403,"Relative paths not allowed.");
-            goto ERR_SETUP;
+bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int cacheSeconds, struct CS_Reply *useMe ) {
+    const char *extension;
+    int len = strlen(fileToOpen);
+    for( int i = len - 2; i > 1; --i ) {
+        if( fileToOpen[ i ] == '.' ) {
+            extension = fileToOpen + i + 1; break;
         }
-    }
-    if( lengthOfUri > 1 ) {
-        for( int i = lengthOfUri - 1; i >= 0; --i ) {
-            if( tempBuff[i] == '/' ) {
-                tempBuff[i] = 0;
-                if( i < lengthOfUri - 1 ) filename = tempBuff + i + 1;
-                for( int j = lengthOfUri - 1; j > i; --j ) {
-                    if( tempBuff[ j ] == '.' ) {
-                        extension = tempBuff + j + 1;
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    char *fileToOpen = CS_tempBuff(MAX_FILE_PATH);
-
-    if( filename == NULL ) {
-        filename = info->server->defaultFileServingFile;
-        int len = strlen(filename);
-        for( int i = len - 2; i > 1; --i ) {
-            if( filename[ i ] == '.' ) { extension = filename + i + 1; break; }
-        } 
-    }
-
-    int printed = snprintf( fileToOpen, MAX_FILE_PATH, "%s%s/%s", info->server->defaultFileServingPath, path, filename );
-    if( printed == MAX_FILE_PATH ) {
-        ERR(info, CS_RESPONSE_403,"Requested file path length too long.");
-        goto ERR_SETUP;
-    }
+    } 
 
     int inputFile = open( fileToOpen, O_RDONLY );
     if( inputFile < 0 ) {
@@ -899,7 +854,7 @@ bool CS_serverFileServer( struct CS_ClientInfo *info ) {
 
     struct stat statBuff;
     if( fstat( inputFile, &statBuff ) < 0 ) {
-        ERR(info, CS_RESPONSE_500,"Cannot stat file. What the heck?");
+        ERR(info, CS_RESPONSE_500,"Cannot stat file.");
         goto ERR_FILE_OPENED;
     }
     
@@ -908,7 +863,8 @@ bool CS_serverFileServer( struct CS_ClientInfo *info ) {
 
     void *fileBuffer = NULL;
 
-    if( request->requestMethodEnum == CS_HTTP_METHOD_GET ) {
+    struct CS_RequestInfo *request = &info->requestInfo;
+    if( request->requestMethodEnum != CS_HTTP_METHOD_HEAD ) {
         fileBuffer = CS_alloc(fileSize);
         if(fileBuffer == NULL) {
             char *tBuff = CS_tempBuff(256);
@@ -932,24 +888,60 @@ bool CS_serverFileServer( struct CS_ClientInfo *info ) {
 
     //Doing this the long way so we have a default set.
     const char *mimeType = CS_mimeFileExtensionToString(extension);
-    struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, fileBuffer, fileSize );
+    struct CS_Reply *reply = useMe?useMe:CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, fileBuffer, fileSize );
     CS_serverSetReplyHeader(reply, "Last-Modified", timeString( lastModified ) );
     CS_serverSetReplyHeader(reply, "Content-Type", mimeType);
     CS_serverSetReplyHeader(reply, "Connection", "close" );
-    if( info->server->defaultFileServingCacheControlMaxAge != 0 ) {
-        CS_serverSetReplyHeader(reply, "Cache-Control", CS_tempBuffSnprintf(256,"max-age=%d", info->server->defaultFileServingCacheControlMaxAge) );
+    if( cacheSeconds != 0 ) {
+        CS_serverSetReplyHeader(reply, "Cache-Control", CS_tempBuffSnprintf(64,"max-age=%d", cacheSeconds ) );
     } else {
         CS_serverSetReplyHeader(reply, "Cache-Control", "no-cache" );
     }
     CS_serverDoReply(info,reply);
-    CS_free(fileBuffer);
-    return true;
 ERR_BUFF_FAILED:
     CS_free(fileBuffer);
 ERR_FILE_OPENED:
     close( inputFile );
 ERR_SETUP:
-    
+    return true;
+}
+
+#define MAX_FILE_PATH 2048
+bool CS_serverFileServer( struct CS_ClientInfo *info ) {
+    struct CS_RequestInfo *request = &info->requestInfo;
+    int lengthOfUri = strlen( request->uri );
+    char *tempBuff = CS_tempBuff( lengthOfUri + 1 );
+    strncpy( tempBuff, request->uri, lengthOfUri + 1 );
+    char *path = tempBuff;
+    const char *filename = NULL;
+    //Check for anyone being sneaky about ..
+    for( int i = 1; i < lengthOfUri - 1; ++i ) {
+        if( tempBuff[i] == '.' && tempBuff[ i - 1 ] == '.' ) {
+            ERR(info,CS_RESPONSE_403,"Relative paths not allowed.");
+            goto ERR_SETUP;
+        }
+    }
+    if( lengthOfUri > 1 ) {
+        for( int i = lengthOfUri - 1; i >= 0; --i ) {
+            if( tempBuff[i] == '/' ) {
+                tempBuff[i] = 0;
+                if( i < lengthOfUri - 1 ) filename = tempBuff + i + 1;
+                break;
+            }
+        }
+    }
+
+    char *fileToOpen = CS_tempBuff(MAX_FILE_PATH);
+
+    int printed = snprintf( fileToOpen, MAX_FILE_PATH, "%s%s/%s", info->server->defaultFileServingPath, path, filename );
+    if( printed == MAX_FILE_PATH ) {
+        ERR(info, CS_RESPONSE_403,"Requested file path length too long.");
+        goto ERR_SETUP;
+    }
+
+    CS_serverPushFile( fileToOpen, info, info->server->defaultFileServingCacheControlMaxAge, NULL );
+
+ERR_SETUP:
     return true;
 }
 
@@ -1152,10 +1144,10 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         if( bytesWritten < 0 ) CS_LOG_ERROR("Fail on write.");
     }
     //Stuff out everything else.
-    while( CS_PP_dataSize( info->output ) > 0 ) {
+    while( bytesWritten >= 0 && CS_PP_dataSize( info->output ) > 0 ) {
         bytesWritten = CS_serverWriteOutputBuffer( info );
         if( bytesWritten < 0 )
-            return true;
+            break;
     }
     CS_serverReturnReply(info, reply);
     return bytesWritten < 0;

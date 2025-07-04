@@ -86,7 +86,10 @@ struct CS_RequestInfo {
 struct CS_ClientInfo {
     int clientSocket;
     struct CS_WebServer *server;
-    struct sockaddr_in clientSocketAddress;
+    union {
+        struct sockaddr clientSocketAddress;
+        char sockaddrbuff[64];
+    };
     struct CS_PushPullBuffer *buffer;
     struct CS_PushPullBuffer *output;
     void (*disconnectCallback)(struct CS_ClientInfo *info);
@@ -134,6 +137,7 @@ bool CS_serverKill(struct CS_WebServer *server);
 
 bool CS_serverDiagnostic200( struct CS_ClientInfo *info );
 bool CS_serverFileServer( struct CS_ClientInfo *info );
+bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int cacheSeconds, struct CS_Reply *useMe );
 
 const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const char *name );
 const char *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const char *header );
