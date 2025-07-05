@@ -68,7 +68,7 @@ struct unRoutable_v6 {
 };
 
 static struct unRoutable_v4 unroutable_v4[] = {
-    { {127,  0,  0,  0}, { 0xFF, 0xFF, 0xFF, 0xFB } }, //Localhost
+    { {127,  0,  0,  0}, { 0xFF, 0xFF, 0xFF, 0xFC } }, //Localhost
     { {  0,  0,  0,  0}, { 0xFF, 0xFF, 0xFF, 0xFF } }, //Zero
     { { 10,  0,  0,  0}, { 0xFF, 0x00, 0x00, 0x00 } }, //10.0.0.0 private network.
     { {192,168,  0,  0}, { 0xFF, 0xFF, 0x00, 0x00 } }, //192.168.0.0 private network.
