@@ -96,17 +96,18 @@ static struct unRoutable_v6 unroutable_v6[] = {
 };
 
 bool CS_networkAddressRoutable( struct sockaddr *addr ) {
-    bool noMatch = false;
+    int numMatch;
     if( addr->sa_family == AF_INET ) {
         struct sockaddr_in *inAddr = (struct sockaddr_in *)addr;
         unsigned char *bytes = (unsigned char *)&(inAddr->sin_addr.s_addr);
         for( int i = 0; i < CS_ARRAY_SIZE( unroutable_v4 ); ++i ) {
             struct unRoutable_v4 *route = unroutable_v4 + i;
-            noMatch = false;
-            for( int b = 0; !noMatch && b < IPV4_ADDRESS_BYTES; ++b ) {
-                if( route->ipv4[ b ] != (route->mask[ b ] & bytes[ b ]) ) noMatch = true;
+            numMatch = 0;
+            for( int b = 0; b < IPV4_ADDRESS_BYTES; ++b ) {
+                if( route->ipv4[ b ] == (route->mask[ b ] & bytes[ b ]) ) ++numMatch;
+                else break;
             }
-            if( noMatch ) return false;
+            if( numMatch == IPV4_ADDRESS_BYTES ) return false;
         }
         return true;
     }
@@ -115,11 +116,12 @@ bool CS_networkAddressRoutable( struct sockaddr *addr ) {
         unsigned char *bytes = inAddr->sin6_addr.s6_addr;
         for( int i = 0; i < CS_ARRAY_SIZE( unroutable_v6 ); ++i ) {
             struct unRoutable_v6 *route = unroutable_v6 + i;
-            noMatch = false;
-            for( int b = 0; !noMatch && b < IPV6_ADDRESS_BYTES; ++b ) {
-                if( route->ipv6[ b ] != (route->mask[ b ] & bytes[ b ]) ) noMatch = true;
+            numMatch = 0;
+            for( int b = 0; b < IPV6_ADDRESS_BYTES; ++b ) {
+                if( route->ipv6[ b ] == (route->mask[ b ] & bytes[ b ]) ) ++numMatch;
+                else break;
             }
-            if( noMatch ) return false;
+            if( numMatch == IPV6_ADDRESS_BYTES ) return false;
         }
         return true;
     }
