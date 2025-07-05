@@ -114,6 +114,11 @@ void PrintHeader() {
 static bool GotInterrupt = false;
 static bool GotHup = false;
 
+static void pipeHandler(int sig) {
+    signal(sig, SIG_IGN);
+    signal(SIGPIPE, pipeHandler);
+}
+
 static void terminateHandler(int sig) {
     signal(sig, SIG_IGN);
     GotInterrupt = true;
@@ -406,6 +411,7 @@ int main(int argc, char *argv[] ) {
     signal(SIGINT, interruptHandler);
     signal(SIGHUP, hupHandler);
     signal(SIGTERM, terminateHandler);
+    signal(SIGPIPE, pipeHandler);
 
     CS_LOG_INFO("Starting web server.");
     const struct CS_Storage *keysCacheBackingStorage = CS_storageOpen( "KEY_WEB_CACHE", "file=/tmp/crankshaft_key.sqlite", CS_STORAGE_BACKEND_SQLITE );

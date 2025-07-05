@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
+#include <signal.h>
 
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
@@ -83,9 +84,14 @@ static const char *timeString(time_t currentTime) {
 }
 
 #define MAX_QUEUE 64
-#define CLIENT_RECEIVE_BUFFER 8192 
+#define CLIENT_RECEIVE_BUFFER 8192
 #define CLIENT_SEND_BUFFER 8192
 static void *clientThread(void *var);
+
+static void pipeHandler(int sig) {
+    signal(sig,SIG_IGN);
+    signal(SIGPIPE,SIG_IGN);
+}
 
 static struct CS_ClientInfo *createClientInfoWithThread( int socket,
                                                       struct CS_WebServer *server,
@@ -106,6 +112,7 @@ static struct CS_ClientInfo *createClientInfoWithThread( int socket,
         CS_LOG_ERROR( "Out of memory allocating client buffer." );
         goto CLIENT_ERR_OUTPUT_BUFF;
     }
+    signal(SIGPIPE,pipeHandler);
     //struct timeval tv;
     //tv.tv_sec = 1;
     //tv.tv_usec = 0;
