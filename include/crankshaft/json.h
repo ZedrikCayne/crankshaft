@@ -185,6 +185,7 @@ struct CS_JsonNode *CS_jsonNodeAppendInteger( struct CS_JsonNode *appendTo, cons
 struct CS_JsonNode *CS_jsonNodeAppendObject( struct CS_JsonNode *appendTo, const char *name );
 struct CS_JsonNode *CS_jsonNodeAppendArray( struct CS_JsonNode *appendTo, const char *name );
 struct CS_JsonNode *CS_jsonNodeAddUnquotedString( struct CS_JsonNode *addTo, const char *name, const char *value );
+struct CS_JsonNode *CS_jsonNodeAddUnquotedStringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int length );
 struct CS_JsonNode *CS_jsonNodeAddFloat( struct CS_JsonNode *addTo, const char *name, double value );
 struct CS_JsonNode *CS_jsonNodeAddInteger( struct CS_JsonNode *addTo, const char *name, long long value );
 struct CS_JsonNode *CS_jsonNodeAddObject( struct CS_JsonNode *addTo, const char *name );

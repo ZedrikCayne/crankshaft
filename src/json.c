@@ -1504,6 +1504,16 @@ struct CS_JsonNode *CS_jsonNodeAddUnquotedString( struct CS_JsonNode *addTo, con
     }
     return stuffQuotedSBOntoJsonNodeAndFreeSB( returnValue, quoted );
 }
+struct CS_JsonNode *CS_jsonNodeAddUnquotedStringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int length ) {
+    struct CS_StringBuilder *quoted = CS_jsonQuoteString( value, length );
+    if( quoted == NULL ) return NULL;
+    struct CS_JsonNode *returnValue = privateAdd( addTo, name );
+    if( returnValue == NULL ) {
+        CS_SB_free( quoted );
+        return NULL;
+    }
+    return stuffQuotedSBOntoJsonNodeAndFreeSB( returnValue, quoted );
+}
 struct CS_JsonNode *CS_jsonNodeAddFloat( struct CS_JsonNode *addTo, const char *name, double value ) {
     struct CS_JsonNode *returnValue = privateAdd( addTo, name );
     if( returnValue != NULL ) {
