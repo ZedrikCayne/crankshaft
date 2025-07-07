@@ -179,16 +179,11 @@ bool CS_WS_returnFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame
 //Parse incoming frame off of the open websocket.
 #define READ_WS(__WS) ((__WS)->clientInfo->ssl?CS_PP_readFromSSL((__WS)
 struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
-RESTART_READ:
     int bytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
 
     if( bytesRead < 0 ) {
         CS_LOG_ERROR( "Error with socket.");
         return NULL;
-    }
-    if( bytesRead < 4 ) {
-        CS_LOG_ERROR( "Not enough bytes read to make up a frame..");
-        goto RESTART_READ;
     }
 
     struct CS_WebSocketFrame *frame = CS_WS_getEmptyFrame( ws );
