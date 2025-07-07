@@ -331,8 +331,20 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame )
     if( frame->mask ) {
         CS_PP_readFromBuffer( pp, frame->maskBytes, 4 );
     }
-    
+
+    int currentHeaderSize = CS_PP_dataSize( pp );
     int bytesTotallyTransferred = 0;
+
+    while( bytesTotallyTransferred < currentHeaderSize ) {
+        int lastWrite = CS_serverWriteOutputBuffer( ws->clientInfo ) ;
+        if( lastWrite < 0 ) {
+            CS_LOG_ERROR("Socket write fail.");
+            return true;
+        }
+        bytesTotallyTransferred += lastWrite;
+    }
+
+    bytesTotallyTransferred = 0;
 
     while( bytesTotallyTransferred < frame->payloadLength ) {
         int lastTransfer = 
