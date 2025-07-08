@@ -1082,6 +1082,7 @@ static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, c
     }
     strncpy( reply->setCookie[ reply->numCookies ].cookie, cookie, COOKIE_MAX );
     strncpy( reply->setCookie[ reply->numCookies ].value, value, COOKIE_VALUE_MAX );
+    reply->setCookie[ reply->numCookies ].httpOnly = httpOnly;
     reply->numCookies++;
     return false;
 }
