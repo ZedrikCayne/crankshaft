@@ -73,8 +73,11 @@ debug: all
 #test: CFLAGS:=-DCS_ALLOC_TRACKING $(CFLAGS)
 test: CFLAGS:=-DCS_TEST_SKIP_TESTTEST $(CFLAGS)
 test: CFLAGS:=-DCS_AUTOTEST_ENABLED $(CFLAGS)
-test: sqlite $(OBJECTS_DIR) $(BINOUT)-test
+test: sqlite test/autogen-test.cpp $(OBJECTS_DIR) $(BINOUT)-test
 	./$(BINOUT)-test --test --suppress-errors --only-fails
+
+test/%.cpp:
+	scripts/gentest
 
 leaks:
 	leaks --outputGraph=$(BINOUT)-test-leaks.graph --atExit -- ./$(BINOUT)-test --test --trace

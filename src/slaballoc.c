@@ -18,6 +18,7 @@ struct SlabAllocItem {
 #define SLAB_NAME_MAX 32
 struct CS_SlabAllocator {
     int size;
+    int originalSize;
     int capacity;
     struct SlabAllocItem *head;
     struct CS_SlabAllocator *nextSlab;
@@ -76,6 +77,7 @@ static struct CS_SlabAllocator *initSlabAlloc( int size, int count, int alignmen
         return NULL;
     }
     returnValue->size = realSize;
+    returnValue->originalSize = size;
     returnValue->capacity = count;
     returnValue->head = (struct SlabAllocItem *)returnValue->buffer;
     returnValue->nextSlab = NULL;
@@ -166,6 +168,12 @@ RELEASE_LOCK:
 void *CS_slabTakeZero(struct CS_SlabAllocator *voidSlab ) {
     void *returnValue = CS_slabTake( voidSlab );
     if( returnValue ) memset( returnValue, 0, voidSlab->size );
+    return returnValue;
+}
+
+void *CS_slabTakeCopy(struct CS_SlabAllocator *voidSlab, const void *source ) {
+    void *returnValue = CS_slabTake( voidSlab );
+    if( returnValue ) memcpy( returnValue, source, voidSlab->originalSize );
     return returnValue;
 }
 

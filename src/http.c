@@ -19,14 +19,14 @@
 #include <crankshaft/util.h>
 #include <crankshaft/network.h>
 #include <crankshaft/ssl.h>
+#include <crankshaft/util.h>
 
 static void *requestSlabAlloc = NULL;
 static pthread_mutex_t slabAllocMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static struct CS_RequestReply *privateGetReply() {
-    if( requestSlabAlloc == NULL ) {
-        pthread_mutex_lock( &slabAllocMutex );
-        if( requestSlabAlloc == NULL ) requestSlabAlloc = CS_slabInit( "Request Reply Slab", sizeof(struct CS_RequestReply), 100, 8 );
+    CS_PMUTEX_PROTECT_GLOBAL( requestSlabAlloc, &slabAllocMutex ) {
+        requestSlabAlloc = CS_slabInit( "Request Reply Slab", sizeof(struct CS_RequestReply), 100, 8 );
         pthread_mutex_unlock( &slabAllocMutex );
         if( requestSlabAlloc == NULL ) return NULL;
     }
@@ -48,7 +48,7 @@ static SSL *newSSL( int socket ) {
             unsigned long err_code = ERR_get_error();
             char err_buf[256];
             ERR_error_string(err_code, err_buf);
-            CS_LOG_LOUD("Failed negotiate SSL. %s", err_buf);
+            CS_LOG_INFO("Failed negotiate SSL. %s", err_buf);
             SSL_free( returnValue );
             returnValue = NULL;
         }

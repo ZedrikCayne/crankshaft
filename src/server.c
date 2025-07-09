@@ -147,8 +147,8 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info);
 
 static void *clientThread(void *var) {
     struct CS_ClientInfo *clientInfo = (struct CS_ClientInfo *)var;
-    if( clientInfo->server->sslctx ) { 
-        clientInfo->ssl = SSL_new( clientInfo->server->sslctx );
+    if( clientInfo->server->wantSSL ) { 
+        clientInfo->ssl = CS_sslNew(false);
         if( clientInfo->ssl == NULL ) {
             CS_LOG_ERROR("Failed to create new ssl.");
             goto CLIENT_BAIL_NOSSL;
@@ -201,76 +201,6 @@ static void freeRoutes(struct CS_WebServer *server) {
     }
 }
 
-static bool privateMakeSelfSign(struct CS_WebServer *server, const char *hostname) {
-    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
-    if( ctx == NULL ) return true;
-    if( EVP_PKEY_keygen_init(ctx) <= 0 ) return true;
-    if( EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 2048) <= 0 ) return true;
-    if( EVP_PKEY_keygen( ctx, &server->ss_pkey ) <= 0 ) return true;
-    EVP_PKEY_CTX_free(ctx);
-    server->ss_X509 = X509_new();
-    ASN1_INTEGER_set(X509_get_serialNumber(server->ss_X509),1);
-    X509_gmtime_adj(X509_get_notBefore(server->ss_X509), 0);
-    X509_gmtime_adj(X509_get_notAfter(server->ss_X509), 31536000L);
-    X509_set_pubkey(server->ss_X509, server->ss_pkey);
-    X509_NAME * name;
-    name = X509_get_subject_name(server->ss_X509);
-    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC,
-                                       (unsigned char *)"US", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC,
-                                       (unsigned char *)"Just Add Hippo Inc.", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
-                                       (unsigned char *)hostname, -1, -1, 0);
-    X509_set_issuer_name(server->ss_X509, name);
-    X509_sign( server->ss_X509, server->ss_pkey, EVP_sha256() );
-    return false;
-}
-
-static bool InitSSL(struct CS_WebServer *server, const char *certFile, const char *keyFile, const char *selfSignHostname ) {
-    if( CS_sslInit() ) {
-        CS_LOG_ERROR("We're trying to use SSL after we've killed SSL.");
-        return true;
-    }
-    const SSL_METHOD *method;
-    method = TLS_server_method();
-    server->sslctx = SSL_CTX_new(method);
-    if( server->sslctx ) {
-        if( selfSignHostname ) {
-            if(privateMakeSelfSign( server, selfSignHostname )) return true;
-            if( SSL_CTX_use_certificate( server->sslctx, server->ss_X509 ) <= 0 ) {
-                ERR_print_errors_fp(stderr);
-                return true;
-            }
-            if( SSL_CTX_use_PrivateKey( server->sslctx, server->ss_pkey ) <= 0 ) {
-                ERR_print_errors_fp(stderr);
-                return true;
-            }
-        } else {
-            if( SSL_CTX_use_certificate_file( server->sslctx, certFile, SSL_FILETYPE_PEM) <= 0 ) {
-                ERR_print_errors_fp(stderr);
-                return true;
-            }
-            if( SSL_CTX_use_PrivateKey_file( server->sslctx, keyFile, SSL_FILETYPE_PEM) <= 0 ) {
-                ERR_print_errors_fp(stderr);
-                return true;
-            }
-        }
-    }
-    return server->sslctx == NULL;
-}
-
-static bool DestroySSL(struct CS_WebServer *server) {
-    if( server->sslctx ) { 
-        if( server->ss_X509 ) X509_free( server->ss_X509 );
-        server->ss_X509 = NULL;
-        if( server->ss_pkey ) EVP_PKEY_free( server->ss_pkey );
-        server->ss_pkey = NULL;
-        SSL_CTX_free(server->sslctx);
-        server->sslctx = NULL;
-    }
-    return false;
-}
-
 static void *serverThreadProc(void *var) {
     struct CS_WebServer *server = (struct CS_WebServer *)var;
     server->threadRunning = true;
@@ -294,7 +224,6 @@ static void *serverThreadProc(void *var) {
     }
     shutdown( server->listenSocket, SHUT_RDWR );
     close( server->listenSocket );
-    DestroySSL( server );
     freeRoutes( server );
     server->listenSocket = -1;
     server->threadRunning = false;
@@ -414,12 +343,9 @@ struct CS_WebServer *CS_serverStart(int portNum,
     }
 
     if( (certFile != NULL && keyFile != NULL) || selfSignHostname != NULL  ) {
-        if( InitSSL( returnValue, certFile, keyFile, selfSignHostname ) ) {
-            CS_LOG_ERROR("Failed to init SSL");
-            goto ERR_SOCK;
-        }
+        returnValue->wantSSL = true;
     } else {
-        returnValue->sslctx = NULL;
+        returnValue->wantSSL = false;
     }
 
     int result = pthread_create(&returnValue->serverThread, NULL, serverThreadProc, returnValue);
@@ -431,7 +357,6 @@ struct CS_WebServer *CS_serverStart(int portNum,
 
     return returnValue;
 ERR_SSL:
-    DestroySSL( returnValue );
 ERR_SOCK:
     close(returnValue->listenSocket);
 ERR_ALLOC_TABLES:

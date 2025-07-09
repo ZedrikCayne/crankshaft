@@ -30,6 +30,7 @@ struct CS_WebServer {
     bool killMe;
     bool threadRunning;
     bool logAccess;
+    bool wantSSL;
     const char *keyPath;
     const char *certificatePath;
     const char *defaultFileServingPath;
@@ -38,9 +39,6 @@ struct CS_WebServer {
     struct CS_SlabAllocator *replyStack;
     int routeNumbers[CS_MAX_HTTP_METHODS];
     struct CS_Route *routes[CS_MAX_HTTP_METHODS];
-    SSL_CTX *sslctx;
-    EVP_PKEY *ss_pkey;
-    X509 *ss_X509;
 };
 
 

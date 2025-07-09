@@ -48,6 +48,7 @@ static char *certFile = NULL;
 static char *keyFile = NULL;
 static char *selfSignHostname = NULL;
 static int cacheTimeInSeconds = 0;
+static char localhost[] = "localhost";
 
 CS_ARG_DEF(wantHelp,CS_ARG_CMP("-?","-help","--help"),"Prints this help");
 CS_ARG_DEF(doTest,CS_ARG_CMP("--test"), "Unit testing.");
@@ -322,7 +323,7 @@ bool loginPageReturn( struct CS_ClientInfo *info ) {
     CS_htmlAddAttribute( div, "data-client_id", CS_GS_getClientID() );
 
     const char *host = CS_serverGetRequestHeader(info,"Host");
-    if( host == NULL ) host = "localhost";
+    if( host == NULL ) host = localhost;
     CS_htmlAddAttribute( div, "data-login_uri",
            CS_tempBuffSnprintf( 1024, "http%s://%s/googlelogin", 
                info->ssl?"s":"", host ) );
@@ -383,8 +384,9 @@ int main(int argc, char *argv[] ) {
             return -1;
         }
     }
+    if( doTest && selfSignHostname == NULL ) selfSignHostname = localhost;
 
-    CS_sslInit();
+    CS_sslInit(keyFile, certFile, selfSignHostname);
 
     CS_tempAllocateGlobal(2*1024*1024);
 

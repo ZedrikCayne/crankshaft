@@ -19,9 +19,9 @@ void CS_mutexDebug( bool logDebug );
 #define CS_mutexUnlock(__MUTEX) CS_mutexUnlockDetailled( __MUTEX, __FILE__, __LINE__ )
 
 struct CS_Mutex *CS_mutexTakeDetailled( const char *name, const char *file, int line );
-void CS_mutexReturnDetailled(struct CS_Mutex *returnMe,const char *file, int line);
-void CS_mutexLockDetailled(struct CS_Mutex *toLock,const char *file, int line);
-void CS_mutexUnlockDetailled(struct CS_Mutex *toUnlock,const char *file, int line);
+bool CS_mutexReturnDetailled(struct CS_Mutex *returnMe,const char *file, int line);
+bool CS_mutexLockDetailled(struct CS_Mutex *toLock,const char *file, int line);
+bool CS_mutexUnlockDetailled(struct CS_Mutex *toUnlock,const char *file, int line);
 
 #ifdef __cplusplus
 }

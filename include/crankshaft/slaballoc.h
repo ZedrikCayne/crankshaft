@@ -31,6 +31,7 @@ struct CS_SlabAllocator;
 
 void *CS_slabTake(struct CS_SlabAllocator *slab);
 void *CS_slabTakeZero(struct CS_SlabAllocator *slab);
+void *CS_slabTakeCopy(struct CS_SlabAllocator *slab, const void *source);
 bool CS_slabReturn(struct CS_SlabAllocator *slab, void *toReturn);
 
 struct CS_SlabAllocator *CS_slabInit( const char *name, int size, int count, int alignment );

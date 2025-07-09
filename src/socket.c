@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <signal.h>
+#include <poll.h>
 
 #include <crankshaft/alloc.h>
 #include <crankshaft/logger.h>
@@ -18,20 +19,53 @@
 #include <crankshaft/socket.h>
 #include <crankshaft/ssl.h>
 #include <crankshaft/tempbuff.h>
+#include <crankshaft/util.h>
+#include <crankshaft/thread.h>
+
+struct CS_Socket {
+    bool ownSocket;
+    int socket;
+    int port;
+    SSL *ssl;
+    bool ipv6;
+    void *context;
+    union {
+        struct sockaddr       sockaddr;
+        struct sockaddr_in    sockaddr_in;
+        struct sockaddr_in6   sockaddr_in6;
+    };
+    struct CS_Mutex *selfMutex;
+    struct CS_Mutex *inputMutex;
+    struct CS_Mutex *outputMutex;
+
+    //Input/output buffers.
+    struct CS_PushPullBuffer *buffer;
+    struct CS_PushPullBuffer *output;
+};
+
+struct autoSocketContext {
+    struct CS_Socket *socket;
+    int inputBufferSize;
+    int outputBufferSize;
+    bool (*cycle)(struct CS_Thread *socket, int socketEnum, struct CS_Socket *newSocket );
+    bool inputMutex;
+    bool outputMutex;
+};
 
 static struct CS_SlabAllocator *sockets = NULL;
+static struct CS_SlabAllocator *socketContexts = NULL;
 
 static pthread_mutex_t socketsMutex = PTHREAD_MUTEX_INITIALIZER;
 
-struct CS_Socket *CS_socketInit( int socket, SSL *ssl, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex ) {
-    if( sockets == NULL ) {
-        pthread_mutex_lock( &socketsMutex );
-        if( sockets == NULL ) {
-            sockets = CS_slabInit( "SOCKETS", sizeof( struct CS_Socket ), 64, sizeof( void * ) );
-            if( sockets == NULL ) {
-                pthread_mutex_unlock( &socketsMutex );
-                return NULL;
-            }
+struct CS_Socket *CS_socketInit( int socket, int port, SSL *ssl, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex ) {
+    CS_PMUTEX_PROTECT_GLOBAL( sockets, &socketsMutex ) {
+        sockets = CS_slabInit( "SOCKETS", sizeof( struct CS_Socket ), 64, sizeof( void * ) );
+        socketContexts = CS_slabInit( "AUTOACCEPT CONTEXTS", sizeof( struct autoSocketContext ), 64, sizeof( void * ) );
+        if( sockets == NULL || socketContexts == NULL ) {
+            if( sockets ) CS_slabFree( sockets );
+            if( socketContexts ) CS_slabFree( socketContexts );
+            pthread_mutex_unlock( &socketsMutex );
+            return NULL;
         }
         pthread_mutex_unlock( &socketsMutex );
     }
@@ -42,6 +76,7 @@ struct CS_Socket *CS_socketInit( int socket, SSL *ssl, int inputBufferSize, int 
 
     returnValue->socket = socket;
     returnValue->ssl = ssl;
+    returnValue->port = port;
     if( inputBufferSize > 0 ) {
         returnValue->buffer = CS_PP_defaultAlloc( inputBufferSize );
         if( returnValue->buffer == NULL ) goto ERROR_INIT;
@@ -64,7 +99,7 @@ ERROR_INIT:
 }
 
 struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int port, bool wantSSL, bool TLSv1, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex ) {
-    struct CS_Socket *returnValue = CS_socketInit( -1, NULL, inputBufferSize, outputBufferSize, inputMutex, outputMutex );
+    struct CS_Socket *returnValue = CS_socketInit( -1, port, NULL, inputBufferSize, outputBufferSize, inputMutex, outputMutex );
     if( returnValue == NULL ) return NULL;
     //Lookup address
     struct addrinfo *addrInfos = CS_networkLookupAddress( address, port );
@@ -193,4 +228,148 @@ int CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock ) {
     return returnValue;
 }
 
+struct CS_Socket *CS_socketBind(int port, bool ipv6, bool wantSSL, int inputBufferSize, int outputBufferSize, bool inputBufferMutex, bool outputBufferMutex ) {
+    int finalPortNum = 0;
+    int listenSocket = ipv6?socket(AF_INET6,SOCK_STREAM,0):socket(AF_INET, SOCK_STREAM,0);
+    if( listenSocket < 0 ) {
+        CS_LOG_ERROR("Failed to open socket for listening.");
+        return NULL;
+    }
+
+    int optVal = 1;
+
+    if( setsockopt( listenSocket, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal) ) < 0 ) {
+        CS_LOG_ERROR("Failed to set socket options.");
+        goto ERR_SOCK;
+    }
+    
+    if( ipv6 ) {
+        goto ERR_SOCK;
+    } else {
+        struct sockaddr_in serverAddress = {0};
+        serverAddress.sin_family = AF_INET;
+        serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+        serverAddress.sin_port = htons(port);
+        if( bind( listenSocket, (struct sockaddr *)&serverAddress,sizeof(serverAddress) ) < 0 ) {
+            CS_LOG_ERROR("Failed to bind socket to port %d.", port);
+            goto ERR_SOCK;
+        }
+
+        struct sockaddr_in serverAddressPostBind = {0};
+        socklen_t addrLen = sizeof(serverAddressPostBind);
+        if( getsockname( listenSocket, (struct sockaddr *)&serverAddressPostBind, &addrLen ) < 0 ) {
+            CS_LOG_ERROR("Failed to get socket address.");
+            goto ERR_SOCK;
+        }
+        finalPortNum = ntohs(serverAddressPostBind.sin_port);
+    }
+
+    if( listen(listenSocket,5) < 0 ) {
+        CS_LOG_ERROR("Failed to listen.");
+        goto ERR_SOCK;
+    }
+
+    SSL *newSSL = NULL;
+
+    if( wantSSL ) {
+        newSSL = CS_sslNew( false );
+    }
+
+    struct CS_Socket *returnValue = CS_socketInit( listenSocket, finalPortNum, newSSL, inputBufferSize, outputBufferSize, inputBufferMutex, outputBufferMutex );
+    if( returnValue == NULL ) goto ERR_SSL;
+
+    return returnValue;
+
+ERR_SSL:
+    SSL_free( newSSL );
+
+ERR_SOCK:
+    close(listenSocket);
+
+    return NULL;
+}
+
+struct CS_Socket *CS_socketAccept( struct CS_Socket *boundSocket, bool blocking, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex ) {
+    do {
+        struct pollfd pollMe = {boundSocket->socket, POLLIN, 0};
+        pollMe.revents = 0;
+        int pollVal = poll(&pollMe, 1, 500);
+        if( pollVal < 0 ) break;
+        if( pollVal == 1 && pollMe.revents == POLLIN ) {
+            struct sockaddr clientSocketAddress;
+            socklen_t addrSize = sizeof(struct sockaddr);
+            int newSock = accept(boundSocket->socket, &clientSocketAddress, &addrSize);
+            if( newSock < 0 ) {
+                CS_LOG_ERROR("Socket failed to accept %s", strerror(errno));
+                break;
+            } else {
+                SSL *newSSL = NULL;
+                if( boundSocket->ssl ) {
+                    newSSL = CS_sslNew(false);
+                }
+                struct CS_Socket *returnValue = CS_socketInit( newSock, boundSocket->port, newSSL, inputBufferSize, outputBufferSize, inputMutex, outputMutex );
+                if( !returnValue ) {
+                    close( newSock );
+                    if( newSSL ) SSL_free( newSSL );
+                }
+                return returnValue;
+            }
+        }
+    } while( blocking && !CS_socketIsClosed( boundSocket ) );
+    return NULL;
+}
+
+bool cycleWrapper( struct CS_Thread *thread, int threadStateEnum, void *context ) {
+    struct autoSocketContext *autoContext = (struct autoSocketContext *)context;
+    if( threadStateEnum == CS_THREAD_RUNNING ) {
+        return ((struct autoSocketContext *)context)->cycle( thread, threadStateEnum, autoContext->socket );
+    }
+    if( threadStateEnum == CS_THREAD_STOP ) {
+        CS_slabReturn( socketContexts, autoContext );
+    }
+    return false;
+}
+
+//Driver for a CS_Thread.
+bool autoThreadAccept( struct CS_Thread *thread, int threadStateEnum, void *context ) {
+    struct autoSocketContext *socketContext = (struct autoSocketContext *)context;
+
+    if( CS_THREAD_STOP != threadStateEnum ) {
+        struct CS_Socket *newSocket = CS_socketAccept( socketContext->socket, false, socketContext->inputBufferSize, socketContext->outputBufferSize, socketContext->inputMutex, socketContext->outputMutex );
+        if( newSocket ) {
+            //Copy new parameters and socket out.
+            struct autoSocketContext *newContext = CS_slabTakeCopy( socketContexts, socketContext );
+            newContext->socket = newSocket;
+            CS_threadStart( CS_tempBuffSnprintf( 60, "auto-accept for %s", CS_threadName( thread ) ), newContext, cycleWrapper );
+        }
+    } else {
+        CS_slabReturn( socketContexts, socketContext );
+    }
+
+    return false;
+}
+
+struct CS_Thread *CS_socketAutoAccept( const char *threadName, struct CS_Socket *boundSocket, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex, bool (*cycle)(struct CS_Thread *thread, int threadSateEnum, struct CS_Socket *incoming ) ) {
+    struct autoSocketContext *newContext = CS_slabTakeZero( socketContexts );
+    if( newContext == NULL ) return NULL;
+    newContext->inputBufferSize = inputBufferSize;
+    newContext->outputBufferSize = outputBufferSize;
+    newContext->inputMutex = inputMutex;
+    newContext->outputMutex = outputMutex;
+    newContext->cycle = cycle;
+    newContext->socket = boundSocket;
+    struct CS_Thread *returnValue = CS_threadStart( threadName, newContext, autoThreadAccept );
+    if( !returnValue ) CS_slabReturn( socketContexts, newContext );
+    return returnValue;
+}
+
+void *CS_socketGetContext( struct CS_Socket *socket ) {
+    return socket->context;
+}
+
+void *CS_socketPutContext( struct CS_Socket *socket, void *context ) {
+    void *oldContext = socket->context;
+    socket->context = context;
+    return oldContext;
+}
 
