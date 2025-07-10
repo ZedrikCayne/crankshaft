@@ -1,5 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 
 #include <openssl/sha.h>
 
@@ -14,6 +17,7 @@
 #include <crankshaft/mime.h>
 #include <crankshaft/base64.h>
 #include <crankshaft/random.h>
+#include <crankshaft/mutex.h>
 
 static const char *opcodeToString[] = {
     "CS_WS_OPCODE_CONTINUE",
@@ -39,6 +43,7 @@ struct CS_WebSocket {
     struct CS_SlabAllocator *frameAllocator;
     struct CS_WebSocketFrame *currentIncomingFrame;
     struct CS_WebSocketFrame *currentOutgoingFrame;
+    struct CS_Mutex *frameWriteMutex;
     void *applicationData;
 };
 
@@ -73,6 +78,21 @@ struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *appli
         CS_LOG_ERROR("OOM creating frame stack.");
         goto ERR_CREATE;
     }
+    returnValue->frameWriteMutex = CS_mutexTakeNamed("WebSocketWrite");
+    if( returnValue->frameWriteMutex == NULL ) {
+        CS_LOG_ERROR("Could not create my mutex.");
+        goto ERR_CREATE;
+    }
+
+    //Okay, because remote implementations are bad... if any partial sends
+    //get pushed through, the sockets (in chrome for example) will happily 
+    //suck in the start of the 'next' frame, trash it, and then let the
+    //socket fail. In order to mitigate this, we'll make sure we fire
+    //everything off in one shot as much as possible and tell the
+    //underlying bits to do so as well. Trying to send data too fast
+    //will also make this unhappy. We'll keep on trucking, but feh.
+    int one = 1;
+    setsockopt(clientInfo->clientSocket, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
     returnValue->clientInfo = clientInfo;
     returnValue->applicationData = applicationData;
 
@@ -98,6 +118,7 @@ struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *appli
 ERR_CREATE:
     if( returnValue ) {
         if( returnValue->frameAllocator ) CS_slabFree( returnValue->frameAllocator );
+        if( returnValue->frameWriteMutex ) CS_mutexReturn( returnValue->frameWriteMutex );
         CS_free( returnValue );
     }
     return NULL;
@@ -107,6 +128,7 @@ struct CS_ClientInfo *CS_WS_destroy( struct CS_WebSocket *ws ) {
     struct CS_ClientInfo *clientInfo = ws->clientInfo;
     CS_slabFree( ws->frameAllocator );
     CS_free( ws );
+    CS_mutexReturn( ws->frameWriteMutex );
     return clientInfo;
 }
 
@@ -274,20 +296,11 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame )
     if( ws == NULL || frame == NULL ) {
         return true;
     }
+    CS_mutexLock( ws->frameWriteMutex );
+
     struct CS_PushPullBuffer *pp = ws->clientInfo->output;
 
     unsigned char temp = 0;
-
-    if( CS_PP_bufferRemaining( pp ) < 32 ) {
-        if( CS_serverWriteOutputBuffer( ws->clientInfo ) < 0 ) {
-            CS_LOG_ERROR("Websocket write error.");
-            return true; 
-        }
-        if( CS_PP_bufferRemaining( pp ) < 32 ) {
-            CS_LOG_ERROR("Websocket needs more space to write, far side not reading fast enough.");
-            return true;
-        }
-    }
 
     if( frame->fin ) temp = 0x80;
     temp |= (frame->opcode & 0x0F);
@@ -295,7 +308,7 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame )
     CS_PP_readFromBuffer( pp, &temp, 1 );
 
     if( frame->mask ) temp = 0x80; else temp = 0;
-    if( frame->payloadLength < 125 ) {
+    if( frame->payloadLength <= 125 ) {
         temp |= frame->payloadLength & 0x7F;
     } else {
         if( frame->payloadLength <= 0x0000FFFF ) {
@@ -330,35 +343,26 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame )
     int currentHeaderSize = CS_PP_dataSize( pp );
     int bytesTotallyTransferred = 0;
 
-    while( bytesTotallyTransferred < currentHeaderSize ) {
-        int lastWrite = CS_serverWriteOutputBuffer( ws->clientInfo ) ;
-        if( lastWrite < 0 ) {
-            CS_LOG_ERROR("Socket write fail.");
-            return true;
-        }
-        bytesTotallyTransferred += lastWrite;
-    }
-
-    bytesTotallyTransferred = 0;
-
-    while( bytesTotallyTransferred < frame->payloadLength ) {
+    while( bytesTotallyTransferred < (frame->payloadLength + currentHeaderSize) ) {
         int lastTransfer = 
             CS_PP_readFromBuffer( pp,
                          ((char*)frame->payload) + bytesTotallyTransferred,
                          frame->payloadLength - bytesTotallyTransferred );
         if( lastTransfer < 0 ) {
             CS_LOG_ERROR("Websocket failed to push data to the output buffer.");
+            CS_mutexUnlock( ws->frameWriteMutex );
             return true;
         }
         int lastWriteToSocket = CS_serverWriteOutputBuffer( ws->clientInfo );
         if( lastWriteToSocket < 0 ) {
             CS_LOG_ERROR("Websocket write failed.");
+            CS_mutexUnlock( ws->frameWriteMutex );
             return true;
         }
-        bytesTotallyTransferred += lastTransfer;
+        bytesTotallyTransferred += lastWriteToSocket;
     }
-
     CS_WS_returnFrame( ws, frame );
+    CS_mutexUnlock( ws->frameWriteMutex );
 
     return false;
 }
