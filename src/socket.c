@@ -307,13 +307,20 @@ struct CS_Socket *CS_socketAccept( struct CS_Socket *boundSocket, bool blocking,
                 SSL *newSSL = NULL;
                 if( boundSocket->ssl ) {
                     newSSL = CS_sslNew(false);
+                    SSL_set_fd( newSSL, newSock );
+                    if( SSL_accept( newSSL ) <= 0 ) {
+                        CS_LOG_ERROR( "ssl failed to accept" );
+                        SSL_free( newSSL );
+                        break;
+                    }
                 }
                 struct CS_Socket *returnValue = CS_socketInit( newSock, boundSocket->port, newSSL, inputBufferSize, outputBufferSize, inputMutex, outputMutex );
                 if( !returnValue ) {
                     close( newSock );
                     if( newSSL ) SSL_free( newSSL );
+                } else {
+                    returnValue->ownSocket = true;
                 }
-                returnValue->ownSocket = true;
                 return returnValue;
             }
         }
