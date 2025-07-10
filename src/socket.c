@@ -228,7 +228,7 @@ int CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock ) {
     return returnValue;
 }
 
-struct CS_Socket *CS_socketBind(int port, bool ipv6, bool wantSSL, int inputBufferSize, int outputBufferSize, bool inputBufferMutex, bool outputBufferMutex ) {
+struct CS_Socket *CS_socketBind(int port, bool ipv6, bool wantSSL) {
     int finalPortNum = 0;
     int listenSocket = ipv6?socket(AF_INET6,SOCK_STREAM,0):socket(AF_INET, SOCK_STREAM,0);
     if( listenSocket < 0 ) {
@@ -275,8 +275,9 @@ struct CS_Socket *CS_socketBind(int port, bool ipv6, bool wantSSL, int inputBuff
         newSSL = CS_sslNew( false );
     }
 
-    struct CS_Socket *returnValue = CS_socketInit( listenSocket, finalPortNum, newSSL, inputBufferSize, outputBufferSize, inputBufferMutex, outputBufferMutex );
+    struct CS_Socket *returnValue = CS_socketInit( listenSocket, finalPortNum, newSSL, 0, 0, false, false);
     if( returnValue == NULL ) goto ERR_SSL;
+    returnValue->ownSocket = true;
 
     return returnValue;
 
@@ -312,6 +313,7 @@ struct CS_Socket *CS_socketAccept( struct CS_Socket *boundSocket, bool blocking,
                     close( newSock );
                     if( newSSL ) SSL_free( newSSL );
                 }
+                returnValue->ownSocket = true;
                 return returnValue;
             }
         }
@@ -321,13 +323,11 @@ struct CS_Socket *CS_socketAccept( struct CS_Socket *boundSocket, bool blocking,
 
 bool cycleWrapper( struct CS_Thread *thread, int threadStateEnum, void *context ) {
     struct autoSocketContext *autoContext = (struct autoSocketContext *)context;
-    if( threadStateEnum == CS_THREAD_RUNNING ) {
-        return ((struct autoSocketContext *)context)->cycle( thread, threadStateEnum, autoContext->socket );
-    }
+    bool returnValue = ((struct autoSocketContext *)context)->cycle( thread, threadStateEnum, autoContext->socket );
     if( threadStateEnum == CS_THREAD_STOP ) {
         CS_slabReturn( socketContexts, autoContext );
     }
-    return false;
+    return returnValue;
 }
 
 //Driver for a CS_Thread.

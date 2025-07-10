@@ -31,7 +31,7 @@ struct CS_Socket;
 
 struct CS_Socket *CS_socketInit( int socket, int portNum, SSL *ssl, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex );
 struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int port, bool wantSSL, bool TLSv1, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex );
-struct CS_Socket *CS_socketBind(int port, bool ipv6, bool wantSSL, int inputBufferSize, int outputBufferSize, bool inputBufferMutex, bool outputBufferMutex );
+struct CS_Socket *CS_socketBind(int port, bool ipv6, bool wantSSL );
 struct CS_Socket *CS_socketAccept( struct CS_Socket *boundSocket, bool blocking, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex );
 struct CS_Thread *CS_socketAutoAccept( const char *threadName, struct CS_Socket *boundSocket, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex, bool (*cycle)(struct CS_Thread *thread, int threadSateEnum, struct CS_Socket *incoming ) );
 bool CS_socketDestroy( struct CS_Socket *socket );
