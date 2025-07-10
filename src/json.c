@@ -1190,6 +1190,10 @@ char *CS_jsonNodePrintableTemp(const struct CS_JsonNode *printMe) {
 
 struct CS_StringBuilder *CS_jsonNodePrintable(const struct CS_JsonNode *printMe) {
     struct CS_StringBuilder *sb = CS_SB_create(2048);
+    return CS_jsonNodePrintableToStringBuilder( printMe, sb );
+}
+
+struct CS_StringBuilder *CS_jsonNodePrintableToStringBuilder(const struct CS_JsonNode *printMe, struct CS_StringBuilder *sb ) {
 
     if( printMe == NULL ) CS_SB_append(sb, "NULL");
 
@@ -1479,6 +1483,10 @@ struct CS_JsonNode *CS_jsonNodeAppendQuotedString( struct CS_JsonNode *appendTo,
 
 struct CS_JsonNode *CS_jsonNodeNew( int allocSize ) {
     return privateInitJson( allocSize, NULL );
+}
+struct CS_JsonNode * CS_jsonNodeReset( struct CS_JsonNode *resetMe ) {
+    CS_linearReset( resetMe->voidLinearAllocator );
+    return privateInitJson( 0, resetMe->voidLinearAllocator );
 }
 struct CS_JsonNode *CS_jsonNodeAppendObject( struct CS_JsonNode *appendTo, const char *name ) {
     struct CS_JsonNode *returnValue = privateAppend( appendTo, name ); 

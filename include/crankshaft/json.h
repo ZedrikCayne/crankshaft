@@ -155,6 +155,7 @@ struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTr
 struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *path);
 
 struct CS_StringBuilder *CS_jsonNodePrintable(const struct CS_JsonNode *printMe);
+struct CS_StringBuilder *CS_jsonNodePrintableToStringBuilder(const struct CS_JsonNode *printMe, struct CS_StringBuilder *sb );
 char *CS_jsonNodePrintableTemp(const struct CS_JsonNode *printMe);
 
 bool CS_unquoteInPlace(char *inputString, int len);
@@ -174,6 +175,7 @@ const char *CS_jsonNodeValueAsTempString( struct CS_JsonNode *mine );
 bool CS_jsonNodesEquivalent(struct CS_JsonNode *a, struct CS_JsonNode *b);
 
 struct CS_JsonNode *CS_jsonNodeNew( int allocSize );
+struct CS_JsonNode *CS_jsonNodeReset( struct CS_JsonNode *node );
 /******************************************************
  *
  * Convenience functions for modifying stuff in place
