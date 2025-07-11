@@ -217,7 +217,7 @@ bool websocket( struct CS_ClientInfo *info ) {
                     case CS_WS_OPCODE_PING:
                         CS_LOG_TRACE("We got incoming ping. %s", CS_WS_describeFrame(nextFrame));
                         returnFrame = CS_WS_createFrame( gws, CS_WS_OPCODE_PONG, false, nextFrame->payload, nextFrame->payloadLength );
-                        if( returnFrame == NULL || CS_WS_pushFrame( gws, returnFrame ) ) {
+                        if( returnFrame == NULL || CS_WS_pushFrame( gws, returnFrame, true ) ) {
                             goto ERROR_CLOSE;
                         }
                         returnFrame = NULL;
@@ -239,7 +239,7 @@ bool websocket( struct CS_ClientInfo *info ) {
                         }
                         returnFrame = CS_WS_createFrame( gws, CS_WS_OPCODE_TEXT, false, copyBuff, nextFrame->payloadLength );
                         copyBuff = NULL;
-                        if( returnFrame == NULL || CS_WS_pushFrame( gws, returnFrame ) ) {
+                        if( returnFrame == NULL || CS_WS_pushFrame( gws, returnFrame, true ) ) {
                             goto ERROR_CLOSE;
                         }
                         returnFrame = NULL;

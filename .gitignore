@@ -12,6 +12,7 @@ storage/
 .idea/
 *.swp
 .ccls*
+.clangd
 root
 keys
 test/autogen-test.*
