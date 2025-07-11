@@ -109,9 +109,19 @@ bool CS_mutexReturnDetailled(struct CS_Mutex *returnMe, const char *file, int li
     return true;
 }
 
-bool CS_mutexLockDetailled(struct CS_Mutex *toLock,const char *file, int line) {
+bool CS_mutexLockDetailled(struct CS_Mutex *toLock, int msec, const char *file, int line) {
     printMutex(toLock, "lock", file, line);
-    pthread_mutex_lock( toLock->mutex );
+    if( msec == 0 ) {
+        pthread_mutex_lock( toLock->mutex );
+    } else {
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += msec / 1000;
+        ts.tv_nsec += (msec % 1000) * 100000;
+        ts.tv_sec += ts.tv_nsec / 100000000L;
+        ts.tv_nsec = ts.tv_nsec % 100000000L;
+        pthread_mutex_timedlock( toLock->mutex, &ts );
+    }
     toLock->locked = true;
     return true;
 }

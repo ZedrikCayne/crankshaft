@@ -86,7 +86,7 @@ bool CS_WS_returnFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame
 //Parse incoming frame off of the open websocket.
 struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws );
 //Push websocket back to client.
-bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame );
+bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame, bool unlockWriteMutex );
 
 const char *CS_WS_describeFrame( struct CS_WebSocketFrame *frame );
 

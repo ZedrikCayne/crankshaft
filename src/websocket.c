@@ -43,7 +43,6 @@ struct CS_WebSocket {
     struct CS_SlabAllocator *frameAllocator;
     struct CS_WebSocketFrame *currentIncomingFrame;
     struct CS_WebSocketFrame *currentOutgoingFrame;
-    struct CS_Mutex *frameWriteMutex;
     void *applicationData;
 };
 
@@ -78,21 +77,7 @@ struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *appli
         CS_LOG_ERROR("OOM creating frame stack.");
         goto ERR_CREATE;
     }
-    returnValue->frameWriteMutex = CS_mutexTakeNamed("WebSocketWrite");
-    if( returnValue->frameWriteMutex == NULL ) {
-        CS_LOG_ERROR("Could not create my mutex.");
-        goto ERR_CREATE;
-    }
 
-    //Okay, because remote implementations are bad... if any partial sends
-    //get pushed through, the sockets (in chrome for example) will happily 
-    //suck in the start of the 'next' frame, trash it, and then let the
-    //socket fail. In order to mitigate this, we'll make sure we fire
-    //everything off in one shot as much as possible and tell the
-    //underlying bits to do so as well. Trying to send data too fast
-    //will also make this unhappy. We'll keep on trucking, but feh.
-    int one = 1;
-    setsockopt(clientInfo->clientSocket, SOL_TCP, TCP_NODELAY, &one, sizeof(one));
     returnValue->clientInfo = clientInfo;
     returnValue->applicationData = applicationData;
 
@@ -118,7 +103,6 @@ struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *appli
 ERR_CREATE:
     if( returnValue ) {
         if( returnValue->frameAllocator ) CS_slabFree( returnValue->frameAllocator );
-        if( returnValue->frameWriteMutex ) CS_mutexReturn( returnValue->frameWriteMutex );
         CS_free( returnValue );
     }
     return NULL;
@@ -128,7 +112,6 @@ struct CS_ClientInfo *CS_WS_destroy( struct CS_WebSocket *ws ) {
     struct CS_ClientInfo *clientInfo = ws->clientInfo;
     CS_slabFree( ws->frameAllocator );
     CS_free( ws );
-    CS_mutexReturn( ws->frameWriteMutex );
     return clientInfo;
 }
 
@@ -292,11 +275,10 @@ ERROR_READING:
 }
 
 //Push websocket back to client.
-bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame ) {
+bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame, bool unlockWriteMutex ) {
     if( ws == NULL || frame == NULL ) {
         return true;
     }
-    CS_mutexLock( ws->frameWriteMutex );
 
     struct CS_PushPullBuffer *pp = ws->clientInfo->output;
 
@@ -350,19 +332,16 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame )
                          frame->payloadLength - bytesTotallyTransferred );
         if( lastTransfer < 0 ) {
             CS_LOG_ERROR("Websocket failed to push data to the output buffer.");
-            CS_mutexUnlock( ws->frameWriteMutex );
             return true;
         }
         int lastWriteToSocket = CS_serverWriteOutputBuffer( ws->clientInfo );
         if( lastWriteToSocket < 0 ) {
             CS_LOG_ERROR("Websocket write failed.");
-            CS_mutexUnlock( ws->frameWriteMutex );
             return true;
         }
         bytesTotallyTransferred += lastWriteToSocket;
     }
     CS_WS_returnFrame( ws, frame );
-    CS_mutexUnlock( ws->frameWriteMutex );
 
     return false;
 }
@@ -372,11 +351,10 @@ void CS_WS_close( struct CS_WebSocket *ws, int closeCode ) {
     closeCodeDataBuffer[0] = (closeCode & 0xFF00) >> 8;
     closeCodeDataBuffer[1] = (closeCode & 0x00FF);
     struct CS_WebSocketFrame *closeFrame = CS_WS_createFrame( ws, CS_WS_OPCODE_CLOSE, false, &closeCodeDataBuffer, 2 );
-    CS_WS_pushFrame( ws, closeFrame );
+    CS_WS_pushFrame( ws, closeFrame, true );
     //Naughty here closing someone else's socket..probably aok?
     close( ws->clientInfo->clientSocket );
 }
-
 
 const char *nullFrameError = "NULL FRAME";
 
