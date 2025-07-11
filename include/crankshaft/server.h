@@ -8,6 +8,7 @@
 
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/http.h>
+#include <crankshaft/logfile.h>
 
 /********************************************************************
  *
@@ -29,7 +30,6 @@ struct CS_WebServer {
     pthread_t serverThread;
     bool killMe;
     bool threadRunning;
-    bool logAccess;
     bool wantSSL;
     const char *keyPath;
     const char *certificatePath;
@@ -39,6 +39,7 @@ struct CS_WebServer {
     struct CS_SlabAllocator *replyStack;
     int routeNumbers[CS_MAX_HTTP_METHODS];
     struct CS_Route *routes[CS_MAX_HTTP_METHODS];
+    struct CS_LogFile *logAccess;
 };
 
 

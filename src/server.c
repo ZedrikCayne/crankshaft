@@ -252,7 +252,7 @@ struct CS_WebServer *CS_serverStart(int portNum,
     returnValue->defaultFileServingFile = fileServingFile;
     returnValue->killMe = false;
     returnValue->threadRunning = false;
-    returnValue->logAccess = false;
+    returnValue->logAccess = NULL;
     returnValue->defaultFileServingCacheControlMaxAge = fileServingCacheControlMaxAge;
     
     int i = 0;
@@ -736,7 +736,9 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     //Consume the bytes for the headers. Might cause the incoming buffer to reset
     //But that should be just fine at this point.
     CS_PP_write(info->buffer,bytesRequiredForHeaders);
-    CS_LOG_LOUD_IF(info->server->logAccess, "Request: %s %s %s", CS_networkAddressToTempString( &info->clientSocketAddress ), info->requestInfo.method, info->requestInfo.uri);
+    if( info->server->logAccess ) {
+        CS_logfilePrintf( info->server->logAccess, "Request: %s %s %s", CS_networkAddressToTempString( &info->clientSocketAddress ), info->requestInfo.method, info->requestInfo.uri);
+    }
     int requestEnum = info->requestInfo.requestMethodEnum;
     int nRoutes = info->server->routeNumbers[ requestEnum ];
     struct CS_Route *routes = info->server->routes[ requestEnum ];
