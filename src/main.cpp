@@ -378,6 +378,8 @@ int main(int argc, char *argv[] ) {
     if( trace )   { CS_LOG_VERBOSE_BOOL=true ; CS_LOG_INFO_BOOL=true ; CS_LOG_QUIET_BOOL=false; CS_LOG_TRACE_BOOL=true ; CS_LOG_WARN_BOOL=true; }
     if( suppressErrors ) { CS_LOG_ERROR_BOOL = false; }
 
+    CS_tempAllocateGlobal(2*1024*1024);
+
     if( logFile != NULL ) {
         if( CS_logInit( logFile ) ) {
             CS_LOG_ERROR("Logging subsystem failed to init. Bailing!");
@@ -387,8 +389,6 @@ int main(int argc, char *argv[] ) {
     if( doTest && selfSignHostname == NULL ) selfSignHostname = localhost;
 
     CS_sslInit(keyFile, certFile, selfSignHostname);
-
-    CS_tempAllocateGlobal(2*1024*1024);
 
     if( CS_GS_initWithEnvironmentVariable( "GOOGLE_JSON" ) ) {
         CS_LOG_WARN("GOOGLE_JSON not defined in the environment. Anything depending on google services json being initialized will fail.");
