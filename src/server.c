@@ -34,6 +34,7 @@
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/ssl.h>
 #include <crankshaft/network.h>
+#include <crankshaft/base64.h>
 
 static const char *dayOfWeek[ 7 ] = {
     "Sun","Mon","Tue","Wed","Thu","Fri","Sat"
@@ -728,9 +729,13 @@ static int parseRequest(struct CS_ClientInfo *info) {
 
 static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     //Message starts:
+    int tempForMalformedLength = CS_PP_dataSize( info->buffer );
+    void *tempForMalformedRequest = CS_tempMemCopy( CS_PP_startOfData( info->buffer ), CS_PP_dataSize( info->buffer ) );
     int bytesRequiredForHeaders = parseRequest(info);
     if( bytesRequiredForHeaders < 0 ) {
-        CS_LOG_ERROR("Malformed Request from: %s", CS_networkAddressToTempString( &info->clientSocketAddress ));
+        int outputLength;
+        char *malformedEncode = CS_base64EncodeTemp( tempForMalformedRequest, tempForMalformedLength, &outputLength );
+        CS_logfilePrintf( info->server->logAccess, "Malformed: %s %d |%s|", CS_networkAddressToTempString( &info->clientSocketAddress ), tempForMalformedLength, malformedEncode);
         return true;
     }
     //Consume the bytes for the headers. Might cause the incoming buffer to reset

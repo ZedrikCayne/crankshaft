@@ -104,7 +104,7 @@ int CS_logfilePrintf(struct CS_LogFile *logfile, const char *format, ...) {
 
     if( currentTime > 0 ) { 
         if( logfile->secondsPerRotate ) {
-            if( (logfile->lastRotate + (logfile->secondsPerRotate*1000)) < currentTime ) {
+            if( (logfile->lastRotate + logfile->secondsPerRotate) < currentTime ) {
                 if( privateRotate( logfile ) ) goto ERR_UNLOCK;
             }
         }
