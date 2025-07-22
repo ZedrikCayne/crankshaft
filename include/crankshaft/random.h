@@ -23,6 +23,7 @@ extern struct CS_LCG_rand_state globalState;
 int CS_LCG_rand( struct CS_LCG_rand_state *state );
 void CS_LCG_rand_init( struct CS_LCG_rand_state *state, int seed );
 
+#define CS_randMod(__X) ((CS_LCG_rand(&globalState)&0x7FFFFFFF)%__X)
 #define CS_rand() CS_LCG_rand(&globalState)
 #define CS_srand(X) (globalState.seed=(X))
 
