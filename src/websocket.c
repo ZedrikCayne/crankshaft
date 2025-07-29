@@ -187,7 +187,6 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
     int bytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
 
     if( bytesRead < 0 ) {
-        CS_LOG_ERROR( "Error with socket.");
         return NULL;
     }
 
