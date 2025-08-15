@@ -47,7 +47,7 @@ bool test_html(void) {
         struct CS_HtmlNode *div2 = CS_htmlAddContainerAfter( body, "div" );
         CS_FAIL_ON_NULL( div2, "Creating div2 in body.", "Nope." );
         CS_FAIL_ON_NULL( CS_htmlSetContents( div2, div2Contents, false ), "Adding contents to div2.", "Nope." );
-        struct CS_StringBuilder *sb = CS_htmlToStringBuilder( html, 1024 );
+        struct CS_StringBuilder *sb = CS_htmlToStringBuilder( html, 1024, false );
         CS_FAIL_ON_FALSE( strcmp( sb->buffer, outputComparison ) == 0, "Check details straight.", "\n%s\n%s", sb->buffer, outputComparison );
         CS_SB_free(sb);
         CS_htmlFree(html);
@@ -65,7 +65,7 @@ bool test_html(void) {
         struct CS_HtmlNode *div = CS_htmlAddContainerBefore( body, "div" );
         CS_FAIL_ON_NULL( div, "Creating div in body.", "Nope." );
         CS_FAIL_ON_NULL( CS_htmlSetContents( div, div1Contents, false ), "Adding contents to div.", "Nope." );
-        struct CS_StringBuilder *sb = CS_htmlToStringBuilder( html, 1024 );
+        struct CS_StringBuilder *sb = CS_htmlToStringBuilder( html, 1024, false );
         CS_FAIL_ON_FALSE( strcmp( sb->buffer, outputComparison ) == 0, "Check details mixed.", "\n%s\n%s", sb->buffer, outputComparison );
         CS_SB_free(sb);
         CS_htmlFree(html);
@@ -74,24 +74,24 @@ bool test_html(void) {
     html = CS_htmlCreateRoot("div", 1024);
     CS_FAIL_ON_NULL( html, "Create root div.", "Failed" );
     if( html ) {
-        struct CS_StringBuilder *sb = CS_htmlToStringBuilder( html, 1024 );
+        struct CS_StringBuilder *sb = CS_htmlToStringBuilder( html, 1024, false );
         CS_FAIL_ON_FALSE( strcmp( sb->buffer, outputComparisonEmptyDiv ) == 0, "Check details empty div.", "\n%s\n%s", sb->buffer, outputComparison );
         CS_SB_free(sb);
         CS_htmlAddAttribute( html, "class", "Foo" );
-        sb = CS_htmlToStringBuilder( html, 1024 );
+        sb = CS_htmlToStringBuilder( html, 1024, false );
         CS_FAIL_ON_FALSE( strcmp( sb->buffer, outputComparisonDiv ) == 0, "Check details div.", "\n%s\n%s", sb->buffer, outputComparison );
         CS_SB_free(sb);
         CS_htmlAddAttribute( html, "class", "Bar" );
-        sb = CS_htmlToStringBuilder( html, 1024 );
+        sb = CS_htmlToStringBuilder( html, 1024, false );
         CS_FAIL_ON_FALSE( strcmp( sb->buffer, outputComparisonDiv2 ) == 0, "Check details div2.", "\n%s\n%s", sb->buffer, outputComparisonDiv2 );
         CS_FAIL_ON_NOT_NULL( CS_htmlRemoveAttributeValue( html, "class", "Scunge" ), "Should fail removing an unknown.", "Oops!" );
         CS_FAIL_ON_NOT_NULL( CS_htmlRemoveAttributeIndex( html, "class", 5 ), "Should fail removing an invalid index.", "Oops." );
         CS_FAIL_ON_NULL( CS_htmlRemoveAttributeIndex( html, "class", 1 ), "Remove 1 index", "Nope" );
-        sb = CS_htmlToStringBuilder( html, 1024 );
+        sb = CS_htmlToStringBuilder( html, 1024, false );
         CS_FAIL_ON_FALSE( strcmp( sb->buffer, outputComparisonDiv3 ) == 0, "Check details div3.", "\n%s\n%s", sb->buffer, outputComparisonDiv3 );
         CS_SB_free(sb);
         CS_htmlAddAttribute( html, "class", "Foo" );
-        sb = CS_htmlToStringBuilder( html, 1024 );
+        sb = CS_htmlToStringBuilder( html, 1024, false );
         CS_FAIL_ON_FALSE( strcmp( sb->buffer, outputComparisonDiv4 ) == 0, "Check details div4.", "\n%s\n%s", sb->buffer, outputComparisonDiv4 );
         CS_SB_free(sb);
 

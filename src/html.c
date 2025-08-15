@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <stdbool.h>
+
+#include <crankshaft/stringbuilder.h>
 #include <crankshaft/alloc.h>
 #include <crankshaft/linearalloc.h>
 #include <crankshaft/logger.h>
@@ -342,6 +345,20 @@ static struct lengthAndValue quoteLookup[] = {
     { 1, NULL }, { 1, NULL }, { 1, NULL }, { 1, NULL }, { 1, NULL }, { 1, NULL }, { 1, NULL }, { 0, NULL },
 };
 
+static int prettyDepth( struct CS_HtmlNode *node ) {
+    int count = 0;
+    struct CS_HtmlNode *up = node;
+    while( up ) { ++count; up = up->up; }
+    return count;
+}
+static void prettyPrint( struct CS_StringBuilder *sb, bool pretty, int depth ) {
+    if( !pretty ) return;
+    CS_SB_appendChar(sb, '\n');
+    for( int i = 0; i < depth; ++i ) {
+        CS_SB_append( sb, "    " );
+    }
+}
+
 static char *privateHtmlQuoted( const char * in ) {
     if( !in ) return NULL;
     int nLen = 0;
@@ -377,7 +394,6 @@ static char *privateHtmlQuoted( const char * in ) {
     *out = 0;
     return quoted;
 }
-
 static char *privateStripQuotes(const char *in) {
     int nLen = strlen(in);
     char *returnValue = CS_tempBuff(nLen + 1);
@@ -388,13 +404,16 @@ static char *privateStripQuotes(const char *in) {
     return returnValue;
 }
 
-static struct CS_HtmlNode *privatePrintNodeIntro( struct CS_HtmlNode *node, struct CS_StringBuilder *sb ) {
+static struct CS_HtmlNode *privatePrintNodeIntro( struct CS_HtmlNode *node, struct CS_StringBuilder *sb, bool pretty ) {
+    int depth = prettyDepth( node );
+    prettyPrint( sb, pretty, depth );
     CS_SB_printf( sb, "<%s", node->name );
     struct CS_HtmlAttribute *current = node->attributes;
     while( current ) {
         CS_SB_appendChar( sb, ' ' );
         CS_SB_append( sb, current->name );
         if( current->values ) {
+            prettyPrint( sb, pretty, depth + 1 );
             CS_SB_append( sb, "=\"" );
             struct CS_HtmlValue *currentValue = current->values;
             while( currentValue ) {
@@ -410,35 +429,37 @@ static struct CS_HtmlNode *privatePrintNodeIntro( struct CS_HtmlNode *node, stru
     return node;
 }
 
-static struct CS_HtmlNode *privatePrintNodeMid( struct CS_HtmlNode *node, struct CS_StringBuilder *sb ) {
+static struct CS_HtmlNode *privatePrintNodeMid( struct CS_HtmlNode *node, struct CS_StringBuilder *sb, bool pretty ) {
     char *quoted = node->raw?node->contents:privateHtmlQuoted( node->contents );
+    prettyPrint( sb, pretty, 0 );
     if( quoted ) CS_SB_append( sb, quoted );
     return node;
 }
 
-static struct CS_HtmlNode *privatePrintNodeOutro( struct CS_HtmlNode *node, struct CS_StringBuilder *sb ) {
+static struct CS_HtmlNode *privatePrintNodeOutro( struct CS_HtmlNode *node, struct CS_StringBuilder *sb, bool pretty ) {
+    prettyPrint(sb, pretty, prettyDepth( node ) );
     CS_SB_printf( sb, "</%s>", node->name );
     return node;
 }
 
-struct CS_StringBuilder *CS_htmlAppend(struct CS_HtmlNode *node, struct CS_StringBuilder *sb ) {
+struct CS_StringBuilder *CS_htmlAppend(struct CS_HtmlNode *node, struct CS_StringBuilder *sb, bool pretty ) {
     struct CS_HtmlNode *current = node;
     while( current ) {
-        privatePrintNodeIntro( current, sb );
+        privatePrintNodeIntro( current, sb, pretty );
         if( current->container ) {
             current = current->container;
             continue;
         }
-        privatePrintNodeMid( current, sb );
-        privatePrintNodeOutro( current, sb );
+        privatePrintNodeMid( current, sb, pretty );
+        privatePrintNodeOutro( current, sb, pretty );
         if( current->next ) {
             current = current->next;
             continue;
         }
         while( current && current->up ) {
             current = current->up;
-            privatePrintNodeMid( current, sb );
-            privatePrintNodeOutro( current, sb );
+            privatePrintNodeMid( current, sb, pretty );
+            privatePrintNodeOutro( current, sb, pretty );
             if( current->next ) {
                 current = current->next;
                 break;
@@ -449,12 +470,12 @@ struct CS_StringBuilder *CS_htmlAppend(struct CS_HtmlNode *node, struct CS_Strin
     return sb;
 }
 
-struct CS_StringBuilder *CS_htmlToStringBuilder(struct CS_HtmlNode *node, int initialSize) {
+struct CS_StringBuilder *CS_htmlToStringBuilder(struct CS_HtmlNode *node, int initialSize, bool pretty) {
     if( !node ) return NULL;
 
     struct CS_StringBuilder *sb = CS_SB_create(initialSize); 
 
-    struct CS_StringBuilder *returnValue = CS_htmlAppend( node, sb );
+    struct CS_StringBuilder *returnValue = CS_htmlAppend( node, sb, pretty );
 
     if( returnValue == NULL ) CS_SB_free( sb );
 

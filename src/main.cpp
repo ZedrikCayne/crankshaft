@@ -298,7 +298,7 @@ bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt, const 
     } else {
         CS_htmlSetContents( code3, "NULL", false );
     }
-    struct CS_StringBuilder *sb = CS_htmlToStringBuilder( root, 2048 );
+    struct CS_StringBuilder *sb = CS_htmlToStringBuilder( root, 2048, false );
     struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_HTML, CS_SB_buffer( sb ), CS_SB_size( sb ) );
     CS_serverSetReplyCookie( reply, "session", "Session_GUID_HERE", true );
     CS_serverDoReply( info, reply );
@@ -336,7 +336,7 @@ bool loginPageReturn( struct CS_ClientInfo *info ) {
     CS_htmlAddAttribute( div, "data-text", "sign_in_with" );
     CS_htmlAddAttribute( div, "data-shape", "rectangular" );
     CS_htmlAddAttribute( div, "data-logo_alignment", "left" );
-    struct CS_StringBuilder *sb = CS_htmlToStringBuilder( root, 2048 );
+    struct CS_StringBuilder *sb = CS_htmlToStringBuilder( root, 2048, false );
     struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_HTML, CS_SB_buffer( sb ), CS_SB_size( sb ) );
     CS_serverDoReply( info, reply );
     CS_SB_free( sb );

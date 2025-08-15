@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include <crankshaft/json.h>
+#include <crankshaft/utf8.h>
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/linearalloc.h>
 #include <crankshaft/alloc.h>
@@ -40,36 +41,7 @@ struct _hexToInt {
 static char hexdigit[]  = "0123456789abcdef0123456789abcdef";
 static char hexdigit1[] = "00000000000000001111111111111111";
 
-static int intToUTF8( int codePoint, char *out, int length ) {
-    if( length <= 0 || codePoint < 0 ) return 0;                              // 0 = 0000
-    if( codePoint <= 0x00007F ) {                                             // 1 = 0001
-        if( length < 1 ) return -1;                                           // 2 = 0010
-        *out = (char)codePoint;                                               // 3 = 0011
-        return 1;                                                             // 4 = 0100
-    }                                                                         // 5 = 0101
-    if( codePoint <= 0x0007FF ) {                                             // 6 = 0110
-        if( length < 2 ) return -1;                                           // 7 = 0111
-        *(out + 0) = (char)( 0x0000C0 | ( (0x00003F & codePoint) >>  6 ));    // 8 = 1000
-        *(out + 1) = (char)( 0x000080 | ( (0x0007C0 & codePoint) >>  0 ));    // 9 = 1001
-        return 2;                                                             // A = 1010
-    }                                                                         // B = 1011
-    if( codePoint <= 0x00FFFF ) {                                             // C = 1100
-        if( length < 3 ) return -1;                                           // D = 1101
-        *(out + 0) = (char)( 0x0000E0 | ( (0x00F000 & codePoint) >> 12 ));    // E = 1110
-        *(out + 1) = (char)( 0x000080 | ( (0x000FC0 & codePoint) >>  6 ));    // F = 1111
-        *(out + 2) = (char)( 0x000080 | ( (0x00003F & codePoint) >>  0 ));    
-        return 3;
-    }
-    if( codePoint <= 0x1FFFFF ) {
-        if( length < 4 ) return -1;
-        *(out + 0) = (char)( 0x0000F0 | ( (0x1C0000 & codePoint) >> 18 ));
-        *(out + 1) = (char)( 0x000080 | ( (0x03F000 & codePoint) >> 12 ));
-        *(out + 2) = (char)( 0x000080 | ( (0x000FC0 & codePoint) >>  6 ));
-        *(out + 3) = (char)( 0x000080 | ( (0x00003F & codePoint) >>  0 ));
-        return 4;
-    }
-    return -1;
-}
+
 
 static int hexDigitToInt( const char *u ) {
     if( *u < '0' ) return -1;
@@ -96,7 +68,7 @@ static int u4ToUTF8( const char *u4, char *out, int length ) {
     i = hexDigitToInt( (u4 + 3 ) );
     if( i < 0 ) return -1;
     u8Char = ( u8Char << 4 ) + i;
-    return intToUTF8( u8Char, out, length );
+    return CS_utf8FromInt( u8Char, out, length );
 }
 
 static struct CS_StringBuilder *privateQuoteString(const char *inputString, int len, struct CS_StringBuilder *out) {
