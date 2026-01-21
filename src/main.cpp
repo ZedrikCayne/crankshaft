@@ -300,7 +300,7 @@ bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt, const 
     }
     struct CS_StringBuilder *sb = CS_htmlToStringBuilder( root, 2048, false );
     struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_HTML, CS_SB_buffer( sb ), CS_SB_size( sb ) );
-    CS_serverSetReplyCookie( reply, "session", "Session_GUID_HERE", true );
+    CS_serverSetReplyCookie( reply, "session", "Session_GUID_HERE", true, CS_REPLY_COOKIE_SAMESITE_LAX );
     CS_serverDoReply( info, reply );
     CS_SB_free( sb );
     CS_htmlFree( root );

@@ -993,13 +993,17 @@ static bool PrivateSetReplyHeaderInt( struct CS_Reply *reply, bool overwrite, co
     return PrivateSetReplyHeader( reply, overwrite, header, temp );
 }
 
-static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly ) {
+static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly, int sameSiteEnum ) {
     if( cookie == NULL || value == NULL ) {
         CS_LOG_ERROR("Trying to set an invalid value as a cookie... %s=%s",cookie?cookie:"NULL",value?value:"NULL");
         return true;
     }
     if( reply->numCookies >= MAX_REPLY_COOKIES ) {
         CS_LOG_ERROR("Trying to add more cookies than we have room for. Max %d", MAX_REPLY_COOKIES);
+        return true;
+    }
+    if( sameSiteEnum < CS_REPLY_COOKIE_SAMESITE_LAX || sameSiteEnum > CS_REPLY_COOKIE_SAMESITE_NONE ) {
+        CS_LOG_ERROR("Trying to set the SameSite attribute on a cookie out of range.");
         return true;
     }
     int nLen = strlen( cookie );
@@ -1015,6 +1019,7 @@ static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, c
     strncpy( reply->setCookie[ reply->numCookies ].cookie, cookie, COOKIE_MAX );
     strncpy( reply->setCookie[ reply->numCookies ].value, value, COOKIE_VALUE_MAX );
     reply->setCookie[ reply->numCookies ].httpOnly = httpOnly;
+    reply->setCookie[ reply->numCookies ].sameSiteEnum = sameSiteEnum;
     reply->numCookies++;
     return false;
 }
@@ -1046,8 +1051,8 @@ bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int
 bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value ) {
     return PrivateSetReplyHeaderInt( reply, false, header, value );
 }
-bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly ) {
-    return PrivateSetReplyCookie( reply, cookie, value, httpOnly );
+bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly, int sameSiteEnum ) {
+    return PrivateSetReplyCookie( reply, cookie, value, httpOnly, sameSiteEnum );
 }
 
 bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
@@ -1073,6 +1078,16 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         CS_PP_printf( info->output, "Set-Cookie: %s=%s", reply->setCookie[i].cookie, reply->setCookie[i].value);
         if( reply->setCookie[i].httpOnly ) CS_PP_printf( info->output, "; HttpOnly" );
         if( info->ssl ) CS_PP_printf( info->output, "; Secure");
+        switch( reply->setCookie[i].sameSiteEnum ) {
+            case CS_REPLY_COOKIE_SAMESITE_LAX:
+                break;
+            case CS_REPLY_COOKIE_SAMESITE_STRICT:
+                CS_PP_printf( info->output, "; SameSite=Strict" );
+                break;
+            case CS_REPLY_COOKIE_SAMESITE_NONE:
+                CS_PP_printf( info->output, "; SameSite=None" );
+                break;
+        }
         CS_PP_printf( info->output, "\r\n" );
     }
     CS_PP_printf( info->output, "\r\n" );

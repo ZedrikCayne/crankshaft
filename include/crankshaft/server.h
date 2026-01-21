@@ -51,8 +51,16 @@ struct CS_ReplyHeader {
 };
 #define COOKIE_MAX 64
 #define COOKIE_VALUE_MAX 256
+
+enum {
+    CS_REPLY_COOKIE_SAMESITE_LAX,
+    CS_REPLY_COOKIE_SAMESITE_STRICT,
+    CS_REPLY_COOKIE_SAMESITE_NONE
+};
+
 struct CS_ReplyCookie {
     bool httpOnly;
+    int sameSiteEnum;
     char cookie[ COOKIE_MAX ];
     char value[ COOKIE_VALUE_MAX ];
 };
@@ -62,11 +70,10 @@ struct CS_QueryParameter {
     const char *value;
 };
 
-
 #define MAX_REQUEST_HEADERS 64
 #define MAX_QUERY_PARAMETERS 64
 #define MAX_FORM_PARAMETERS 64
-#define MAX_REPLY_COOKIES 64
+#define MAX_REPLY_COOKIES 16
 
 struct CS_RequestInfo {
     bool valid;
@@ -146,7 +153,7 @@ bool CS_serverSetReplyHeader( struct CS_Reply *reply, const char *header, const 
 bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value );
 bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value );
 bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value );
-bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly );
+bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly, int sameSiteEnum );
 
 struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *replyBuffer, int replyLength );
 void CS_serverReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
