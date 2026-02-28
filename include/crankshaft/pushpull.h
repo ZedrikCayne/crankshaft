@@ -44,10 +44,10 @@ void CS_PP_init(struct CS_PushPullBuffer *initMe, int initialSize, char *buff);
 
 void CS_PP_defaultFree(struct CS_PushPullBuffer *freeMe);
 
-#define CS_PP_startOfData(PPBUFF) (PPBUFF->buff + PPBUFF->currentWriteOffset)
-#define CS_PP_endOfData(PPBUFF) (PPBUFF->buff + PPBUFF->currentReadOffset)
-#define CS_PP_dataSize(PPBUFF) (PPBUFF->currentReadOffset - PPBUFF->currentWriteOffset)
-#define CS_PP_bufferRemaining(PPBUFF) (PPBUFF->size - PPBUFF->currentReadOffset)
+#define CS_PP_startOfData(PPBUFF) ((PPBUFF)->buff + (PPBUFF)->currentWriteOffset)
+#define CS_PP_endOfData(PPBUFF) ((PPBUFF)->buff + (PPBUFF)->currentReadOffset)
+#define CS_PP_dataSize(PPBUFF) ((PPBUFF)->currentReadOffset - (PPBUFF)->currentWriteOffset)
+#define CS_PP_bufferRemaining(PPBUFF) ((PPBUFF)->size - (PPBUFF)->currentReadOffset)
 
 int CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int fileDescriptor);
 int CS_PP_readFromBuffer(struct CS_PushPullBuffer *buffer, const void *source, int nBytes);
@@ -61,10 +61,10 @@ int CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl);
 int CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file);
 #define CS_PP_write(PPbuff,PPnBytes) CS_PP_writeToBuffer(PPbuff,NULL,PPnBytes)
 
-#define CS_PP_setFull(PPBUFF) (PPBUFF->currentReadOffset=PPBUFF->size)
-#define CS_PP_rewind(PPBUFF) (PPBUFF->currentWriteOffset = 0)
-#define CS_PP_hasError(PPBUFF) (PPBUFF->err!=0)
-#define CS_PP_reset(PPBUFF) (PPBUFF->currentWriteOffset=PPBUFF->currentReadOffset=0)
+#define CS_PP_setFull(PPBUFF) ((PPBUFF)->currentReadOffset=(PPBUFF)->size)
+#define CS_PP_rewind(PPBUFF) ((PPBUFF)->currentWriteOffset = 0)
+#define CS_PP_hasError(PPBUFF) ((PPBUFF)->err!=0)
+#define CS_PP_reset(PPBUFF) ((PPBUFF)->currentWriteOffset=(PPBUFF)->currentReadOffset=0)
 
 bool CS_PP_removeOffEnd( struct CS_PushPullBuffer *buffer, int nBytes );
 bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int offset, int nBytes );

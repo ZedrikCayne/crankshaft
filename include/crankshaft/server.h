@@ -149,6 +149,7 @@ const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const 
 const char *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const char *header );
 const char *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const char *name );
 const char *CS_serverGetRequestCookie( struct CS_ClientInfo *info, const char *cookie );
+const char *CS_serverGetReplyHeader( struct CS_Reply *reply, const char *header );
 bool CS_serverSetReplyHeader( struct CS_Reply *reply, const char *header, const char *value );
 bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value );
 bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value );

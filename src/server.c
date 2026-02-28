@@ -35,6 +35,7 @@
 #include <crankshaft/ssl.h>
 #include <crankshaft/network.h>
 #include <crankshaft/base64.h>
+#include <crankshaft/compress.h>
 
 static const char *dayOfWeek[ 7 ] = {
     "Sun","Mon","Tue","Wed","Thu","Fri","Sat"
@@ -951,12 +952,12 @@ static bool PrivateSetReplyHeader( struct CS_Reply *reply,
         CS_LOG_ERROR("Trying to set a reply header with a null header or value.");
         return true;
     }
-    int headerLen = strlen(header);
+    int headerLen = strnlen(header, HEADER_MAX);
     if( headerLen > HEADER_MAX - 1 ) {
         CS_LOG_ERROR("Trying to set a reply header longer than %d", HEADER_MAX-1);
         return true;
     }
-    int valueLen = strlen(value);
+    int valueLen = strnlen(value, HEADER_MAX);
     if( valueLen > HEADER_VALUE_MAX - 1 ) {
         CS_LOG_ERROR("Trying to set a value in a reply header longer than %d", HEADER_VALUE_MAX-1); 
         return true;
@@ -1006,14 +1007,14 @@ static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, c
         CS_LOG_ERROR("Trying to set the SameSite attribute on a cookie out of range.");
         return true;
     }
-    int nLen = strlen( cookie );
-    if( nLen > COOKIE_MAX ) {
-        CS_LOG_ERROR("Trying to set a cookie name longer than %d", COOKIE_MAX );
+    int nLen = strnlen( cookie, COOKIE_MAX );
+    if( nLen > COOKIE_MAX - 1 ) {
+        CS_LOG_ERROR("Trying to set a cookie name longer than %d", COOKIE_MAX - 1 );
         return true;
     }
-    nLen = strlen( value );
-    if( nLen > COOKIE_VALUE_MAX ) {
-        CS_LOG_ERROR("Trying to set a cookie value longer than %d", COOKIE_VALUE_MAX );
+    nLen = strnlen( value, COOKIE_VALUE_MAX );
+    if( nLen > COOKIE_VALUE_MAX - 1 ) {
+        CS_LOG_ERROR("Trying to set a cookie value longer than %d", COOKIE_VALUE_MAX - 1 );
         return true;
     }
     strncpy( reply->setCookie[ reply->numCookies ].cookie, cookie, COOKIE_MAX );
@@ -1022,6 +1023,19 @@ static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, c
     reply->setCookie[ reply->numCookies ].sameSiteEnum = sameSiteEnum;
     reply->numCookies++;
     return false;
+}
+
+const char *PrivateGetReplyHeader(const struct CS_Reply *reply, const char *header ) {
+    if( reply == NULL || header == NULL || *header == 0 ) {
+        return NULL;
+    }
+    for(int i = 0; i < reply->numHeaders; ++i) {
+        if(strncasecmp(header, reply->replyHeaders[i].header, HEADER_MAX) == 0) {
+            return reply->replyHeaders[i].value;
+        }
+    }
+
+    return NULL;
 }
 
 struct CS_Reply *CS_serverCreateReply(struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *outputBuffer, int outputLength ) {
@@ -1051,6 +1065,9 @@ bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int
 bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value ) {
     return PrivateSetReplyHeaderInt( reply, false, header, value );
 }
+const char *CS_serverGetReplyHeader( struct CS_Reply *reply, const char *header ) {
+    return PrivateGetReplyHeader( reply, header );
+}
 bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly, int sameSiteEnum ) {
     return PrivateSetReplyCookie( reply, cookie, value, httpOnly, sameSiteEnum );
 }
@@ -1060,13 +1077,75 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         CS_LOG_ERROR("Bad arguments.");
         return true;
     }
+
+    void *compressedBuffer = NULL;
+    int compressedLength = 0;
+    const char *acceptEncoding = CS_serverGetRequestHeader(info, "Accept-Encoding");
+
+    if (acceptEncoding && strstr(acceptEncoding, "gzip") && 
+        reply->outputBuffer != NULL && reply->outputLength > 128) {
+        
+        bool shouldCompress = false;
+        const char *contentType = NULL;
+        if (reply->contentTypeEnum != CS_MIME_DO_NOT_SET) {
+            contentType = CS_mimeEnumToString(reply->contentTypeEnum);
+        } else {
+            contentType = CS_serverGetReplyHeader(reply, "Content-Type");
+        }
+
+        if (contentType) {
+            if (strstr(contentType, "text/") || 
+                strstr(contentType, "application/json") ||
+                strstr(contentType, "application/javascript") ||
+                strstr(contentType, "application/xml") ||
+                strstr(contentType, "image/svg+xml")) {
+                shouldCompress = true;
+            }
+        } else {
+            shouldCompress = true; 
+        }
+
+        if (shouldCompress) {
+            if( CS_serverGetReplyHeader(reply,"Content-Encoding") != NULL ) {
+                shouldCompress = false;
+            }
+        }
+
+        if (shouldCompress) {
+            CS_Compress ctx;
+            CS_compressInit(&ctx);
+            int bufferSize = reply->outputLength + 1024 + (reply->outputLength / 100);
+            void *outBuff = CS_alloc(bufferSize);
+            if (outBuff) {
+                struct CS_PushPullBuffer in_pp, out_pp;
+                CS_PP_init(&in_pp, reply->outputLength, (char*)reply->outputBuffer);
+                in_pp.currentReadOffset = reply->outputLength;
+                CS_PP_init(&out_pp, bufferSize, (char*)outBuff);
+                
+                if (CS_compressGzip(&ctx, &in_pp, &out_pp) >= 0) {
+                    if (CS_compressGzip(&ctx, &in_pp, &out_pp) >= 0) {
+                        compressedBuffer = outBuff;
+                        compressedLength = CS_PP_dataSize(&out_pp);
+                        CS_serverSetReplyHeader(reply, "Content-Encoding", "gzip");
+                    }
+                }
+                if (!compressedBuffer) CS_free(outBuff);
+            }
+            CS_compressDestroy(&ctx);
+        }
+    }
+
     int replyNumber = CS_httpResponseEnumToCode( reply->returnStatusEnum );
     const char *replyString = CS_httpResponseEnumToString( reply->returnStatusEnum );
     if( reply->contentTypeEnum != CS_MIME_DO_NOT_SET ) {
         CS_serverSetReplyHeaderIfMissing(reply, "Content-Type", CS_mimeEnumToString( reply->contentTypeEnum ) );
     }
-    if( reply->outputBuffer != NULL ) {
-        CS_serverSetReplyHeaderIntIfMissing(reply, "Content-Length", reply->outputLength );
+
+    void *bufferToSend = compressedBuffer ? compressedBuffer : (void*)reply->outputBuffer;
+    int lengthToSend = compressedBuffer ? compressedLength : reply->outputLength;
+
+    if( bufferToSend != NULL ) {
+        CS_serverSetReplyHeaderInt(reply, "Content-Length", lengthToSend );
     }
     CS_serverSetReplyHeaderIfMissing(reply, "Date", timeString(time(NULL)));
     CS_serverSetReplyHeaderIfMissing(reply, "Cache-Control", "no-cache" );
@@ -1093,13 +1172,13 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     CS_PP_printf( info->output, "\r\n" );
     int bytesWritten = 0;
 
-    if( reply->outputBuffer != NULL ) {
-        int bytesToWrite = reply->outputLength + CS_PP_dataSize( info->output );
+    if( bufferToSend != NULL ) {
+        int bytesToWrite = lengthToSend + CS_PP_dataSize( info->output );
         int bytesPutInBuff = 0;
         int totalBytesTaken = 0;
 
         do {
-            bytesPutInBuff = CS_PP_readFromBuffer( info->output, ((char*)reply->outputBuffer) + totalBytesTaken, reply->outputLength - totalBytesTaken );
+            bytesPutInBuff = CS_PP_readFromBuffer( info->output, ((char*)bufferToSend) + totalBytesTaken, lengthToSend - totalBytesTaken );
             totalBytesTaken += bytesPutInBuff;
             bytesWritten = CS_serverWriteOutputBuffer( info );
             bytesToWrite -= bytesWritten;
@@ -1112,6 +1191,7 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         if( bytesWritten < 0 )
             break;
     }
+    if (compressedBuffer) CS_free(compressedBuffer);
     CS_serverReturnReply(info, reply);
     return bytesWritten < 0;
 }
