@@ -386,7 +386,7 @@ static void ERR(struct CS_ClientInfo *info, int errorEnum, const char *details) 
     int error = CS_httpResponseEnumToCode( errorEnum );
     const char *errorString = CS_httpResponseEnumToString( errorEnum );
 
-    int contentLength = snprintf(tempBuff, STACK_BUFFER_SIZE, "{\"error\":\"%s\",\"status\":%d,\"details\":\"%s\"}",errorString,error,errorString);
+    int contentLength = snprintf(tempBuff, STACK_BUFFER_SIZE, "{\"error\":\"%s\",\"status\":%d,\"details\":\"%s\"}",errorString,error,details?details:errorString);
     struct CS_Reply *reply = CS_serverCreateReply( info, errorEnum, CS_MIME_JSON, tempBuff, contentLength );
     if( reply == NULL ) return;
     CS_serverDoReply( info, reply );
@@ -777,16 +777,22 @@ bool CS_serverDiagnostic200( struct CS_ClientInfo *info ) {
     return BASIC_OK(info, info->requestInfo.method);
 }
 
+#define MAX_FILE_PATH 2048
 bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int cacheSeconds, struct CS_Reply *useMe ) {
     const char *extension;
-    int len = strlen(fileToOpen);
+    const char *retryFile = fileToOpen;
+    int len = 0;
+
+PUSH_FILE_RETRY:
+
+    len = strlen(retryFile);
     for( int i = len - 2; i > 1; --i ) {
-        if( fileToOpen[ i ] == '.' ) {
-            extension = fileToOpen + i + 1; break;
+        if( retryFile[ i ] == '.' ) {
+            extension = retryFile + i + 1; break;
         }
     } 
 
-    int inputFile = open( fileToOpen, O_RDONLY );
+    int inputFile = open( retryFile, O_RDONLY );
     if( inputFile < 0 ) {
         ERR(info, CS_RESPONSE_404,"File Not Found");
         goto ERR_SETUP;
@@ -796,6 +802,13 @@ bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int 
     if( fstat( inputFile, &statBuff ) < 0 ) {
         ERR(info, CS_RESPONSE_500,"Cannot stat file.");
         goto ERR_FILE_OPENED;
+    }
+
+    //Did we open a directory?
+    if((statBuff.st_mode & S_IFMT) == S_IFDIR) {
+        close( inputFile );
+        retryFile = CS_tempBuffSnprintf( MAX_FILE_PATH, "%s/index.html", fileToOpen );
+        goto PUSH_FILE_RETRY;
     }
     
     long fileSize = statBuff.st_size;
@@ -854,7 +867,6 @@ ERR_SETUP:
     return true;
 }
 
-#define MAX_FILE_PATH 2048
 bool CS_serverFileServer( struct CS_ClientInfo *info ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     int lengthOfUri = strlen( request->uri );
