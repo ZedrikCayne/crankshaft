@@ -785,7 +785,6 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
     CS_SB_printf(sb, "%s %s", method, rest );
     if( queryParameters != NULL ) {
         for( int i = 0; i < numQueryParameters; ++i ) {
-            queryParameters[i];
             CS_SB_printf(sb, "%c%s=%s",
                     prefix,
                     CS_httpUrlEncodeTemp(queryParameters[i].name),
