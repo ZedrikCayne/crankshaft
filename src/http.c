@@ -711,7 +711,7 @@ static int privateContinueChunked( struct CS_RequestReply *reply ) {
 
 #define INITIAL_STRING_BUILDER_SIZE 4096
 #define PP_BUFFER_SIZE_FOR_RETURN 16384
-struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
+struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
                                             const char *uri,
                                             struct CS_RequestHeader *headers,
                                             int numHeaders,
@@ -872,10 +872,45 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
     CS_SB_free( sb );
     sb = NULL;
 
+    returnValue->buffer = CS_PP_defaultAlloc( PP_BUFFER_SIZE_FOR_RETURN );
+
+    return returnValue;
+
+CLEANUP:
+    if( returnValue && !reuse ) CS_httpCloseRequest( returnValue );
+    if( formString ) CS_SB_free(formString);
+    if( sb ) CS_SB_free(sb);
+    if( pp ) CS_PP_defaultFree(pp);
+    
+    if( addrInfos ) CS_networkReleaseAddressInfos( addrInfos );
+    return NULL;
+
+}
+
+
+#define INITIAL_STRING_BUILDER_SIZE 4096
+#define PP_BUFFER_SIZE_FOR_RETURN 16384
+struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
+                                            const char *uri,
+                                            struct CS_RequestHeader *headers,
+                                            int numHeaders,
+                                            struct CS_QueryParameter *queryParameters,
+                                            int numQueryParameters,
+                                            struct CS_FormParameters *formParameters,
+                                            int numFormParameters,
+                                            void *data,
+                                            int dataLength,
+                                            struct CS_RequestReply *reuse ) {
+    struct CS_RequestReply *returnValue = CS_httpStartRequest( methodEnum, uri, headers, numHeaders, queryParameters, numQueryParameters, formParameters, numFormParameters, data, dataLength, reuse );
+
+    if( returnValue == NULL ) return NULL;
+
+    bool wantSSL = returnValue->ssl != NULL;
+
     char CRLFBUFF[] = { CR,LF };
 
     if( data && dataLength > 0 ) {
-        pp = CS_PP_onStaticBuffer( dataLength, data );
+        struct CS_PushPullBuffer *pp = CS_PP_onStaticBuffer( dataLength, data );
         do {
             int numBytesSent = wantSSL?CS_PP_writeToSSL( pp, returnValue->ssl):CS_PP_writeToFile( pp, returnValue->remoteSocket );
             if( numBytesSent <= 0 ) {
@@ -889,7 +924,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         } else {
             write( returnValue->remoteSocket, CRLFBUFF, 2 );
         }
-     }
+    }
 
     returnValue->buffer = CS_PP_defaultAlloc( PP_BUFFER_SIZE_FOR_RETURN );
 
@@ -951,11 +986,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
 
 CLEANUP:
     if( returnValue && !reuse ) CS_httpCloseRequest( returnValue );
-    if( formString ) CS_SB_free(formString);
-    if( sb ) CS_SB_free(sb);
-    if( pp ) CS_PP_defaultFree(pp);
-    
-    if( addrInfos ) CS_networkReleaseAddressInfos( addrInfos );
+
     return NULL;
 }
 
