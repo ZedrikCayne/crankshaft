@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <stdio.h>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -715,6 +715,8 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
                                             const char *uri,
                                             struct CS_RequestHeader *headers,
                                             int numHeaders,
+                                            struct CS_QueryParameter *queryParameters,
+                                            int numQueryParameters,
                                             struct CS_FormParameters *formParameters,
                                             int numFormParameters,
                                             void *data,
@@ -752,7 +754,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         CS_LOG_ERROR("CS_httpMakeRequest() Badly formatted URI %s", uri?uri:"NULL");
         return NULL;
     }
-    
+
     struct CS_RequestReply *returnValue;
     if( reuse ) {
         returnValue = reuse;
@@ -774,9 +776,24 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         goto CLEANUP;
     }
 
+    char prefix = '?';
+    //In case we've put query parameters on the uri already.
+    if( rest != NULL && strstr(rest, "?") ) prefix = '&';
+            
     if( rest == NULL || rest[0] == 0 ) rest = "/";
 
-    CS_SB_printf(sb, "%s %s %s%c%c", method, rest, "HTTP/1.1", CR, LF);
+    CS_SB_printf(sb, "%s %s", method, rest );
+    if( queryParameters != NULL ) {
+        for( int i = 0; i < numQueryParameters; ++i ) {
+            queryParameters[i];
+            CS_SB_printf(sb, "%c%s=%s",
+                    prefix,
+                    CS_httpUrlEncodeTemp(queryParameters[i].name),
+                    CS_httpUrlEncodeTemp(queryParameters[i].value) );
+            prefix = '&';
+        }
+    }
+    CS_SB_printf(sb, " %s%c%c", "HTTP/1.1", CR, LF);
 
     defaultHeadersValue[HOST_INDEX] = address;
     for( int i = 0; i < (CS_ARRAY_SIZE(defaultHeaders)); ++i ) {

@@ -106,6 +106,11 @@ struct CS_FormParameters {
     const char *value;
 };
 
+struct CS_QueryParameter {
+    const char *name;
+    const char *value;
+};
+
 #define MAX_REPLY_HEADERS 64
 struct CS_RequestReply {
     int remoteSocket;
@@ -144,11 +149,14 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
                                             const char *uri,
                                             struct CS_RequestHeader *headers,
                                             int numHeaders,
+                                            struct CS_QueryParameter *queryParameters,
+                                            int numQueryParameters,
                                             struct CS_FormParameters *formParameters,
-                                            int numFormParameterschar,
+                                            int numFormParameters,
                                             void *data,
                                             int dataLength,
                                             struct CS_RequestReply *reuse );
+
 void CS_httpCloseRequest( struct CS_RequestReply *closeMe );
 
 void CS_httpCleanupReplies();

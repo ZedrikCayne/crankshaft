@@ -65,10 +65,6 @@ struct CS_ReplyCookie {
     char value[ COOKIE_VALUE_MAX ];
 };
 
-struct CS_QueryParameter {
-    const char *name;
-    const char *value;
-};
 
 #define MAX_REQUEST_HEADERS 64
 #define MAX_QUERY_PARAMETERS 64

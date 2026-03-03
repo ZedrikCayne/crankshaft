@@ -63,7 +63,7 @@ bool test_http(void) {
     snprintf( base, 128, "http://localhost:%d/test", testServer->serverPort );
 
     if( testServer ) {
-        struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, base, NULL, 0, NULL, 0, NULL, 0, NULL );
+        struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, base, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL );
         CS_FAIL_ON_NOT_NULL( reply, "Request should come back null.", "Oops." );
         CS_serverKill( testServer );
     }
@@ -72,7 +72,7 @@ bool test_http(void) {
     CS_FAIL_ON_NULL( testServer, "Start web server.", "Failed." );
     snprintf( base, 128, "https://localhost:%d/test", testServer->serverPort );
     if( testServer ) {
-        struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, base, NULL, 0, NULL, 0, NULL, 0, NULL );
+        struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, base, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL );
         CS_FAIL_ON_NULL( reply, "GET request to /test", "Failed" );
         if( reply ) {
             struct CS_JsonNode *json = CS_jsonParse( CS_PP_startOfData( reply->buffer ),
@@ -91,7 +91,7 @@ bool test_http(void) {
 
         snprintf(base, 128, "https://localhost:%d/test?a=b&c=fah&d=groovy",testServer->serverPort);
 
-        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, NULL, 0, NULL, 0, NULL, 0, NULL );
+        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL );
         CS_FAIL_ON_NULL( reply, "Make POST with uri parameters.", "Failed on %s", base );
         if( reply ) {
             struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
@@ -108,10 +108,10 @@ bool test_http(void) {
                                 CS_FAIL_ON_FALSE( strcmp( value->stringValue, "b" ) == 0, "a is b", "Not." );
                                 break;
                             case 'c':
-                                CS_FAIL_ON_FALSE( strcmp( value->stringValue, "fah" ) == 0, "a is b", "Not." );
+                                CS_FAIL_ON_FALSE( strcmp( value->stringValue, "fah" ) == 0, "c is fah", "Not." );
                                 break;
                             case 'd':
-                                CS_FAIL_ON_FALSE( strcmp( value->stringValue, "groovy" ) == 0, "a is b", "Not." );
+                                CS_FAIL_ON_FALSE( strcmp( value->stringValue, "groovy" ) == 0, "d is groovy", "Not." );
                                 break;
                             default: 
                                 CS_FAIL_ON_TRUE( true, "Any other 'name'", "Name was: %s", name->stringValue );
@@ -124,14 +124,20 @@ bool test_http(void) {
             CS_httpCloseRequest(reply);
         }
 
-        snprintf(base, 128, "https://localhost:%d/test?a=b&c=fah&d=groovy",testServer->serverPort);
+        struct CS_QueryParameter queryParameters[] = {
+            {"a", "b"},
+            {"c", "fah"},
+            {"d", "groovy"}
+        };
+
+        snprintf(base, 128, "https://localhost:%d/test",testServer->serverPort);
         struct CS_RequestHeader headers[] = {
             {"Header1","Value1"},
             {"Header2","Value2"},
             {"Header3","Value3"},
             {"Header4","Value4"},
         };
-        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, headers, 4, NULL, 0, NULL, 0, NULL );
+        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, headers, 4, queryParameters, 3, NULL, 0, NULL, 0, NULL );
         CS_FAIL_ON_NULL( reply, "Make POST with uri parameters and form parameters.", "Failed on %s", base );
         if( reply ) {
             const char *ctype = CS_httpReplyHeader(reply,"Content-Type");
@@ -141,7 +147,28 @@ bool test_http(void) {
                     CS_PP_dataSize( reply->buffer ), 512 );
             CS_FAIL_ON_NULL( json, "Json parsing reply", "Json failed." );
             if( json ) {
-                for( int i = 0; i < sizeof(headers)/sizeof(headers[0]); ++i ) {
+                struct CS_JsonNode *queryParams = CS_jsonNodeByPath( json, "queryParameters" );
+                CS_FAIL_ON_NULL( queryParams, "Check Query Parameters", "Could not find query parameters. %s", CS_PP_startOfData( reply->buffer ) );
+                CS_JSON_NODE_ITER(queryParams, queryParameter) {
+                    struct CS_JsonNode *name = CS_jsonNodeByPath( queryParameter, "name" );
+                    struct CS_JsonNode *value = CS_jsonNodeByPath( queryParameter, "value" );
+                    if( name && value ) {
+                        switch( name->stringValue[0] ) {
+                            case 'a':
+                                CS_FAIL_ON_FALSE( strcmp( value->stringValue, "b" ) == 0, "a is b", "Not." );
+                                break;
+                            case 'c':
+                                CS_FAIL_ON_FALSE( strcmp( value->stringValue, "fah" ) == 0, "c is fah", "Not." );
+                                break;
+                            case 'd':
+                                CS_FAIL_ON_FALSE( strcmp( value->stringValue, "groovy" ) == 0, "d is groovy", "Not." );
+                                break;
+                            default: 
+                                CS_FAIL_ON_TRUE( true, "Any other 'name'", "Name was: %s", name->stringValue );
+                                break;
+                        }
+                    }
+                }for( int i = 0; i < sizeof(headers)/sizeof(headers[0]); ++i ) {
                     const char *tempPath = CS_tempBuffSnprintf( 64, "headers/|name=%s/value", headers[i].header );
                     const char *tempVal = CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) );
                     CS_FAIL_ON_FALSE( tempVal && strcmp(tempVal,headers[i].values) == 0, CS_tempBuffSnprintf(64, "Looking for %s in %s", headers[i].values, tempPath), "Found %s", tempVal?tempVal:NULL );
@@ -157,7 +184,7 @@ bool test_http(void) {
             {"form3","Form3 Data"}
         };
 
-        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, headers, 4, formParameters, 3, NULL, 0, NULL );
+        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, headers, 4, NULL, 0, formParameters, 3, NULL, 0, NULL );
         CS_FAIL_ON_NULL( reply, "Request with params, form params, uri paramaters.", "Failed." );
         if( reply ) {
             struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
