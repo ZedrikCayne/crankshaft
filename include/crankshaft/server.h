@@ -138,6 +138,7 @@ struct CS_WebServer *CS_serverStart(int portNum,
 bool CS_serverKill(struct CS_WebServer *server);
 
 bool CS_serverDiagnostic200( struct CS_ClientInfo *info );
+bool CS_serverReplyError( struct CS_ClientInfo *info, int responseEnum, const char *details );
 bool CS_serverFileServer( struct CS_ClientInfo *info );
 bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int cacheSeconds, struct CS_Reply *useMe );
 

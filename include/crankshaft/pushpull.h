@@ -71,6 +71,9 @@ bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int offset, int nBytes
 bool CS_PP_makeRoom( struct CS_PushPullBuffer *buffer );
 char *CS_PP_findChar( struct CS_PushPullBuffer *buffer, char needle );
 
+//Moves as much as possible from the source to the destination.
+int CS_PP_moveBuffer( struct CS_PushPullBuffer *source, struct CS_PushPullBuffer *destination );
+
 #define CS_PP_printf(PPbuff,...) CS_PP_read(PPbuff,snprintf((char*)CS_PP_endOfData(PPbuff),CS_PP_bufferRemaining(PPbuff),__VA_ARGS__));
 
 const char *CS_PP_desc(struct CS_PushPullBuffer *ppBuff);

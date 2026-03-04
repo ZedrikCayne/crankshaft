@@ -254,6 +254,20 @@ char *CS_PP_findChar( struct CS_PushPullBuffer *buffer, char needle ) {
 }
 
 
+int CS_PP_moveBuffer( struct CS_PushPullBuffer *source, struct CS_PushPullBuffer *destination ) {
+    int sourceSize = CS_PP_dataSize( source );
+    if( sourceSize == 0 ) return 0;
+    int destinationSize = CS_PP_bufferRemaining( destination );
+    if( destinationSize == 0 ) return 0;
+    int moveSize = sourceSize < destinationSize?sourceSize:destinationSize;
+    //updates the destination pointers.
+    CS_PP_readFromBuffer( destination, CS_PP_startOfData( source ), moveSize );
+    //updates the source pointers.
+    CS_PP_write( source, moveSize );
+    return moveSize;
+}
+
+
 #define MAX_PRINT_SIZE 1024
 const char *CS_PP_desc(struct CS_PushPullBuffer *buffer) {
     char *temp = (char*)CS_tempBuff(MAX_PRINT_SIZE);

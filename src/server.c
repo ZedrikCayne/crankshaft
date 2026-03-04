@@ -735,6 +735,11 @@ bool CS_serverDiagnostic200( struct CS_ClientInfo *info ) {
     return BASIC_OK(info, info->requestInfo.method);
 }
 
+bool CS_serverReplyError( struct CS_ClientInfo *info, int responseEnum, const char *details ) {
+    ERR( info, responseEnum, details );
+    return true;
+}
+
 #define MAX_FILE_PATH 2048
 bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int cacheSeconds, struct CS_Reply *useMe ) {
     const char *extension;

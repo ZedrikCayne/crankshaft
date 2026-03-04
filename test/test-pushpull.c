@@ -100,7 +100,19 @@ bool test_pushpull() {
     CS_FAIL_ON_TRUE( CS_PP_removeChunk( testBuffer1, TEST_BUFF_SIZE - 15, 15 ), "Removing the last 15 bytes should work.", "This errored." );
     CS_FAIL_ON_FALSE( CS_PP_removeChunk( testBuffer1, TEST_BUFF_SIZE - 15, 15 ), "Removing the last 15 bytes should not work if beyond the end of the written buffer.", "This worked, not cool." );
 
+    struct CS_PushPullBuffer *testBuffer2 = CS_PP_defaultAlloc( TEST_BUFF_SIZE / 2 );
+    CS_PP_reset(testBuffer1);
+    CS_PP_readFromBuffer( testBuffer1, temp, TEST_BUFF_SIZE);
+    CS_FAIL_ON_FALSE( CS_PP_moveBuffer( testBuffer1, testBuffer2 ) == ( TEST_BUFF_SIZE / 2 ), "Copying from a large buffer to small buffer return the size of the smaller buffer.", "Did not copy the correct size bytes." );
+    CS_FAIL_ON_FALSE( CS_PP_dataSize( testBuffer2 ) == (TEST_BUFF_SIZE / 2), "Moving bytes frone buffer to another should have the right reported number of bytes.", "Wrong number of bytes." );
+    CS_FAIL_ON_FALSE( CS_PP_dataSize( testBuffer1 ) == (TEST_BUFF_SIZE / 2), "Moving bytes from one buffer to another should half half the size of the source.", "Source not empty." );
+    CS_PP_reset( testBuffer2 );
+    CS_FAIL_ON_FALSE( CS_PP_moveBuffer( testBuffer1, testBuffer2 ) == ( TEST_BUFF_SIZE / 2 ), "Copying from a large buffer that is half full to small buffer return the size of the smaller buffer.", "Did not copy the correct size bytes." );
+    CS_FAIL_ON_FALSE( CS_PP_dataSize( testBuffer1 ) == 0, "Moving bytes from one buffer to another should half half the size of the source.", "Source not empty." );
+    CS_FAIL_ON_FALSE( CS_PP_dataSize( testBuffer2 ) == (TEST_BUFF_SIZE / 2), "Moving bytes frone buffer to another should have the right reported number of bytes.", "Wrong number of bytes." );
+
     CS_PP_defaultFree( testBuffer1 );
+    CS_PP_defaultFree( testBuffer2 );
 
     return testCount !=
            testSucceeded;
