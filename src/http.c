@@ -887,6 +887,32 @@ CLEANUP:
 
 }
 
+int CS_httpFillReplyFromRemote( struct CS_RequestReply *requestReply ) {
+    int numBytesRead = requestReply->ssl?CS_PP_readFromSSL( requestReply->buffer, requestReply->ssl ):CS_PP_readFromFile( requestReply->buffer, requestReply->remoteSocket );
+
+    return numBytesRead;
+}
+
+int CS_httpPushBufferToRemote( struct CS_RequestReply *requestReply, struct CS_PushPullBuffer *pp ) {
+    int totalSent = 0;
+    do {
+        int numBytesSent = requestReply->ssl?CS_PP_writeToSSL( pp, requestReply->ssl):CS_PP_writeToFile( pp, requestReply->remoteSocket );
+        if( numBytesSent <= 0 ) {
+            return numBytesSent; 
+        }
+        totalSent += numBytesSent;
+    } while ( CS_PP_dataSize( pp ) > 0 );
+    return totalSent;
+}
+
+int CS_httpPushBytesToRemote( struct CS_RequestReply *requestReply, void *data, int dataLength ) {
+    struct CS_PushPullBuffer *pp = CS_PP_onStaticBuffer( dataLength, data );
+    if( !pp ) return -1;
+    int bytesSent = CS_httpPushBufferToRemote( requestReply, pp );
+    CS_PP_defaultFree(pp);
+    return bytesSent;
+}
+
 
 #define INITIAL_STRING_BUILDER_SIZE 4096
 #define PP_BUFFER_SIZE_FOR_RETURN 16384
@@ -928,7 +954,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
 
     returnValue->buffer = CS_PP_defaultAlloc( PP_BUFFER_SIZE_FOR_RETURN );
 
-    int numBytesRead = wantSSL?CS_PP_readFromSSL( returnValue->buffer, returnValue->ssl ):CS_PP_readFromFile( returnValue->buffer, returnValue->remoteSocket );
+    int numBytesRead = CS_httpFillReplyFromRemote( returnValue );
 
     if( numBytesRead < 0 ) {
         CS_LOG_ERROR("Read from remote failed.");
@@ -945,9 +971,8 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
     if( contentLength != NULL ) {
         int howMuch = atol(contentLength);
         if( howMuch > CS_PP_dataSize( returnValue->buffer ) ) {
-            int readMore = wantSSL?CS_PP_readFromSSL( returnValue->buffer, returnValue->ssl ):CS_PP_readFromFile( returnValue->buffer, returnValue->remoteSocket );
-            if( readMore < 0 )
-                goto CLEANUP;
+            int readMore = CS_httpFillReplyFromRemote( returnValue );
+            if( readMore < 0 ) goto CLEANUP;
         }
     }
 
@@ -965,7 +990,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
             if( continueValue == CONTINUE_CHUNK_MORE ) {
                 CS_LOG_TRACE("Need more data.");
                 //Need more data.
-                numBytesRead = wantSSL?CS_PP_readFromSSL( returnValue->buffer, returnValue->ssl ):CS_PP_readFromFile( returnValue->buffer, returnValue->remoteSocket );
+                numBytesRead = CS_httpFillReplyFromRemote( returnValue );
                 if( numBytesRead < 0 ) {
                     CS_LOG_TRACE("Error?");
                     goto CLEANUP;

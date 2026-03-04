@@ -159,6 +159,10 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
 
 void CS_httpCloseRequest( struct CS_RequestReply *closeMe );
 
+int CS_httpFillReplyFromRemote( struct CS_RequestReply *requestReply );
+int CS_httpPushBufferToRemote( struct CS_RequestReply *requestReply, struct CS_PushPullBuffer *pp );
+int CS_httpPushBytesToRemote( struct CS_RequestReply *requestReply, void *data, int dataLength );
+
 void CS_httpCleanupReplies();
 #ifdef __cplusplus
 }
