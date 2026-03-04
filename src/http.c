@@ -21,6 +21,24 @@
 #include <crankshaft/ssl.h>
 #include <crankshaft/util.h>
 
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define _CONNECT 0x404f4e4e
+#define _DELETE  0x44454c45
+#define _GET     0x47455420
+#define _HEAD    0x48454144
+#define _POST    0x504f5d54
+#define _PUT     0x50555420
+#define _TRACE   0x54524143
+#else
+#define _CONNECT 0x43434340
+#define _DELETE  0x454c4544
+#define _GET     0x20544547
+#define _HEAD    0x44414548
+#define _POST    0x54534f50
+#define _PUT     0x20545550
+#define _TRACE   0x43415254
+#endif
+
 static void *requestSlabAlloc = NULL;
 static pthread_mutex_t slabAllocMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -230,6 +248,35 @@ static const char *methodEnumToName[] = {
     "PUT",
     "TRACE",
 };
+
+int CS_httpStringToMethodEnum( const char *methodString ) {
+    int command = *(int*)methodString;
+    switch(command) {
+        case _CONNECT:
+            return CS_HTTP_METHOD_CONNECT;
+            break;
+        case _DELETE:
+            return CS_HTTP_METHOD_DELETE;
+            break;
+        case _GET:
+            return CS_HTTP_METHOD_GET;
+            break;
+        case _HEAD:
+            return CS_HTTP_METHOD_HEAD;
+            break;
+        case _POST:
+            return CS_HTTP_METHOD_POST;
+            break;
+        case _PUT:
+            return CS_HTTP_METHOD_PUT;
+            break;
+        case _TRACE:
+            return CS_HTTP_METHOD_TRACE;
+            break;
+        default:
+            return CS_HTTP_METHOD_UNKNOWN;
+    }
+}
 
 const char *CS_httpResponseEnumToString( int responseEnum ) {
     if( responseEnum < 0 || responseEnum >= MAX_NUM_CS_RESPONSE_ENUMS ) return NULL;

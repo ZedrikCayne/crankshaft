@@ -130,6 +130,7 @@ struct CS_RequestReply {
 
 #define CS_MAX_REQUEST_LENGTH 4096
 
+int CS_httpStringToMethodEnum( const char *methodString );
 const char *CS_httpMethodEnumToString( int methodEnum );
 const char *CS_httpResponseEnumToString( int responseEnum );
 int CS_httpResponseEnumToCode( int responseEnum );
@@ -144,6 +145,18 @@ int CS_httpUrlDecodeBinary( const void *toDecode, int decodeBufferLength, void *
 int CS_httpUrlEncodeBinary( const void *toEncode, int encodeBufferLength, void *output, int outputBufferLength );
 
 const char *CS_httpReplyHeader( struct CS_RequestReply *reply, const char *header );
+
+struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
+                                            const char *uri,
+                                            struct CS_RequestHeader *headers,
+                                            int numHeaders,
+                                            struct CS_QueryParameter *queryParameters,
+                                            int numQueryParameters,
+                                            struct CS_FormParameters *formParameters,
+                                            int numFormParameters,
+                                            void *data,
+                                            int dataLength,
+                                            struct CS_RequestReply *reuse );
 
 struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
                                             const char *uri,

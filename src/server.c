@@ -432,24 +432,6 @@ static bool BASIC_OK(struct CS_ClientInfo *info, const char *what) {
     return CS_serverDoReply( info, reply );
 }
 
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#define _CONNECT 0x404f4e4e
-#define _DELETE  0x44454c45
-#define _GET     0x47455420
-#define _HEAD    0x48454144
-#define _POST    0x504f5d54
-#define _PUT     0x50555420
-#define _TRACE   0x54524143
-#else
-#define _CONNECT 0x43434340
-#define _DELETE  0x454c4544
-#define _GET     0x20544547
-#define _HEAD    0x44414548
-#define _POST    0x54534f50
-#define _PUT     0x20545550
-#define _TRACE   0x43415254
-#endif
-
 enum HeaderState {
     HEADER_STATE_POSSIBLE_WHITE_SPACE,
     HEADER_STATE_METHOD,
@@ -488,34 +470,6 @@ enum HeaderState {
 static int parseRequest(struct CS_ClientInfo *info) {
     CS_ClearRequestInfo(info);
     char *startOfData = CS_PP_startOfData(info->buffer);
-    //Find first space, that's the end of the 'method'
-    int command = *(int*)startOfData;
-    switch(command) {
-        case _CONNECT:
-            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_CONNECT;
-            break;
-        case _DELETE:
-            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_DELETE;
-            break;
-        case _GET:
-            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_GET;
-            break;
-        case _HEAD:
-            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_HEAD;
-            break;
-        case _POST:
-            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_POST;
-            break;
-        case _PUT:
-            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_PUT;
-            break;
-        case _TRACE:
-            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_TRACE;
-            break;
-        default:
-            info->requestInfo.requestMethodEnum = CS_HTTP_METHOD_UNKNOWN;
-            return -1;
-    }
 
     char *currentPoint = startOfData;
     char *startOfToken = NULL;
@@ -537,6 +491,10 @@ static int parseRequest(struct CS_ClientInfo *info) {
                 startOfToken = currentPoint;
                 EAT_CRLF();
                 currentHeaderState = HEADER_STATE_METHOD;
+                info->requestInfo.requestMethodEnum = CS_httpStringToMethodEnum(startOfData);
+                if( info->requestInfo.requestMethodEnum == CS_HTTP_METHOD_UNKNOWN ) {
+                    return -1;
+                }
             case HEADER_STATE_METHOD:
                 //One space separates method and the uri
                 if( *currentPoint == SP )  {
