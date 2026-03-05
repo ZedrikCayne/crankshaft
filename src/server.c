@@ -1119,9 +1119,8 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     void *bufferToSend = compressedBuffer ? compressedBuffer : (void*)reply->outputBuffer;
     int lengthToSend = compressedBuffer ? compressedLength : reply->outputLength;
 
-    if( bufferToSend != NULL ) {
-        CS_serverSetReplyHeaderInt(reply, "Content-Length", lengthToSend );
-    }
+    CS_serverSetReplyHeaderInt(reply, "Content-Length", lengthToSend );
+
     CS_serverSetReplyHeaderIfMissing(reply, "Date", timeString(time(NULL)));
     CS_serverSetReplyHeaderIfMissing(reply, "Cache-Control", "no-cache" );
     CS_PP_printf( info->output, "%s %d %s\r\n", HTTP_VERSION, replyNumber, replyString );
