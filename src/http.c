@@ -790,7 +790,7 @@ struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
         CS_LOG_ERROR("CS_httpMakeRequest() Bad methodEnum %d", methodEnum );
         return NULL;
     }
-    if( formParameters ) {
+    if( formParameters && numFormParameters > 0 ) {
         const char *currentlySet = headerHas( headers, numHeaders, "Content-Type" );
         if( currentlySet != NULL && strcmp(currentlySet, "application/x-www-form-urlencoded" ) != 0 ) {
             CS_LOG_ERROR("Form parameters set but user has set a content type other than form-urlencoded.");
