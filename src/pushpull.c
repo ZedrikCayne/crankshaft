@@ -142,7 +142,7 @@ int CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination, int
         int bytesRead = SSL_read( ssl,
                                   CS_PP_endOfData(buffer),
                                   CS_PP_bufferRemaining(buffer) );
-        if( bytesRead < 0 || (bytesRead == 0 && errno != 0) ) {
+        if( bytesRead <= 0 ) {
             bytesRead = -1;
             buffer->err = errno;
         } else {
