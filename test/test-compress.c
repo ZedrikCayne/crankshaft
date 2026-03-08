@@ -108,6 +108,7 @@ static bool check_roundtrip(const char *algoName,
     } else {
         CS_LOG_OK(algoName);
     }
+    CS_free(inputData);
     CS_free(outputData);
 
 cleanup:

@@ -371,6 +371,7 @@ bool test_json() {
         CS_FAIL_ON_FALSE( (js2 && strcmp(js2->stringValue,"cVal")==0 ), "|name=c/value should be cVal", "Was not." );
         CS_jsonFree(js);
     }
+    CS_linearFree( tempVoidAllocator );
     
 
     CS_tempFreeManual( myTempBuffer );

@@ -87,6 +87,7 @@ bool test_html(void) {
         CS_FAIL_ON_NOT_NULL( CS_htmlRemoveAttributeValue( html, "class", "Scunge" ), "Should fail removing an unknown.", "Oops!" );
         CS_FAIL_ON_NOT_NULL( CS_htmlRemoveAttributeIndex( html, "class", 5 ), "Should fail removing an invalid index.", "Oops." );
         CS_FAIL_ON_NULL( CS_htmlRemoveAttributeIndex( html, "class", 1 ), "Remove 1 index", "Nope" );
+        CS_SB_free(sb);
         sb = CS_htmlToStringBuilder( html, 1024, false );
         CS_FAIL_ON_FALSE( strcmp( sb->buffer, outputComparisonDiv3 ) == 0, "Check details div3.", "\n%s\n%s", sb->buffer, outputComparisonDiv3 );
         CS_SB_free(sb);
@@ -94,8 +95,7 @@ bool test_html(void) {
         sb = CS_htmlToStringBuilder( html, 1024, false );
         CS_FAIL_ON_FALSE( strcmp( sb->buffer, outputComparisonDiv4 ) == 0, "Check details div4.", "\n%s\n%s", sb->buffer, outputComparisonDiv4 );
         CS_SB_free(sb);
-
-
+        CS_htmlFree(html);
     }
 
     return testCount !=

@@ -999,8 +999,6 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         }
     }
 
-    returnValue->buffer = CS_PP_defaultAlloc( PP_BUFFER_SIZE_FOR_RETURN );
-
     int numBytesRead = CS_httpFillReplyFromRemote( returnValue );
 
     if( numBytesRead < 0 ) {
