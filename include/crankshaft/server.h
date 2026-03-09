@@ -157,6 +157,7 @@ struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int responseE
 void CS_serverReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
 bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
 
+int CS_serverKillClientSocket( struct CS_ClientInfo *info );
 int CS_serverFillIncomingBuffer( struct CS_ClientInfo *info );
 int CS_serverWriteOutputBuffer( struct CS_ClientInfo *info );
 

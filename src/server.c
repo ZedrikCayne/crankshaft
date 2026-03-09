@@ -179,7 +179,7 @@ CLIENT_BAIL_NOSSL:
         SSL_free( clientInfo->ssl );
         clientInfo->ssl = NULL;
     }
-    close(clientInfo->clientSocket);
+    CS_serverKillClientSocket( clientInfo );
     if( clientInfo->disconnectCallback != NULL ) {
         clientInfo->disconnectCallback( clientInfo );
         clientInfo->disconnectCallback = NULL;
@@ -1168,6 +1168,13 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     if (compressedBuffer) CS_free(compressedBuffer);
     CS_serverReturnReply(info, reply);
     return bytesWritten < 0;
+}
+
+int CS_serverKillClientSocket( struct CS_ClientInfo *info ) {
+    int returnValue = 0;
+    if( info->clientSocket ) returnValue = close( info->clientSocket );
+    info->clientSocket = 0;
+    return returnValue;
 }
 
 int CS_serverFillIncomingBuffer( struct CS_ClientInfo *info ) {
