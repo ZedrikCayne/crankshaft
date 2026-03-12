@@ -20,6 +20,7 @@
 #include <crankshaft/network.h>
 #include <crankshaft/ssl.h>
 #include <crankshaft/util.h>
+#include <crankshaft/compress.h>
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #define _CONNECT 0x404f4e4e
@@ -676,7 +677,7 @@ static const char *defaultHeadersValue[] = {
     "Crankshaft",
     "close",
     "*/*",
-    "identity",
+    "gzip, deflate",
     NULL
 };
 #define HOST_INDEX 4
@@ -961,6 +962,66 @@ int CS_httpPushBytesToRemote( struct CS_RequestReply *requestReply, void *data, 
 }
 
 
+#define MINIMUM_DECOMPRESSION_BUFFER 16384
+static int privateDecompressReply( struct CS_RequestReply *reply ) {
+    const char *contentEncoding = CS_httpReplyHeader( reply, "Content-Encoding" );
+    if( contentEncoding == NULL ) return 0;
+    
+    bool isGzip = strstr( contentEncoding, "gzip" ) != NULL;
+    bool isDeflate = strstr( contentEncoding, "deflate" ) != NULL;
+    
+    if( !isGzip && !isDeflate ) return 0;
+    
+    CS_Compress ctx;
+    CS_compressInit( &ctx );
+    
+    int initialSize = CS_PP_dataSize( reply->buffer ) * 2;
+    if( initialSize < MINIMUM_DECOMPRESSION_BUFFER ) initialSize = MINIMUM_DECOMPRESSION_BUFFER;
+    
+    struct CS_PushPullBuffer *decompressed = CS_PP_defaultAlloc( initialSize );
+    if( decompressed == NULL ) {
+        CS_LOG_ERROR("OOM creating a decompression buffer.");
+        CS_compressDestroy( &ctx );
+        return -1;
+    }
+    
+    while( CS_PP_dataSize( reply->buffer ) > 0 ) {
+        long result;
+        if( isGzip ) {
+            result = CS_compressGunzip( &ctx, reply->buffer, decompressed );
+        } else {
+            result = CS_compressInflate( &ctx, reply->buffer, decompressed );
+        }
+        
+        if( result < 0 ) {
+            CS_PP_defaultFree( decompressed );
+            CS_compressDestroy( &ctx );
+            return -1;
+        }
+        
+        if( result == 0 && CS_PP_dataSize( reply->buffer ) > 0 ) {
+            // Need more space
+            int newSize = decompressed->size * 2;
+            struct CS_PushPullBuffer *newDecompressed = CS_PP_defaultAlloc( newSize );
+            if( newDecompressed == NULL ) {
+                 CS_PP_defaultFree( decompressed );
+                 CS_compressDestroy( &ctx );
+                 return -1;
+            }
+            CS_PP_moveBuffer( decompressed, newDecompressed );
+            CS_PP_defaultFree( decompressed );
+            decompressed = newDecompressed;
+        } else if (result == 0) {
+            break;
+        }
+    }
+    
+    CS_compressDestroy( &ctx );
+    CS_PP_defaultFree( reply->buffer );
+    reply->buffer = decompressed;
+    return 0;
+}
+
 #define INITIAL_STRING_BUILDER_SIZE 4096
 #define PP_BUFFER_SIZE_FOR_RETURN 16384
 struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
@@ -1050,6 +1111,11 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
                 break;
             }
         } while( CS_PP_bufferRemaining( returnValue->buffer ) > 0 );
+    }
+
+    if( privateDecompressReply( returnValue ) < 0 ) {
+        CS_LOG_ERROR("Decompression failed.");
+        goto CLEANUP;
     }
 
     return returnValue;
