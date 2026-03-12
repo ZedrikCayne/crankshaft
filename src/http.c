@@ -1034,6 +1034,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
                                             int numFormParameters,
                                             void *data,
                                             int dataLength,
+                                            bool autoDecompress,
                                             struct CS_RequestReply *reuse ) {
     struct CS_RequestReply *returnValue = CS_httpStartRequest( methodEnum, uri, headers, numHeaders, queryParameters, numQueryParameters, formParameters, numFormParameters, data, dataLength, reuse );
 
@@ -1113,7 +1114,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         } while( CS_PP_bufferRemaining( returnValue->buffer ) > 0 );
     }
 
-    if( privateDecompressReply( returnValue ) < 0 ) {
+    if( autoDecompress && privateDecompressReply( returnValue ) < 0 ) {
         CS_LOG_ERROR("Decompression failed.");
         goto CLEANUP;
     }

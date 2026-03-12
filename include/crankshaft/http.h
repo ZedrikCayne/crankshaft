@@ -168,6 +168,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
                                             int numFormParameters,
                                             void *data,
                                             int dataLength,
+                                            bool autoDecompress,
                                             struct CS_RequestReply *reuse );
 
 void CS_httpCloseRequest( struct CS_RequestReply *closeMe );

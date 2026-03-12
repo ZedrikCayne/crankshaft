@@ -40,8 +40,11 @@ bool test_compression_server(void) {
     char url[128];
     snprintf(url, sizeof(url), "http://localhost:%d/large", server->serverPort);
 
+    struct CS_RequestHeader headers_identity[] = {
+        {"Accept-Encoding", "Identity"}
+    };
     // 1. Request without Accept-Encoding
-    struct CS_RequestReply *reply = CS_httpMakeRequest(CS_HTTP_METHOD_GET, url, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL);
+    struct CS_RequestReply *reply = CS_httpMakeRequest(CS_HTTP_METHOD_GET, url, headers_identity, 1, NULL, 0, NULL, 0, NULL, 0, false, NULL);
     CS_FAIL_ON_NULL(reply, "Request without compression", "Failed");
     if (reply) {
         const char *ce = CS_httpReplyHeader(reply, "Content-Encoding");
@@ -54,7 +57,7 @@ bool test_compression_server(void) {
     struct CS_RequestHeader headers[] = {
         {"Accept-Encoding", "gzip"}
     };
-    reply = CS_httpMakeRequest(CS_HTTP_METHOD_GET, url, headers, 1, NULL, 0, NULL, 0, NULL, 0, NULL);
+    reply = CS_httpMakeRequest(CS_HTTP_METHOD_GET, url, headers, 1, NULL, 0, NULL, 0, NULL, 0, false, NULL);
     CS_FAIL_ON_NULL(reply, "Request with compression", "Failed");
     if (reply) {
         const char *ce = CS_httpReplyHeader(reply, "Content-Encoding");

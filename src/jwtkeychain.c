@@ -35,6 +35,7 @@ static struct CS_StorageItem *privateWebCache( const struct CS_Cache *cache, con
                             NULL, 0,
                             NULL, 0,
                             NULL, 0,
+                            true, 
                             NULL );
     if( reply == NULL ) return NULL;
 

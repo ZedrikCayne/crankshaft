@@ -20,6 +20,9 @@ static struct CS_Route routes[] = {
     { CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_EXACT, 0, "/compressed", compressed_route }
 };
 
+static int testCount = 0;
+static int testSucceeded = 0;
+
 bool test_compression() {
     struct CS_WebServer *server = CS_serverStart( 0, NULL, NULL, NULL, NULL, NULL, 0, routes, 1 );
     if( !server ) return true;
@@ -32,7 +35,7 @@ bool test_compression() {
         { "Accept-Encoding", "gzip" }
     };
 
-    struct CS_RequestReply *reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, url, headers, 1, NULL, 0, NULL, 0, NULL, 0, NULL );
+    struct CS_RequestReply *reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, url, headers, 1, NULL, 0, NULL, 0, NULL, 0, true, NULL );
     
     if( !reply ) {
         CS_serverKill( server );
@@ -40,23 +43,14 @@ bool test_compression() {
     }
 
     const char *encoding = CS_httpReplyHeader( reply, "Content-Encoding" );
-    
-    CS_LOG_INFO( "Content-Encoding: %s", encoding ? encoding : "none" );
-    CS_LOG_INFO( "Data size: %d", CS_PP_dataSize( reply->buffer ) );
 
-    bool failed = false;
     // If it's still gzipped, the size will likely be much smaller than 1024
-    if( CS_PP_dataSize( reply->buffer ) != 1024 ) {
-        CS_LOG_ERROR( "Expected 1024 bytes, got %d", CS_PP_dataSize( reply->buffer ) );
-        failed = true;
-    } else {
+    CS_FAIL_ON_FALSE( CS_PP_dataSize( reply->buffer ) == 1024,  "Expected 1024 bytes", "Got %d", CS_PP_dataSize( reply->buffer ) );
+
+    if( CS_PP_dataSize( reply->buffer ) == 1024 ) {
         char *data = CS_PP_startOfData( reply->buffer );
         for( int i = 0; i < 1024; i++ ) {
-            if( data[i] != 'A' ) {
-                CS_LOG_ERROR( "Data mismatch at %d", i );
-                failed = true;
-                break;
-            }
+            CS_FAIL_ON_TRUE( data[i] != 'A', "Data expected to be A", "Data mismatch at %d", i );
         }
     }
 
@@ -67,26 +61,17 @@ bool test_compression() {
         { "Accept-Encoding", "identity" }
     };
 
-    reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, url, headers2, 1, NULL, 0, NULL, 0, NULL, 0, NULL );
-    if( !reply ) {
-        CS_serverKill( server );
-        return true;
-    }
+    reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, url, headers2, 1, NULL, 0, NULL, 0, NULL, 0, false, NULL );
+    CS_FAIL_ON_NULL( reply, "Make request", "Failed" );
+    if( reply ) {
+        encoding = CS_httpReplyHeader( reply, "Content-Encoding" );
+        
+        CS_FAIL_ON_TRUE( encoding != NULL && strstr( encoding, "gzip" ), "Expecting no encoding.", "Got %s", encoding );
 
-    encoding = CS_httpReplyHeader( reply, "Content-Encoding" );
-    CS_LOG_INFO( "Content-Encoding (identity request): %s", encoding ? encoding : "none" );
-    
-    if( encoding != NULL && strstr( encoding, "gzip" ) ) {
-        CS_LOG_ERROR( "Expected no gzip encoding for identity request" );
-        failed = true;
-    }
+        CS_FAIL_ON_TRUE( CS_PP_dataSize( reply->buffer ) != 1024, "Expecting 1024 bytes", "Got %d",CS_PP_dataSize(reply->buffer) );
 
-    if( CS_PP_dataSize( reply->buffer ) != 1024 ) {
-        CS_LOG_ERROR( "Expected 1024 bytes, got %d", CS_PP_dataSize( reply->buffer ) );
-        failed = true;
+        CS_httpCloseRequest( reply );
     }
-
-    CS_httpCloseRequest( reply );
     CS_serverKill( server );
-    return failed;
+    return testCount != testSucceeded;
 }
