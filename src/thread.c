@@ -77,8 +77,7 @@ struct CS_Thread *CS_threadStart(const char *threadName,
         bool (*cycle)(struct CS_Thread *myThread, int threadState, void *context)) {
     struct CS_Thread *returnValue = privateGetThread();
 
-    strncpy( returnValue->name, threadName, CS_THREAD_NAME_MAX );
-    returnValue->name[CS_THREAD_NAME_MAX] = 0;
+    strlcpy( returnValue->name, threadName, CS_THREAD_NAME_MAX );
     returnValue->cycle = cycle;
     returnValue->context = context;
     returnValue->threadStateEnum = CS_THREAD_INIT;

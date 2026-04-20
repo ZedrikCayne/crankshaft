@@ -813,7 +813,7 @@ struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
         CS_LOG_ERROR("CS_httpMakeRequest() OOM getting a reply" );
         return NULL;
     }
-    strncpy( address, tempAddress, 127 );
+    strlcpy( address, tempAddress, 127 );
     struct addrinfo *addrInfos = CS_networkLookupAddress( address, portNum );
     //Lookup already has a log with it.
     if( addrInfos == NULL ) return NULL;

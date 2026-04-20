@@ -31,7 +31,7 @@ static bool initTempBuff(struct CS_TempBuffer *storage,
     };
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-truncation"
-    strncpy(storage->name, name, CS_MAX_TEMP_BUFF_TEMP_NAME-1);
+    strlcpy(storage->name, name, CS_MAX_TEMP_BUFF_TEMP_NAME-1);
 #pragma GCC diagnostic pop
     storage->size = totalSize;
     storage->current = buffer;
@@ -98,7 +98,7 @@ char *CS_tempStringCopyWithPad(const char *copyFrom, int size, char pad, int *ou
     int newLength = size%aligned==0?size:(size + aligned - ( size % aligned ) );
     char *returnValue = CS_tempBuffZero( newLength + 1 );
     if( returnValue ) {
-        strncpy( returnValue, copyFrom, size );
+        strlcpy( returnValue, copyFrom, size );
         int oldLen = strlen( returnValue );
         if( oldLen < size ) {
             nLen = oldLen;

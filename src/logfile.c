@@ -149,7 +149,7 @@ struct CS_LogFile *CS_logfileCreate(const char *filename, int rotates, int maxBy
 
     if( !returnValue ) goto ERR;
 
-    strncpy( returnValue->fileName, filename, PATH_MAX );
+    strlcpy( returnValue->fileName, filename, PATH_MAX );
 
     returnValue->mutex = CS_mutexTakeNamed("LOGFILE");
 

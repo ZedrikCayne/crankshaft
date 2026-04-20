@@ -1249,7 +1249,7 @@ struct CS_StringBuilder *CS_jsonNodePrintableToStringBuilder(const struct CS_Jso
 static char *privateAllocStringWithLength( struct CS_JsonNode *from, const char *nullTermString, int len ) {
     char *buff = CS_linearTake( from->voidLinearAllocator, len + 1, 1 );
     if( buff ) {
-        strncpy( buff, nullTermString, len + 1 );
+        strlcpy( buff, nullTermString, len + 1 );
     }
     return buff;
 }
@@ -1441,7 +1441,7 @@ struct CS_JsonNode *CS_jsonNodeAppendQuotedString( struct CS_JsonNode *appendTo,
             CS_jsonNodeRemoveNode( returnValue );
             return NULL;
         }
-        strncpy(newBuff, value, nBytes+1);
+        strlcpy(newBuff, value, nBytes+1);
         returnValue->alloc = newBuff;
         returnValue->stringValue = NULL;
         returnValue->typeEnum = CS_JSON_STRING_QUOTED_ALLOCATED;

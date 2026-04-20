@@ -17,6 +17,11 @@
 extern "C" {
 #endif
 
+enum CS_HttpProtocol {
+    CS_HTTP_PROTOCOL_11,
+    CS_HTTP_PROTOCOL_2
+};
+
 enum CS_HttpMethods {
     CS_HTTP_METHOD_ANY = -1,
     CS_HTTP_METHOD_CONNECT = 0,
