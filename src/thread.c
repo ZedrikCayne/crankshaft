@@ -77,11 +77,15 @@ struct CS_Thread *CS_threadStart(const char *threadName,
         bool (*cycle)(struct CS_Thread *myThread, int threadState, void *context)) {
     struct CS_Thread *returnValue = privateGetThread();
 
+    pthread_attr_t threadAttr;
+    pthread_attr_init( &threadAttr );
+    pthread_attr_setstacksize(&threadAttr, PTHREAD_STACK_MIN * 2 );
+
     strlcpy( returnValue->name, threadName, CS_THREAD_NAME_MAX );
     returnValue->cycle = cycle;
     returnValue->context = context;
     returnValue->threadStateEnum = CS_THREAD_INIT;
-    if( pthread_create( &returnValue->threadId, NULL, threadDriver, returnValue ) < 0 ) {
+    if( pthread_create( &returnValue->threadId, &threadAttr, threadDriver, returnValue ) < 0 ) {
         privateReturnThread( returnValue );
         return NULL;
     }

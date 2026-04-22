@@ -126,9 +126,13 @@ static struct CS_ClientInfo *createClientInfoWithThread( int socket,
     
     CS_networkCopySockaddr( &ci->clientSocketAddress, clientSocketAddress );
     pthread_t newThread;
+    pthread_attr_t threadAttr;
+    pthread_attr_init( &threadAttr );
+
     ci->disconnectCallback = NULL;
     ci->persistentData = NULL;
-    int result = pthread_create( &newThread, NULL, clientThread, ci );
+    pthread_attr_setstacksize(&threadAttr, PTHREAD_STACK_MIN * 2 );
+    int result = pthread_create( &newThread, &threadAttr, clientThread, ci );
     if( result < 0 ) {
         CS_LOG_ERROR( "Failed to create client thread." );
         goto CLIENT_ERR_PTHREAD;
