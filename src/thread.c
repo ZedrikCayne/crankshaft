@@ -81,7 +81,8 @@ struct CS_Thread *CS_threadStart(const char *threadName,
     pthread_attr_init( &threadAttr );
     pthread_attr_setstacksize(&threadAttr, PTHREAD_STACK_MIN * 2 );
 
-    strlcpy( returnValue->name, threadName, CS_THREAD_NAME_MAX );
+    strncpy( returnValue->name, threadName, CS_THREAD_NAME_MAX );
+    returnValue->name[CS_THREAD_NAME_MAX] = 0;
     returnValue->cycle = cycle;
     returnValue->context = context;
     returnValue->threadStateEnum = CS_THREAD_INIT;

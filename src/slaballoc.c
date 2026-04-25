@@ -118,7 +118,7 @@ static struct CS_SlabAllocator *privateSlabInit( const char *name, int size, int
         }
     }
     if( returnValue != NULL && name != NULL ) {
-        strlcpy( returnValue->name, name, len + 2 );
+        strncpy( returnValue->name, name, len + 2 );
     }
     return returnValue;
 }

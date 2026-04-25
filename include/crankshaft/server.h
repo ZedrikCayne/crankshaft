@@ -98,7 +98,6 @@ struct CS_ClientInfo {
     void (*disconnectCallback)(struct CS_ClientInfo *info);
     void *persistentData;
     SSL *ssl;
-    int httpProtocol;
     struct CS_RequestInfo requestInfo;
 };
 
