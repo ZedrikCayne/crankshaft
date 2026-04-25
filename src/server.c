@@ -260,6 +260,7 @@ struct CS_WebServer *CS_serverStart(int portNum,
     returnValue->threadRunning = false;
     returnValue->logAccess = NULL;
     returnValue->defaultFileServingCacheControlMaxAge = fileServingCacheControlMaxAge;
+    returnValue->behindProxy = false;
     
     int i = 0;
     int j = 0;
@@ -1015,6 +1016,14 @@ const char *PrivateGetReplyHeader(const struct CS_Reply *reply, const char *head
     }
 
     return NULL;
+}
+
+const char *CS_serverGetRequestTempIdAddress( struct CS_ClientInfo *info ) {
+    if( info->server->behindProxy ) {
+        const char *realIp = CS_serverGetRequestHeader( info, "X-Real-IP" );
+        if( realIp != NULL ) return CS_tempStringCopy(realIp);
+    }
+    return CS_networkAddressToTempString( &info->clientSocketAddress );
 }
 
 struct CS_Reply *CS_serverCreateReply(struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *outputBuffer, int outputLength ) {
