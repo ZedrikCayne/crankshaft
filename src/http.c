@@ -30,6 +30,7 @@
 #define _POST    0x504f5d54
 #define _PUT     0x50555420
 #define _TRACE   0x54524143
+#define _PRE     0x50524520
 #else
 #define _CONNECT 0x43434340
 #define _DELETE  0x454c4544
@@ -38,6 +39,7 @@
 #define _POST    0x54534f50
 #define _PUT     0x20545550
 #define _TRACE   0x43415254
+#define _PRE     0x20455250
 #endif
 
 static void *requestSlabAlloc = NULL;
@@ -248,6 +250,7 @@ static const char *methodEnumToName[] = {
     "POST",
     "PUT",
     "TRACE",
+    "PRE",
 };
 
 int CS_httpStringToMethodEnum( const char *methodString ) {
@@ -273,6 +276,9 @@ int CS_httpStringToMethodEnum( const char *methodString ) {
             break;
         case _TRACE:
             return CS_HTTP_METHOD_TRACE;
+            break;
+        case _PRE:
+            return CS_HTTP_METHOD_PRE;
             break;
         default:
             return CS_HTTP_METHOD_UNKNOWN;
