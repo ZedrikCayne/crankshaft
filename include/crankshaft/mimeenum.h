@@ -26,6 +26,8 @@ enum CS_MIMETypes {
     CS_MIME_ICO,
     CS_MIME_ICS,
     CS_MIME_JAR,
+    CS_MIME_JPG,
+    CS_MIME_JPEG,
     CS_MIME_JS,
     CS_MIME_JSON,
     CS_MIME_JSONLD,

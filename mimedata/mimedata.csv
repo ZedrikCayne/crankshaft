@@ -23,6 +23,8 @@ CS_MIME_HTML,html,text/html
 CS_MIME_ICO,ico,image/vnd.microsoft.icon
 CS_MIME_ICS,ics,text/calendar
 CS_MIME_JAR,jar,application/java-archive
+CS_MIME_JPG,jpg,image/jpeg
+CS_MIME_JPEG,jpeg,image/jpeg
 CS_MIME_JS,js,text/javascript
 CS_MIME_JSON,json,application/json
 CS_MIME_JSONLD,jsonld,application/ld+json
