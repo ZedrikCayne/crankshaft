@@ -692,14 +692,16 @@ static int parseRequest(struct CS_ClientInfo *info) {
 }
 
 static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
-    //Message starts:
-    int tempForMalformedLength = CS_PP_dataSize( info->buffer );
-    void *tempForMalformedRequest = CS_tempMemCopy( CS_PP_startOfData( info->buffer ), CS_PP_dataSize( info->buffer ) );
+    //Copy off the start (in case of malformed)
+    info->lastSize = CS_PP_dataSize( info->buffer );
+    info->tempLast = CS_tempMemCopy( CS_PP_startOfData( info->buffer ), CS_PP_dataSize( info->buffer ) );
+    CS_LOG_TRACE("%.*s\n", info->lastSize, (char*)info->tempLast );
     int bytesRequiredForHeaders = parseRequest(info);
+    
     if( bytesRequiredForHeaders < 0 ) {
         int outputLength;
-        char *malformedEncode = CS_base64EncodeTemp( tempForMalformedRequest, tempForMalformedLength, &outputLength );
-        CS_logfilePrintf( info->server->logAccess, "Malformed: %s %d |%s|", CS_networkAddressToTempString( &info->clientSocketAddress ), tempForMalformedLength, malformedEncode);
+        char *malformedEncode = CS_base64EncodeTemp( info->tempLast, info->lastSize, &outputLength );
+        CS_logfilePrintf( info->server->logAccess, "Malformed: %s %d |%s|", CS_networkAddressToTempString( &info->clientSocketAddress ), info->lastSize, malformedEncode);
         return true;
     }
     //Consume the bytes for the headers. Might cause the incoming buffer to reset

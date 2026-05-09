@@ -93,6 +93,8 @@ struct CS_ClientInfo {
         struct sockaddr clientSocketAddress;
         char sockaddrbuff[64];
     };
+    void *tempLast;
+    int lastSize;
     struct CS_PushPullBuffer *buffer;
     struct CS_PushPullBuffer *output;
     void (*disconnectCallback)(struct CS_ClientInfo *info);
