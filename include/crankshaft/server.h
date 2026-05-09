@@ -143,6 +143,7 @@ bool CS_serverReplyError( struct CS_ClientInfo *info, int responseEnum, const ch
 bool CS_serverFileServer( struct CS_ClientInfo *info );
 bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int cacheSeconds, struct CS_Reply *useMe );
 
+void CS_serverRemoveRequestHeader( struct CS_ClientInfo *info, const char *header );
 const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const char *name );
 const char *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const char *header );
 const char *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const char *name );

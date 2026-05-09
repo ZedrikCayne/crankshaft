@@ -873,6 +873,18 @@ ERR_SETUP:
     return true;
 }
 
+void CS_serverRemoveRequestHeader( struct CS_ClientInfo *info, const char *header ) {
+    struct CS_RequestInfo *request = &info->requestInfo;
+    for( int i = 0; i < request->numHeaders; ++i ) {
+        if( strncmp(header,request->headers[i].header,HEADER_MAX) == 0 ) {
+            if( i <= request->numHeaders - 1 ) {
+                memcpy(&request->headers[i],&request->headers[i + 1],sizeof(struct CS_RequestHeader) * (request->numHeaders - i));
+            }
+            request->numHeaders--;
+        }
+    }
+}
+
 const char *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const char *header ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int i = 0; i < request->numHeaders; ++i ) {
