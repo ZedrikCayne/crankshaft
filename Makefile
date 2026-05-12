@@ -65,8 +65,8 @@ cleansqlite:
 run: all
 	./$(BINOUT) --trace
 
-debug: all
-	gdb --args $(BINOUT) --test --suppress-errors --only-fails
+debug: $(BINOUT)-test
+	gdb --args $(BINOUT)-test --test --suppress-errors --only-fails
 
 #test: CFLAGS:=-DCRANKSHAFT_NO_LOGS $(CFLAGS)
 #test: CFLAGS:=-DCS_ALLOC_USE_MALLOC $(CFLAGS)

@@ -84,7 +84,7 @@ struct CS_StorageItem *privateGetStorageItem(void) {
 }
 
 void privateReturnStorageItem(struct CS_StorageItem *item) {
-    if( item->key ) CS_stringFree( item->key );
+    if( item->key ) CS_cstringFree( item->key );
     item->key = NULL;
     if( item->value ) CS_free( item->value );
     item->value = NULL;
@@ -99,7 +99,7 @@ struct CS_StorageItem *privateGetStorageItemWithCopyData( const char *key, int c
         item->cas = cas;
         item->size = size;
         item->expires = expires;
-        item->key = CS_stringCopy(key);
+        item->key = CS_cstringCopy(key);
         if( key == NULL ) {
             privateReturnStorageItem(item);
             return NULL;
@@ -159,17 +159,17 @@ const struct CS_Storage *CS_storageGetStorage( const char *storageName ) {
 }
 
 static void privateFreeStorageStruct( const struct CS_Storage *storage ) {
-    CS_stringFree((void*)storage->name);
-    CS_stringFree((void*)storage->config);
+    CS_cstringFree((void*)storage->name);
+    CS_cstringFree((void*)storage->config);
     CS_free((void*)storage);
 }
 
 static struct CS_Storage *privateInitStorageStruct( const char *storageName, const char *config, const struct CS_StorageBackend *backend ) {
     struct CS_Storage *storage = (struct CS_Storage *)CS_alloc(sizeof(struct CS_Storage));
     if( storage ) {
-        storage->name = CS_stringCopy( storageName );
+        storage->name = CS_cstringCopy( storageName );
         storage->backend = backend;
-        storage->config = CS_stringCopy( config );
+        storage->config = CS_cstringCopy( config );
         storage->storageData = NULL;
         if( (storage->name == NULL) || 
             (config&&!storage->config) ) {
@@ -344,8 +344,8 @@ static void privateFreeSqlite( struct privateSqliteData *sqliteData ) {
         IF_DO_NULL(sqliteData->remove,sqlite3_finalize);
         IF_DO_NULL(sqliteData->list,sqlite3_finalize);
         IF_DO_NULL(sqliteData->connection,sqlite3_close);
-        IF_DO_NULL(sqliteData->tableName,CS_stringFree);
-        IF_DO_NULL(sqliteData->dbFile,CS_stringFree);
+        IF_DO_NULL(sqliteData->tableName,CS_cstringFree);
+        IF_DO_NULL(sqliteData->dbFile,CS_cstringFree);
         IF_DO_NULL(sqliteData->sb,CS_SB_free);
         CS_free( sqliteData );
     }
@@ -389,22 +389,22 @@ static struct privateSqliteData *privateCreateSqliteFromConfig( const char *conf
                 char *val = strtok_r( NULL, "=", &equalsStorage );
                 if( key && val ) {
                     if( strcmp( key, "file" ) == 0 ) {
-                        if( returnValue->dbFile ) CS_stringFree( returnValue->dbFile );
-                        returnValue->dbFile = CS_stringCopy( val );
+                        if( returnValue->dbFile ) CS_cstringFree( returnValue->dbFile );
+                        returnValue->dbFile = CS_cstringCopy( val );
                     } else if ( strcmp( key, "table" ) == 0 ) {
-                        if( returnValue->tableName ) CS_stringFree( returnValue->tableName );
-                        returnValue->tableName = CS_stringCopy( val );
+                        if( returnValue->tableName ) CS_cstringFree( returnValue->tableName );
+                        returnValue->tableName = CS_cstringCopy( val );
                     } else if ( strcmp( key, "vfs" ) == 0 ) {
-                        if( vfsName ) CS_stringFree( vfsName );
-                        vfsName = CS_stringCopy( val );
+                        if( vfsName ) CS_cstringFree( vfsName );
+                        vfsName = CS_cstringCopy( val );
                     } else if ( strcmp( key, "trace" ) == 0 ) {
                         insertTrace = strcmp( val, "true" ) == 0;
                     }
                 }
             } while( (nextItem = strtok_r( NULL, ",", &commasStorage )) != NULL );
         }
-        if( returnValue->tableName == NULL ) returnValue->tableName = CS_stringCopy( sqliteDefaultTableName );
-        if( returnValue->dbFile == NULL ) returnValue->dbFile = CS_stringCopy( sqliteDefaultDbFile );
+        if( returnValue->tableName == NULL ) returnValue->tableName = CS_cstringCopy( sqliteDefaultTableName );
+        if( returnValue->dbFile == NULL ) returnValue->dbFile = CS_cstringCopy( sqliteDefaultDbFile );
 
         if( insertTrace ) sqlite3_config(SQLITE_CONFIG_LOG, sqlite_log_receiver, NULL);
 

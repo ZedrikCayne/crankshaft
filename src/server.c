@@ -1171,6 +1171,8 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         CS_PP_printf( info->output, "\r\n" );
     }
     CS_PP_printf( info->output, "\r\n" );
+
+    CS_LOG_TRACE( "%.*s", CS_PP_dataSize( info->output ), CS_PP_startOfData( info->output ) );
     int bytesWritten = 0;
 
     if( bufferToSend != NULL ) {
