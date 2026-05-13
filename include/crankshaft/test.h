@@ -5,6 +5,7 @@
 #include <crankshaft/logger.h>
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/random.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -23,10 +24,10 @@ extern "C" {
 extern bool CS_TEST_PRINT_ONLY_ERRORS;
 
 bool CS_testMain(void);
-void CS_testSetRandomSeed(int seed);
+void CS_testSetRandomSeed(int32_t seed);
 void CS_testResetGlobalRandSeed();
-int  CS_testRand();
-int  CS_testRandMax(int max);
+int32_t  CS_testRand();
+int32_t  CS_testRandMax(int32_t max);
 
 #define MAX_TEST_LOG 1023
 #define CS_LOG_OK(TESTNAME) if(!CS_TEST_PRINT_ONLY_ERRORS)CS_LOG_LOUD("[ ] %s:%d #%d %s",__FILE__,__LINE__,testCount,TESTNAME)

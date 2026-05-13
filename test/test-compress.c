@@ -7,6 +7,7 @@
 #include <crankshaft/test.h>
 #include <crankshaft/pushpull.h>
 #include <crankshaft/compress.h>
+#include <stdint.h>
 
 #ifdef __has_include
 #if __has_include(<bzlib.h>)
@@ -16,8 +17,8 @@
 
 extern bool test_compress(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 typedef long (*CompressFunc)(CS_Compress*, struct CS_PushPullBuffer*, struct CS_PushPullBuffer*);
 
@@ -25,9 +26,9 @@ static bool check_roundtrip(const char *algoName,
                             CompressFunc compressFunc,
                             CompressFunc decompressFunc,
                             CS_CompressType type) {
-    int inputLen = 1024;
+    int32_t inputLen = 1024;
     unsigned char *inputData = CS_alloc(inputLen);
-    for( int i = 0; i < inputLen; ++i ) {
+    for( int32_t i = 0; i < inputLen; ++i ) {
         inputData[i] = (unsigned char)CS_testRandMax(255);
     }
 

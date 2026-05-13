@@ -18,6 +18,7 @@
 
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/stringbuilder.h>
+#include <stdint.h>
 
 struct CS_Storage {
     const char *name;
@@ -93,7 +94,7 @@ void privateReturnStorageItem(struct CS_StorageItem *item) {
     if( storageItemSlabAllocator ) CS_slabReturn( storageItemSlabAllocator, item );
 }
 
-struct CS_StorageItem *privateGetStorageItemWithCopyData( const char *key, int cas, int size, time_t expires, const void *data ) {
+struct CS_StorageItem *privateGetStorageItemWithCopyData( const char *key, int32_t cas, int32_t size, time_t expires, const void *data ) {
     struct CS_StorageItem *item = privateGetStorageItem();
     if( item ) {
         item->cas = cas;
@@ -269,7 +270,7 @@ struct CS_StorageItem *CS_storageUpdate( const struct CS_Storage *storage, struc
     return returnValue;
 }
 
-struct CS_StorageItem *CS_storagePut( const struct CS_Storage *storage, const char *key, const void *value, int size, time_t expires, struct CS_StorageItem **outPresent ) {
+struct CS_StorageItem *CS_storagePut( const struct CS_Storage *storage, const char *key, const void *value, int32_t size, time_t expires, struct CS_StorageItem **outPresent ) {
     if( storage == NULL ) {
         CS_LOG_ERROR("CS_storagePut NULL storage.");
         return NULL;
@@ -298,7 +299,7 @@ struct CS_StorageItem *CS_storageDuplicateItem( struct CS_StorageItem *item ) {
     return privateDeepCopyStorageItem( item );
 }
 
-struct CS_StorageItem *CS_storageCreateItemDataCopy( const char *key, unsigned long cas, unsigned int size, time_t expires, const void *data ) {
+struct CS_StorageItem *CS_storageCreateItemDataCopy( const char *key, unsigned long cas, uint32_t size, time_t expires, const void *data ) {
     return privateGetStorageItemWithCopyData( key, cas, size, expires, data );
 }
 
@@ -306,7 +307,7 @@ void CS_storageReturnItem( struct CS_StorageItem *item ) {
     if( !item ) return;
     privateReturnStorageItem(item);
 }
-struct CS_StorageItem *CS_storageItemChangeData( struct CS_StorageItem *item, unsigned int size, const time_t expires, void *data ) {
+struct CS_StorageItem *CS_storageItemChangeData( struct CS_StorageItem *item, uint32_t size, const time_t expires, void *data ) {
     void *newData = CS_allocDuplicate( data, size );
     if( !newData ) return NULL;
     void *oldData = item->value;
@@ -351,11 +352,11 @@ static void privateFreeSqlite( struct privateSqliteData *sqliteData ) {
     }
 }
 #define OR_NULL(_X) (_X)?(_X):"NULL"
-static int sqlCallback( void *storagePointer, int numberOfColumns, char **columnDatas, char **columnNames ) {
+static int32_t sqlCallback( void *storagePointer, int32_t numberOfColumns, char **columnDatas, char **columnNames ) {
     struct CS_StringBuilder *sb = ((struct privateSqliteData*)storagePointer)->sb;
     CS_SB_reset(sb);
     CS_SB_printf( sb, "SQL: %d columns: {", numberOfColumns );
-    for( int i = 0; i < numberOfColumns; ++i ) {
+    for( int32_t i = 0; i < numberOfColumns; ++i ) {
         CS_SB_printf( sb, "{\"%s\":\"%s\"}", OR_NULL(columnNames[i]), OR_NULL(columnDatas[i]) );
         if( i < numberOfColumns - 1 ) CS_SB_appendChar(sb, ',');
     }
@@ -364,7 +365,7 @@ static int sqlCallback( void *storagePointer, int numberOfColumns, char **column
     return 0;
 }
 
-void sqlite_log_receiver(void *context, int code, const char *message)
+void sqlite_log_receiver(void *context, int32_t code, const char *message)
 {
     CS_LOG_LOUD("SQLITE LOG [%d] %s", code, message);
 }
@@ -496,10 +497,10 @@ static struct CS_StorageItem *privateSqliteGet(const struct CS_Storage *storage,
     sqlite3_bind_text( sqliteData->get, 1, key, -1, SQLITE_STATIC );
     struct CS_StorageItem *returnValue = NULL;
     if( sqlite3_step( sqliteData->get ) == SQLITE_ROW ) {
-        unsigned int cas = sqlite3_column_int( sqliteData->get, 0 );
+        uint32_t cas = sqlite3_column_int( sqliteData->get, 0 );
         time_t expires = sqlite3_column_int64( sqliteData->get, 1 );
         const void *value = sqlite3_column_blob( sqliteData->get, 2 );
-        unsigned int size = sqlite3_column_bytes( sqliteData->get, 2 );
+        uint32_t size = sqlite3_column_bytes( sqliteData->get, 2 );
         if( expires == 0 || expires > time(NULL) ) {
             returnValue = privateGetStorageItemWithCopyData( key, cas, size, expires, value );
         } else {
@@ -575,7 +576,7 @@ static struct CS_List *privateSqliteList(const struct CS_Storage *storage) {
     if( returnList != NULL ) {
         while( sqlite3_step( sqliteData->list ) == SQLITE_ROW ) {
             const void *key = sqlite3_column_blob( sqliteData->get, 0 );
-            unsigned int keySize = sqlite3_column_bytes( sqliteData->get, 0 );
+            uint32_t keySize = sqlite3_column_bytes( sqliteData->get, 0 );
             CS_listPushTail( returnList, key, keySize );
         }
     }
@@ -629,10 +630,10 @@ static struct CS_StorageItem *privateHashtableGet(const struct CS_Storage *stora
 struct _checkContext {
     const struct CS_Storage *storage;
     struct CS_StorageItem *oldItemCopy;
-    int casToCheck;
+    int32_t casToCheck;
 };
 //If we didn't insert...
-static int privateHashtableCheckPutMaybe( void *context, const void *previousItemInTable ) {
+static int32_t privateHashtableCheckPutMaybe( void *context, const void *previousItemInTable ) {
     struct _checkContext *checkContext = (struct _checkContext *)context;
     const struct CS_StorageItem *oldItem = (const struct CS_StorageItem *)previousItemInTable;
     if( checkContext->casToCheck == 0 ) {
@@ -690,7 +691,7 @@ static struct CS_List *privateHashtableList(const struct CS_Storage *storage) {
 
     CS_HASHTABLE_ITER(table,item) {
         const char *key = table->keyToTempString( table, item );
-        int byteLength = strlen(key) + 1;
+        int32_t byteLength = strlen(key) + 1;
         CS_listPushTail( returnList, key, byteLength );
     }
 

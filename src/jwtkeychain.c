@@ -21,6 +21,7 @@
 #include <crankshaft/list.h>
 
 #include <crankshaft/jwtkeychain.h>
+#include <stdint.h>
 
 #define DEFAULT_KEY_SIZE 8192
 
@@ -115,10 +116,10 @@ bool CS_jwtkeychainFetchPublicKeys( const char *urlToFetchKeysFrom ) {
             if( !e ) break;
             struct CS_JsonNode *kid = CS_jsonNodeByPath( keyNode, "kid" );
             if( !kid ) break;
-            int nSize;
+            int32_t nSize;
             void *nBits = CS_base64DecodeUrlTemp( n->stringValue, n->nItemsOrLength, &nSize );
             if( !nBits ) break;
-            int eSize;
+            int32_t eSize;
             void *eBits = CS_base64DecodeUrlTemp( e->stringValue, e->nItemsOrLength, &eSize );
             if( !eBits ) break;
             BIGNUM *bn = BN_bin2bn( nBits, nSize, NULL );

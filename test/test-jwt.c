@@ -16,11 +16,12 @@
 #include <crankshaft/base64.h>
 
 #include <crankshaft/jwt.h>
+#include <stdint.h>
 
 extern bool test_jwt(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 static const char *testJwt = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImFiODYxNGZmNjI4OTNiYWRjZTVhYTc5YTc3MDNiNTk2NjY1ZDI0NzgiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI5NjMyMTU5NzI5MjEtOXZsYmV0bjA0cGVicTRjZHNudWI1cHZlczIwcHFwOXEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI5NjMyMTU5NzI5MjEtOXZsYmV0bjA0cGVicTRjZHNudWI1cHZlczIwcHFwOXEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTYwMjQ2MTQ3MDk4MDA2MTQxOTAiLCJlbWFpbCI6InplZHJpa2NheW5lQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYmYiOjE3MzUzMjcyNTMsIm5hbWUiOiJaZWRyaWsgQ2F5bmUiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jS3I3cWRmM0RkdGNha3NIQW96bV9LeWJhQjBnNnRiNUFzQl9uU1d2d1lBemNzZ0MyWGM1dz1zOTYtYyIsImdpdmVuX25hbWUiOiJaZWRyaWsiLCJmYW1pbHlfbmFtZSI6IkNheW5lIiwiaWF0IjoxNzM1MzI3NTUzLCJleHAiOjE3MzUzMzExNTMsImp0aSI6Ijk3N2Q2NTg0ZWYyYjdhZTliYjViNmFlYTVmZTdlZmNjNDhhNWFiODEifQ.eFq2kPgAT7JmWZCv5wyNkpXaF_QLfCArCSYBdm1zC8VIu6Qn4GDQwZxxDx3bTAnbD8V7S_3DH9s9q22OSXJe5yaN6GhqlB8c8EiJfZ0otR2ybrTXKc1vUDRqEQLxTyMxSroxizNwDpIrYLpCpD8wPahaKwUVhGk5s8ClKsV0xChTXBV8W5KsQ10MU-5IPpERHDUUKOPO0tLWYAvJGaUv9IKLBxtgV2e0NESiI81WAGHY6zmUmt39wZ-gbKFqbeCv_tHxkGJN2FKe7iFMlg7qIX8L7FnyO2PqtDyPS6uai5u6RIuzbFPFt39ZluwZxZ-Qw2rXAjD99Nk7k6_Mr9d1KQ";
 
@@ -47,9 +48,9 @@ bool test_jwt(void) {
                     CS_FAIL_ON_NULL( alg, "Algorithm should exist.", "Nope." );
                     CS_FAIL_ON_FALSE( strlen( n->stringValue ) == n->nItemsOrLength, "Check lengths of n.", "Different." );
                     CS_FAIL_ON_FALSE( strlen( e->stringValue ) == e->nItemsOrLength, "Check lengths of e.", "Different." );
-                    int nSize;
+                    int32_t nSize;
                     void *nBits = CS_base64DecodeUrlTemp( n->stringValue, n->nItemsOrLength, &nSize );
-                    int eSize;
+                    int32_t eSize;
                     void *eBits = CS_base64DecodeUrlTemp( e->stringValue, e->nItemsOrLength, &eSize );
                     CS_FAIL_ON_NULL( nBits, "Decode N.", "Nope." );
                     CS_FAIL_ON_NULL( eBits, "Decode E.", "Nope." );

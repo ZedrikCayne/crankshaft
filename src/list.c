@@ -7,22 +7,23 @@
 #include <crankshaft/slaballoc.h>
 
 #include <crankshaft/list.h>
+#include <stdint.h>
 
 struct CS_List {
     struct CS_SlabAllocator *slabAllocator;
     struct ListItem *head;
     struct ListItem *tail;
-    int count;
+    int32_t count;
 };
 
 struct ListItem {
     struct ListItem *next;
     struct ListItem *prev;
     const void *what;
-    int size;
+    int32_t size;
 };
 
-struct CS_List *CS_listCreate( int initialSize ) {
+struct CS_List *CS_listCreate( int32_t initialSize ) {
     struct CS_List *returnValue = CS_allocZero( sizeof( struct CS_List ) );
     if( !returnValue ) {
         CS_LOG_ERROR( "OOM creating a list." );
@@ -87,7 +88,7 @@ void privateReturnListItem( struct CS_List *list, struct ListItem *toReturn ) {
     CS_slabReturn( list->slabAllocator, toReturn );
 }
 
-struct ListItem *privateNewListItem( struct CS_List *list, const void *what, int size ) {
+struct ListItem *privateNewListItem( struct CS_List *list, const void *what, int32_t size ) {
     struct ListItem *newItem = (struct ListItem *)CS_slabTakeZero( list->slabAllocator );
     if( newItem ) {
         newItem->size = size;
@@ -154,7 +155,7 @@ bool CS_listRemove( struct CS_List *list, const struct CS_ListItem *const_item )
     return returnValue;
 }
 
-bool CS_listPushHead( struct CS_List *list, const void *what, int size ) {
+bool CS_listPushHead( struct CS_List *list, const void *what, int32_t size ) {
     struct ListItem *returnValue = privateNewListItem(list,what,size);
     if( returnValue ) {
         privateInsertBefore(list, returnValue, list->head);
@@ -163,7 +164,7 @@ bool CS_listPushHead( struct CS_List *list, const void *what, int size ) {
     return true;
 }
 
-bool CS_listPushTail( struct CS_List *list, const void *what, int size ) {
+bool CS_listPushTail( struct CS_List *list, const void *what, int32_t size ) {
     struct ListItem *returnValue = privateNewListItem(list,what,size);
     if( returnValue ) {
         privateInsertAfter( list, returnValue, list->tail );
@@ -172,7 +173,7 @@ bool CS_listPushTail( struct CS_List *list, const void *what, int size ) {
     return true;
 }
 
-bool CS_listPushAfter( struct CS_List *list, const struct CS_ListItem *const_item, const void *what, int size ) {
+bool CS_listPushAfter( struct CS_List *list, const struct CS_ListItem *const_item, const void *what, int32_t size ) {
     struct ListItem *returnValue = privateNewListItem(list,what,size);
     if( returnValue ) {
         privateInsertAfter( list, returnValue, (struct ListItem *)const_item );
@@ -181,7 +182,7 @@ bool CS_listPushAfter( struct CS_List *list, const struct CS_ListItem *const_ite
     return true;
 }
 
-bool CS_listPushBefore( struct CS_List *list, const struct CS_ListItem *const_item, const void *what, int size ) {
+bool CS_listPushBefore( struct CS_List *list, const struct CS_ListItem *const_item, const void *what, int32_t size ) {
     struct ListItem *returnValue = privateNewListItem(list,what,size);
     if( returnValue ) {
         privateInsertBefore( list, returnValue, (struct ListItem *)(const_item) );
@@ -208,17 +209,17 @@ const struct CS_ListItem *CS_listPopTail( struct CS_List *list ) {
     return returnValue;
 }
 
-const struct CS_ListItem *CS_listGetByIndex( struct CS_List *list, int index ) {
+const struct CS_ListItem *CS_listGetByIndex( struct CS_List *list, int32_t index ) {
     bool down = (index < 0);
     struct ListItem *item = (struct ListItem *)(down?list->tail:list->head);
-    int target = index;
-    int start = 0;
+    int32_t target = index;
+    int32_t start = 0;
     if( down ) {
         target = 0;
         start = index+1;
     }
 
-    for( int i = start; item && i < target; i++ ) {
+    for( int32_t i = start; item && i < target; i++ ) {
         item = down?item->prev:item->next;
     }
     return (struct CS_ListItem *)item;
@@ -232,11 +233,11 @@ const struct CS_ListItem *CS_listGetTail( struct CS_List *list ) {
     return (const struct CS_ListItem *)list->tail;
 }
 
-int CS_listCount( struct CS_List *list ) {
+int32_t CS_listCount( struct CS_List *list ) {
     return list->count;
 }
 
-void CS_listSort( struct CS_List *list, int (*compare)( const struct CS_ListItem *left, const struct CS_ListItem *right ) ) {
+void CS_listSort( struct CS_List *list, int32_t (*compare)( const struct CS_ListItem *left, const struct CS_ListItem *right ) ) {
     if( list->head == NULL ) return;
     struct ListItem *currentToInsert = list->head;
     struct ListItem *nextToInsert = currentToInsert->next;

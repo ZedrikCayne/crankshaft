@@ -8,11 +8,12 @@
 #include <crankshaft/test.h>
 
 #include <crankshaft/storage.h>
+#include <stdint.h>
 
 extern bool test_sqlitestorage(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 extern bool util_test_generic_storage( const struct CS_Storage *storage );
 

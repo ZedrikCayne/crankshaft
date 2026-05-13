@@ -21,6 +21,7 @@
 #include <crankshaft/ssl.h>
 #include <crankshaft/util.h>
 #include <crankshaft/compress.h>
+#include <stdint.h>
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #define _CONNECT 0x404f4e4e
@@ -61,7 +62,7 @@ static void privateReturnReply( struct CS_RequestReply *toReturn ) {
     CS_slabReturn(requestSlabAlloc, toReturn);
 }
 
-static SSL *newSSL( int socket ) {
+static SSL *newSSL( int32_t socket ) {
     SSL *returnValue = CS_sslNew(false);
     if( returnValue ) {
         SSL_set_fd( returnValue, socket );
@@ -100,8 +101,8 @@ enum {
     REPLY_HEADER_DONE
 };
 
-static int privateParseReply( struct CS_RequestReply *replyToParse ) {
-    int sizeOfReply = CS_PP_dataSize( replyToParse->buffer );
+static int32_t privateParseReply( struct CS_RequestReply *replyToParse ) {
+    int32_t sizeOfReply = CS_PP_dataSize( replyToParse->buffer );
     char *startOfBuffer = CS_PP_startOfData( replyToParse->buffer );
     char *endOfData = startOfBuffer + sizeOfReply;
     char *currentPoint = startOfBuffer;
@@ -123,7 +124,7 @@ static int privateParseReply( struct CS_RequestReply *replyToParse ) {
     REQUIRE_CHAR(CR);
     REQUIRE_CHAR(LF);
     char *startOfToken = NULL;
-    int currentState = REPLY_HEADER_NAME;
+    int32_t currentState = REPLY_HEADER_NAME;
     while( currentPoint < endOfData && currentState != REPLY_HEADER_DONE ) {
         if( startOfToken == NULL ) startOfToken = currentPoint;
         switch( currentState ) {
@@ -172,7 +173,7 @@ static int privateParseReply( struct CS_RequestReply *replyToParse ) {
 }
 
 struct CodeToReturnString {
-    int code;
+    int32_t code;
     const char *value;
 };
 
@@ -253,8 +254,8 @@ static const char *methodEnumToName[] = {
     "PRE",
 };
 
-int CS_httpStringToMethodEnum( const char *methodString ) {
-    int command = *(int*)methodString;
+int32_t CS_httpStringToMethodEnum( const char *methodString ) {
+    int32_t command = *(int32_t*)methodString;
     switch(command) {
         case _CONNECT:
             return CS_HTTP_METHOD_CONNECT;
@@ -285,22 +286,22 @@ int CS_httpStringToMethodEnum( const char *methodString ) {
     }
 }
 
-const char *CS_httpResponseEnumToString( int responseEnum ) {
+const char *CS_httpResponseEnumToString( int32_t responseEnum ) {
     if( responseEnum < 0 || responseEnum >= MAX_NUM_CS_RESPONSE_ENUMS ) return NULL;
     return codeToString[ responseEnum ].value;
 }
 
-int CS_httpResponseEnumToCode( int responseEnum ) {
+int32_t CS_httpResponseEnumToCode( int32_t responseEnum ) {
     if( responseEnum < 0 || responseEnum >= MAX_NUM_CS_RESPONSE_ENUMS ) return -1;
     return codeToString[ responseEnum ].code;
 }
 
-const char *CS_httpMethodEnumToString( int methodEnum ) {
+const char *CS_httpMethodEnumToString( int32_t methodEnum ) {
     if( methodEnum < 0 || methodEnum >= CS_MAX_HTTP_METHODS ) return NULL;
     return methodEnumToName[ methodEnum ];
 }
 
-static int comp(const void *a, const void *b) {
+static int32_t comp(const void *a, const void *b) {
     struct CodeToReturnString *as = (struct CodeToReturnString *)a;
     struct CodeToReturnString *bs = (struct CodeToReturnString *)b;
 #pragma GCC diagnostic push
@@ -311,7 +312,7 @@ static int comp(const void *a, const void *b) {
     return 0;
 }
 
-int CS_httpResponseCodeToEnum( int code ) {
+int32_t CS_httpResponseCodeToEnum( int32_t code ) {
     struct CodeToReturnString *response;
     response = (struct CodeToReturnString *)bsearch( &code, codeToString, CS_ARRAY_SIZE(codeToString), sizeof(codeToString[0]), comp);
 
@@ -320,20 +321,20 @@ int CS_httpResponseCodeToEnum( int code ) {
     return codeToString - response;
 }
 
-static int hexDigitToInt( const char *u ) {
+static int32_t hexDigitToInt( const char *u ) {
     if( *u < '0' ) return -1;
     if( *u > 'f' ) return -1;
-    if( *u <= '9' ) return (int)( *u - '0' );
-    if( *u >= 'a' ) return (int)( *u - 'a' ) + 10;
+    if( *u <= '9' ) return (int32_t)( *u - '0' );
+    if( *u >= 'a' ) return (int32_t)( *u - 'a' ) + 10;
     if( *u > 'F' ) return -1;
-    if( *u >= 'A' ) return (int)( *u - 'A' ) + 10;
+    if( *u >= 'A' ) return (int32_t)( *u - 'A' ) + 10;
     return -1;
 }
 
 #define DECODE_INVALID_LENGTH -1
 #define ENCODE_INVALID_LENGTH -1
 //  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-static int encodeBool[] = {
+static int32_t encodeBool[] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    //00 - 0F 'XXXXXXXXXXXXXXXX'
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    //10 - 1F 'XXXXXXXXXXXXXXXX'
     1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,    //20 - 2F ' !"#$%&'()*+,-./'
@@ -354,15 +355,15 @@ static int encodeBool[] = {
 
 char nibbleToHex[] = "0123456789ABCDEF";
 #define appendC(X) if( out < end )*out = X; ++out
-#define highHexDigit(X) nibbleToHex[((((int)(X))&0xF0)>>4)];
-#define lowHexDigit(X) nibbleToHex[(((int)(X))&0x0F)];
-static int privateEncode( const char *toEncode, int toEncodeBufferLength, char *encodeTo, int outputBufferLength ) {
+#define highHexDigit(X) nibbleToHex[((((int32_t)(X))&0xF0)>>4)];
+#define lowHexDigit(X) nibbleToHex[(((int32_t)(X))&0x0F)];
+static int32_t privateEncode( const char *toEncode, int32_t toEncodeBufferLength, char *encodeTo, int32_t outputBufferLength ) {
     const char *in = toEncode;
     char *out = encodeTo;
     char *end = encodeTo + outputBufferLength;
     
-    for( int i = 0; ((toEncodeBufferLength==0)&&*in)||(i < toEncodeBufferLength); ++i ) {
-        if( encodeBool[ (int)*in ] ) {
+    for( int32_t i = 0; ((toEncodeBufferLength==0)&&*in)||(i < toEncodeBufferLength); ++i ) {
+        if( encodeBool[ (int32_t)*in ] ) {
             appendC('%');
             appendC(highHexDigit(*in));
             appendC(lowHexDigit(*in));
@@ -377,12 +378,12 @@ static int privateEncode( const char *toEncode, int toEncodeBufferLength, char *
 }
 
 
-static int privateDecode( const char *toDecode, int decodeBufferLength, char *output, int outputLength ) {
+static int32_t privateDecode( const char *toDecode, int32_t decodeBufferLength, char *output, int32_t outputLength ) {
     const char *in = toDecode;
     char *out = output;
     char *end = output + outputLength;
 
-    for( int i = 0; (decodeBufferLength == 0 && *in) || (i < decodeBufferLength); ++i ) {
+    for( int32_t i = 0; (decodeBufferLength == 0 && *in) || (i < decodeBufferLength); ++i ) {
         if( toDecode == output ) {
             end = out + 3;
         }
@@ -392,13 +393,13 @@ static int privateDecode( const char *toDecode, int decodeBufferLength, char *ou
                 return DECODE_INVALID_LENGTH;
             }
             ++in;
-            int highByte = hexDigitToInt( in );
+            int32_t highByte = hexDigitToInt( in );
             if( highByte < 0 ) {
                 CS_LOG_ERROR("Invalid hex digit");
                 return DECODE_INVALID_LENGTH;
             }
             ++in;
-            int lowByte = hexDigitToInt( in );
+            int32_t lowByte = hexDigitToInt( in );
             if( lowByte < 0 ) {
                 CS_LOG_ERROR("Invalid hex digit");
                 return DECODE_INVALID_LENGTH;
@@ -414,12 +415,12 @@ static int privateDecode( const char *toDecode, int decodeBufferLength, char *ou
     return out - toDecode;
 }
 
-static int privateDecodeInPlace( char *toDecode, int decodeBufferLength ) {
+static int32_t privateDecodeInPlace( char *toDecode, int32_t decodeBufferLength ) {
     return privateDecode( (const char *)toDecode, 0, toDecode, 0 );
 }
 
 bool CS_httpUrlDecodeInPlace( char *toDecode ) {
-    int length = privateDecodeInPlace( toDecode, 0 );
+    int32_t length = privateDecodeInPlace( toDecode, 0 );
     return length == DECODE_INVALID_LENGTH;
 }
 
@@ -435,10 +436,10 @@ char *CS_httpUrlDecodeTemp( const char *doDecode ) {
 }
 
 char *CS_httpUrlEncodeTemp( const char *toEncode ) {
-    int nLen = strlen(toEncode);
+    int32_t nLen = strlen(toEncode);
     char *returnValue = CS_tempBuff( nLen * 3 );
     if( returnValue != NULL ) {
-        int nLength = privateEncode( toEncode, nLen, returnValue, nLen * 3 );
+        int32_t nLength = privateEncode( toEncode, nLen, returnValue, nLen * 3 );
         if( nLength == ENCODE_INVALID_LENGTH ) return NULL;
     } else {
         CS_LOG_ERROR("CS_httpUrlEncodeTemp: String to encode too long.");
@@ -447,7 +448,7 @@ char *CS_httpUrlEncodeTemp( const char *toEncode ) {
 }
 
 struct CS_StringBuilder *CS_httpUrlDecode( const char *toDecode ) {
-    int nLen = strlen(toDecode);
+    int32_t nLen = strlen(toDecode);
     struct CS_StringBuilder *appendTo = CS_SB_create( nLen + 5 );
     struct CS_StringBuilder *returnValue = CS_httpUrlDecodeAppend( toDecode, appendTo );
     if( returnValue == NULL ) {
@@ -457,7 +458,7 @@ struct CS_StringBuilder *CS_httpUrlDecode( const char *toDecode ) {
 }
 
 struct CS_StringBuilder *CS_httpUrlEncode( const char *toEncode ) {
-    int nLen = privateEncode( toEncode, 0, NULL, 0 );
+    int32_t nLen = privateEncode( toEncode, 0, NULL, 0 );
     struct CS_StringBuilder *appendTo = CS_SB_create( nLen + 5 );
     struct CS_StringBuilder *returnValue = CS_httpUrlEncodeAppend( toEncode, appendTo );
     if( returnValue == NULL ) {
@@ -466,8 +467,8 @@ struct CS_StringBuilder *CS_httpUrlEncode( const char *toEncode ) {
 }
 
 struct CS_StringBuilder *CS_httpUrlDecodeAppend( const char *toDecode, struct CS_StringBuilder *appendTo ) {
-    int remains = CS_SB_remain( appendTo );
-    int needed = privateDecode( toDecode, 0, CS_SB_writePosition( appendTo ), remains );
+    int32_t remains = CS_SB_remain( appendTo );
+    int32_t needed = privateDecode( toDecode, 0, CS_SB_writePosition( appendTo ), remains );
     if( needed >= remains ) {
         if( CS_SB_expandBy( appendTo, needed ) ) return NULL;
         needed = privateDecode( toDecode, 0, CS_SB_writePosition( appendTo ), remains );
@@ -477,8 +478,8 @@ struct CS_StringBuilder *CS_httpUrlDecodeAppend( const char *toDecode, struct CS
 }
 
 struct CS_StringBuilder *CS_httpUrlEncodeAppend( const char *toEncode, struct CS_StringBuilder *appendTo ) {
-    int remains = CS_SB_remain( appendTo );
-    int needed = privateEncode( toEncode, 0, CS_SB_writePosition( appendTo ), remains );
+    int32_t remains = CS_SB_remain( appendTo );
+    int32_t needed = privateEncode( toEncode, 0, CS_SB_writePosition( appendTo ), remains );
     if( needed >= remains ) {
         if( CS_SB_expandBy( appendTo, needed ) ) return NULL;
         needed = privateEncode( toEncode, 0, CS_SB_writePosition( appendTo ), CS_SB_remain( appendTo ) );
@@ -487,10 +488,10 @@ struct CS_StringBuilder *CS_httpUrlEncodeAppend( const char *toEncode, struct CS
     return appendTo;
 }
 
-int CS_httpUrlDecodeBinary( const void *toDecode, int decodeBufferLength, void *output, int outputBufferLength ) {
+int32_t CS_httpUrlDecodeBinary( const void *toDecode, int32_t decodeBufferLength, void *output, int32_t outputBufferLength ) {
     return privateDecode( (const char *)toDecode, decodeBufferLength, (char *)output, outputBufferLength );
 }
-int CS_httpUrlEncodeBinary( const void *toEncode, int encodeBufferLength, void *output, int outputBufferLength ) {
+int32_t CS_httpUrlEncodeBinary( const void *toEncode, int32_t encodeBufferLength, void *output, int32_t outputBufferLength ) {
     return privateEncode( (const char *)toEncode, encodeBufferLength, output, outputBufferLength );
 }
 
@@ -503,8 +504,8 @@ enum WhatKindOfUri {
 
 struct UriPrefixToKind {
     const char *prefix;
-    int prefixLength;
-    int whatKindOfUri;
+    int32_t prefixLength;
+    int32_t whatKindOfUri;
 };
 
 static struct UriPrefixToKind uriPrefixToKind[] = {
@@ -513,8 +514,8 @@ static struct UriPrefixToKind uriPrefixToKind[] = {
     { "ssl", 3, URI_SSL },
 };
 
-static int matchUriToType( const char *uri ) {
-    for( int i = 0; i < CS_ARRAY_SIZE(uriPrefixToKind); ++i ) {
+static int32_t matchUriToType( const char *uri ) {
+    for( int32_t i = 0; i < CS_ARRAY_SIZE(uriPrefixToKind); ++i ) {
         if( strncmp( uri, uriPrefixToKind[i].prefix, uriPrefixToKind[i].prefixLength ) == 0 ) {
             return uriPrefixToKind[i].whatKindOfUri;
         }
@@ -522,7 +523,7 @@ static int matchUriToType( const char *uri ) {
     return URI_UNKNOWN;
 }
 
-static int privateParseAddressAndPort( const char *uri, char *baseUri, char *currentPoint, char *endOfData, char **address, int *port, bool *ssl, const char **rest, bool wantSSL, int defaultSSLPort, int defaultNonSSLPort ) {
+static int32_t privateParseAddressAndPort( const char *uri, char *baseUri, char *currentPoint, char *endOfData, char **address, int32_t *port, bool *ssl, const char **rest, bool wantSSL, int32_t defaultSSLPort, int32_t defaultNonSSLPort ) {
     char *portChar = NULL;
     *address = currentPoint;
     while( currentPoint < endOfData && !(*currentPoint == ':' || *currentPoint == '/') ) ++currentPoint;
@@ -551,8 +552,8 @@ static int privateParseAddressAndPort( const char *uri, char *baseUri, char *cur
     return 0;
 }
 
-static int privateParseHttpUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
-    int len = strlen(uri);
+static int32_t privateParseHttpUri( const char *uri, char **address, int32_t *port, bool *ssl, const char **rest ) {
+    int32_t len = strlen(uri);
     char *tempUri = CS_tempStringCopy( uri );
     char *currentPoint = tempUri;
     char *endOfData = tempUri + len;
@@ -574,10 +575,10 @@ static int privateParseHttpUri( const char *uri, char **address, int *port, bool
     return privateParseAddressAndPort( uri, tempUri, currentPoint, endOfData, address, port, ssl, rest, wantSSL, 443, 80 );
 }
 
-static int privateParseTelnetUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
+static int32_t privateParseTelnetUri( const char *uri, char **address, int32_t *port, bool *ssl, const char **rest ) {
     if( uri == NULL ) return -1;
 
-    int len = strlen(uri);
+    int32_t len = strlen(uri);
     char *tempUri = CS_tempStringCopy( uri );
     char *currentPoint = tempUri;
     char *endOfData = tempUri + len;
@@ -594,10 +595,10 @@ static int privateParseTelnetUri( const char *uri, char **address, int *port, bo
     return privateParseAddressAndPort( uri, tempUri, currentPoint, endOfData, address, port, ssl, rest, false, 22, 23 );
 }
 
-static int privateParseSslUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
+static int32_t privateParseSslUri( const char *uri, char **address, int32_t *port, bool *ssl, const char **rest ) {
     if( uri == NULL ) return -1;
 
-    int len = strlen(uri);
+    int32_t len = strlen(uri);
     char *tempUri = CS_tempStringCopy( uri );
     char *currentPoint = tempUri;
     char *endOfData = tempUri + len;
@@ -611,8 +612,8 @@ static int privateParseSslUri( const char *uri, char **address, int *port, bool 
     return privateParseAddressAndPort( uri, tempUri, currentPoint, endOfData, address, port, ssl, rest, true, 22, 23 );
 }
 
-static int privateParseUri( const char *uri, char **address, int *port, bool *ssl, const char **rest ) {
-    int uriType = matchUriToType( uri );
+static int32_t privateParseUri( const char *uri, char **address, int32_t *port, bool *ssl, const char **rest ) {
+    int32_t uriType = matchUriToType( uri );
     switch( uriType ) {
         case URI_HTTP:
             return privateParseHttpUri( uri, address, port, ssl, rest );
@@ -627,8 +628,8 @@ static int privateParseUri( const char *uri, char **address, int *port, bool *ss
     return -1;
 }
 
-static const char *headerHas( struct CS_RequestHeader *headers, int numHeaders, const char *which ) {
-    for( int i = 0; i < numHeaders; ++i ) {
+static const char *headerHas( struct CS_RequestHeader *headers, int32_t numHeaders, const char *which ) {
+    for( int32_t i = 0; i < numHeaders; ++i ) {
         if( strcmp( headers[ i ].header, which ) == 0 ) {
             return headers[ i ].values;
         }
@@ -636,8 +637,8 @@ static const char *headerHas( struct CS_RequestHeader *headers, int numHeaders, 
     return NULL;
 }
 
-static const bool alreadySent( const char **alreadySent, int numAlreadySent, const char *which ) {
-    for( int i = 0; i < numAlreadySent; ++i ) {
+static const bool alreadySent( const char **alreadySent, int32_t numAlreadySent, const char *which ) {
+    for( int32_t i = 0; i < numAlreadySent; ++i ) {
         if( strcmp( alreadySent[ i ], which ) == 0 ) return true;
     }
     return false;
@@ -651,7 +652,7 @@ static void privateForceAppendHeader( struct CS_StringBuilder *appendTo,
 
 static void privateAppendHeader( struct CS_StringBuilder *appendTo, 
                           struct CS_RequestHeader *headers,
-                          int numHeaders,
+                          int32_t numHeaders,
                           const char *header, 
                           const char *defaultValue ) {
     const char *userHeaderValue = headerHas( headers, numHeaders, header );
@@ -661,10 +662,10 @@ static void privateAppendHeader( struct CS_StringBuilder *appendTo,
 
 static void privateAppendOthers( struct CS_StringBuilder *appendTo,
                          struct CS_RequestHeader *headers,
-                         int numHeaders,
+                         int32_t numHeaders,
                          const char **headersIHaveAlreadySent,
-                         int numHeadersAlreadySent ) {
-    for( int i = 0; i < numHeaders; ++i ) {
+                         int32_t numHeadersAlreadySent ) {
+    for( int32_t i = 0; i < numHeaders; ++i ) {
         if( !alreadySent( headersIHaveAlreadySent, numHeadersAlreadySent, headers[ i ].header ) ) {
             privateForceAppendHeader( appendTo, headers[ i ].header, headers[ i ].values );
         }
@@ -693,7 +694,7 @@ static const char *defaultHeadersValue[] = {
 #define CONTINUE_CHUNK_MORE   1
 
 //returns 0 if we're done... negative on error, positive on 'read more'
-static int privateContinueChunked( struct CS_RequestReply *reply ) {
+static int32_t privateContinueChunked( struct CS_RequestReply *reply ) {
     //chunkedBytesOffset represents the offset from the 'read' head where the
     //# of bytes in the next chunk are encoded. When we enter this function
     //we assume that if we've already gotten it in the buffer, we've already
@@ -716,15 +717,15 @@ static int privateContinueChunked( struct CS_RequestReply *reply ) {
             }
             reply->chunkCRLFStillPresent = false;
         }
-        int initialOffset = currentPoint - CS_PP_startOfData(reply->buffer);
+        int32_t initialOffset = currentPoint - CS_PP_startOfData(reply->buffer);
         char *end = CS_PP_endOfData( reply->buffer );
-        int accumulator = 0;
+        int32_t accumulator = 0;
 
         CS_LOG_TRACE("Okay, we're here now....about to read hex digits.");
 
         while( *currentPoint != CR && currentPoint < end ) {
             accumulator <<= 4;
-            int digit = hexDigitToInt( currentPoint ); 
+            int32_t digit = hexDigitToInt( currentPoint ); 
             if( digit < 0 ) {
                 CS_LOG_ERROR("Should be hex digits here...was not.");
                 return CONTINUE_CHUNK_ERROR;
@@ -749,7 +750,7 @@ static int privateContinueChunked( struct CS_RequestReply *reply ) {
             return CONTINUE_CHUNK_ERROR;
         }
         ++currentPoint;
-        int numBytesToEat = currentPoint - initialPoint;
+        int32_t numBytesToEat = currentPoint - initialPoint;
         if( CS_PP_removeChunk( reply->buffer, initialOffset, numBytesToEat ) ) {
             CS_LOG_ERROR("This should not be able to happen...");
             return CONTINUE_CHUNK_MORE;
@@ -765,20 +766,20 @@ static int privateContinueChunked( struct CS_RequestReply *reply ) {
 
 #define INITIAL_STRING_BUILDER_SIZE 4096
 #define PP_BUFFER_SIZE_FOR_RETURN 16384
-struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
+struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
                                             const char *uri,
                                             struct CS_RequestHeader *headers,
-                                            int numHeaders,
+                                            int32_t numHeaders,
                                             struct CS_QueryParameter *queryParameters,
-                                            int numQueryParameters,
+                                            int32_t numQueryParameters,
                                             struct CS_FormParameters *formParameters,
-                                            int numFormParameters,
+                                            int32_t numFormParameters,
                                             void *data,
-                                            int dataLength,
+                                            int32_t dataLength,
                                             struct CS_RequestReply *reuse ) {
     char address[ 128 ];
     const char *rest;
-    int portNum;
+    int32_t portNum;
     char *tempAddress;
     bool wantSSL;
     const char *method = CS_httpMethodEnumToString( methodEnum );
@@ -838,7 +839,7 @@ struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
 
     CS_SB_printf(sb, "%s %s", method, rest );
     if( queryParameters != NULL ) {
-        for( int i = 0; i < numQueryParameters; ++i ) {
+        for( int32_t i = 0; i < numQueryParameters; ++i ) {
             CS_SB_printf(sb, "%c%s=%s",
                     prefix,
                     CS_httpUrlEncodeTemp(queryParameters[i].name),
@@ -849,7 +850,7 @@ struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
     CS_SB_printf(sb, " %s%c%c", "HTTP/1.1", CR, LF);
 
     defaultHeadersValue[HOST_INDEX] = address;
-    for( int i = 0; i < (CS_ARRAY_SIZE(defaultHeaders)); ++i ) {
+    for( int32_t i = 0; i < (CS_ARRAY_SIZE(defaultHeaders)); ++i ) {
         privateAppendHeader( sb, headers, numHeaders, defaultHeaders[ i ], defaultHeadersValue[ i ] );
     }
     privateAppendOthers( sb, headers, numHeaders, defaultHeaders, CS_ARRAY_SIZE(defaultHeaders) );
@@ -859,7 +860,7 @@ struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
         char *ampersand = "&";
         char *currentSeparator = empty;
         formString = CS_SB_create( INITIAL_STRING_BUILDER_SIZE );
-        for( int i = 0; i < numFormParameters; ++i ) {
+        for( int32_t i = 0; i < numFormParameters; ++i ) {
             CS_SB_printf( formString, "%s%s=%s", currentSeparator, 
                     formParameters[ i ].name,
                     CS_httpUrlEncodeTemp( formParameters[i].value ) );
@@ -886,7 +887,7 @@ struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
 
     //Okay, we're ready to actually open the socket and go.
     struct addrinfo *addrInfoIter = addrInfos;
-    int connectValue = -1;
+    int32_t connectValue = -1;
     do {
         returnValue->remoteSocket = socket(AF_INET, SOCK_STREAM, 0);
         if( returnValue->remoteSocket < 0 ) {
@@ -916,7 +917,7 @@ struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
 
     pp = CS_SB_getPushPullBuffer(sb);
     do {
-        int numBytesSent = wantSSL?CS_PP_writeToSSL( pp, returnValue->ssl):CS_PP_writeToFile( pp, returnValue->remoteSocket );
+        int32_t numBytesSent = wantSSL?CS_PP_writeToSSL( pp, returnValue->ssl):CS_PP_writeToFile( pp, returnValue->remoteSocket );
         if( numBytesSent <= 0 ) {
             goto CLEANUP;
         }
@@ -941,16 +942,16 @@ CLEANUP:
 
 }
 
-int CS_httpFillReplyFromRemote( struct CS_RequestReply *requestReply ) {
-    int numBytesRead = requestReply->ssl?CS_PP_readFromSSL( requestReply->buffer, requestReply->ssl ):CS_PP_readFromFile( requestReply->buffer, requestReply->remoteSocket );
+int32_t CS_httpFillReplyFromRemote( struct CS_RequestReply *requestReply ) {
+    int32_t numBytesRead = requestReply->ssl?CS_PP_readFromSSL( requestReply->buffer, requestReply->ssl ):CS_PP_readFromFile( requestReply->buffer, requestReply->remoteSocket );
 
     return numBytesRead;
 }
 
-int CS_httpPushBufferToRemote( struct CS_RequestReply *requestReply, struct CS_PushPullBuffer *pp ) {
-    int totalSent = 0;
+int32_t CS_httpPushBufferToRemote( struct CS_RequestReply *requestReply, struct CS_PushPullBuffer *pp ) {
+    int32_t totalSent = 0;
     do {
-        int numBytesSent = requestReply->ssl?CS_PP_writeToSSL( pp, requestReply->ssl):CS_PP_writeToFile( pp, requestReply->remoteSocket );
+        int32_t numBytesSent = requestReply->ssl?CS_PP_writeToSSL( pp, requestReply->ssl):CS_PP_writeToFile( pp, requestReply->remoteSocket );
         if( numBytesSent <= 0 ) {
             return numBytesSent; 
         }
@@ -959,17 +960,17 @@ int CS_httpPushBufferToRemote( struct CS_RequestReply *requestReply, struct CS_P
     return totalSent;
 }
 
-int CS_httpPushBytesToRemote( struct CS_RequestReply *requestReply, void *data, int dataLength ) {
+int32_t CS_httpPushBytesToRemote( struct CS_RequestReply *requestReply, void *data, int32_t dataLength ) {
     struct CS_PushPullBuffer *pp = CS_PP_onStaticBuffer( dataLength, data );
     if( !pp ) return -1;
-    int bytesSent = CS_httpPushBufferToRemote( requestReply, pp );
+    int32_t bytesSent = CS_httpPushBufferToRemote( requestReply, pp );
     CS_PP_defaultFree(pp);
     return bytesSent;
 }
 
 
 #define MINIMUM_DECOMPRESSION_BUFFER 16384
-static int privateDecompressReply( struct CS_RequestReply *reply ) {
+static int32_t privateDecompressReply( struct CS_RequestReply *reply ) {
     const char *contentEncoding = CS_httpReplyHeader( reply, "Content-Encoding" );
     if( contentEncoding == NULL ) return 0;
     
@@ -981,7 +982,7 @@ static int privateDecompressReply( struct CS_RequestReply *reply ) {
     CS_Compress ctx;
     CS_compressInit( &ctx );
     
-    int initialSize = CS_PP_dataSize( reply->buffer ) * 2;
+    int32_t initialSize = CS_PP_dataSize( reply->buffer ) * 2;
     if( initialSize < MINIMUM_DECOMPRESSION_BUFFER ) initialSize = MINIMUM_DECOMPRESSION_BUFFER;
     
     struct CS_PushPullBuffer *decompressed = CS_PP_defaultAlloc( initialSize );
@@ -1007,7 +1008,7 @@ static int privateDecompressReply( struct CS_RequestReply *reply ) {
         
         if( result == 0 && CS_PP_dataSize( reply->buffer ) > 0 ) {
             // Need more space
-            int newSize = decompressed->size * 2;
+            int32_t newSize = decompressed->size * 2;
             struct CS_PushPullBuffer *newDecompressed = CS_PP_defaultAlloc( newSize );
             if( newDecompressed == NULL ) {
                  CS_PP_defaultFree( decompressed );
@@ -1030,16 +1031,16 @@ static int privateDecompressReply( struct CS_RequestReply *reply ) {
 
 #define INITIAL_STRING_BUILDER_SIZE 4096
 #define PP_BUFFER_SIZE_FOR_RETURN 16384
-struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
+struct CS_RequestReply *CS_httpMakeRequest( int32_t methodEnum,
                                             const char *uri,
                                             struct CS_RequestHeader *headers,
-                                            int numHeaders,
+                                            int32_t numHeaders,
                                             struct CS_QueryParameter *queryParameters,
-                                            int numQueryParameters,
+                                            int32_t numQueryParameters,
                                             struct CS_FormParameters *formParameters,
-                                            int numFormParameters,
+                                            int32_t numFormParameters,
                                             void *data,
-                                            int dataLength,
+                                            int32_t dataLength,
                                             bool autoDecompress,
                                             struct CS_RequestReply *reuse ) {
     struct CS_RequestReply *returnValue = CS_httpStartRequest( methodEnum, uri, headers, numHeaders, queryParameters, numQueryParameters, formParameters, numFormParameters, data, dataLength, reuse );
@@ -1053,7 +1054,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
     if( data && dataLength > 0 ) {
         struct CS_PushPullBuffer *pp = CS_PP_onStaticBuffer( dataLength, data );
         do {
-            int numBytesSent = wantSSL?CS_PP_writeToSSL( pp, returnValue->ssl):CS_PP_writeToFile( pp, returnValue->remoteSocket );
+            int32_t numBytesSent = wantSSL?CS_PP_writeToSSL( pp, returnValue->ssl):CS_PP_writeToFile( pp, returnValue->remoteSocket );
             if( numBytesSent <= 0 ) {
                 goto CLEANUP;
             }
@@ -1067,14 +1068,14 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         }
     }
 
-    int numBytesRead = CS_httpFillReplyFromRemote( returnValue );
+    int32_t numBytesRead = CS_httpFillReplyFromRemote( returnValue );
 
     if( numBytesRead < 0 ) {
         CS_LOG_ERROR("Read from remote failed.");
         goto CLEANUP;
     }
 
-    int numBytesParsed = privateParseReply( returnValue );
+    int32_t numBytesParsed = privateParseReply( returnValue );
     if( numBytesParsed < 0 ) goto CLEANUP;
 
     CS_PP_write( returnValue->buffer, numBytesParsed );
@@ -1082,9 +1083,9 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
     const char *contentLength = CS_httpReplyHeader( returnValue, "Content-Length" );
     //If we have any content at all...there's likely to be something out there for us.
     if( contentLength != NULL ) {
-        int howMuch = atol(contentLength);
+        int32_t howMuch = atol(contentLength);
         if( howMuch > CS_PP_dataSize( returnValue->buffer ) ) {
-            int readMore = CS_httpFillReplyFromRemote( returnValue );
+            int32_t readMore = CS_httpFillReplyFromRemote( returnValue );
             if( readMore < 0 ) goto CLEANUP;
         }
     }
@@ -1099,7 +1100,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
         returnValue->chunkedBytesOffset = -CS_PP_dataSize( returnValue->buffer );
         CS_LOG_TRACE("Chunked bytes offset is %d", returnValue->chunkedBytesOffset);
         do {
-            int continueValue = privateContinueChunked( returnValue );
+            int32_t continueValue = privateContinueChunked( returnValue );
             if( continueValue == CONTINUE_CHUNK_MORE ) {
                 CS_LOG_TRACE("Need more data.");
                 //Need more data.
@@ -1145,7 +1146,7 @@ void CS_httpCloseRequest( struct CS_RequestReply *toReturn ) {
 }
 
 const char *CS_httpReplyHeader( struct CS_RequestReply *reply, const char *header ) {
-    for( int i = 0; i < reply->numReplyHeaders; ++i ) {
+    for( int32_t i = 0; i < reply->numReplyHeaders; ++i ) {
         if( strstr( header, reply->replyHeaders[ i ].header) )
             return reply->replyHeaders[ i ].values;
     }

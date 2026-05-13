@@ -24,6 +24,7 @@ extern "C" {
 #endif
 
 #include <stdlib.h>
+#include <stdint.h>
 
 #ifdef CS_ALLOC_USE_MALLOC
 
@@ -42,8 +43,8 @@ extern "C" {
 
 #else
 
-void CS_setFailAlloc(int percentageOfTheTime);
-void CS_setMaxAlloc(int maxSize);
+void CS_setFailAlloc(int32_t percentageOfTheTime);
+void CS_setMaxAlloc(int32_t maxSize);
 
 #define CS_alloc(X) CS_alloc_detailled(X,__FILE__,__LINE__)
 #define CS_free(X) CS_free_detailled(X,__FILE__,__LINE__)
@@ -56,11 +57,11 @@ void CS_setMaxAlloc(int maxSize);
 #define CS_allocDuplicateB(_B,_X,_Y) (_B)?CS_allocDuplicateMalloc(_X,_Y):CS_allocDuplicate_detailled(_X,_Y,__FILE__,__LINE__)
 #define CS_allocZeroB(_B,_X) (_B)?CS_allocDuplicateMalloc(_B):CS_allocDuplicate_detailled(_X,__FILE__,__LINE__)
 
-void *CS_alloc_detailled(unsigned long size,const char *file,int line);
-void CS_free_detailled(void *freeMe,const char *file, int line);
-void *CS_realloc_detailled(void *reallocMe,unsigned long size,const char *file,int line);
-void *CS_allocDuplicate_detailled( const void *duplicateMe, unsigned long size, const char *file, int line);
-void *CS_allocZero_detailled( unsigned long size, const char *file, int line);
+void *CS_alloc_detailled(unsigned long size,const char *file,int32_t line);
+void CS_free_detailled(void *freeMe,const char *file, int32_t line);
+void *CS_realloc_detailled(void *reallocMe,unsigned long size,const char *file,int32_t line);
+void *CS_allocDuplicate_detailled( const void *duplicateMe, unsigned long size, const char *file, int32_t line);
+void *CS_allocZero_detailled( unsigned long size, const char *file, int32_t line);
 
 #endif
 
@@ -71,9 +72,9 @@ void *CS_allocZeroMalloc(unsigned long size);
 #ifdef CS_ALLOC_USE_MALLOC
 #error "You can't have CS_ALLOC_TRACKING and CS_ALLOC_USE_MALLOC defined at the same time."
 #endif
-int CS_allocSystemTracker(int concurrentTrackingSlots,unsigned int flags);
-int CS_allocSystemTrackerKill();
-int CS_allocSystemReport();
+int32_t CS_allocSystemTracker(int32_t concurrentTrackingSlots,uint32_t flags);
+int32_t CS_allocSystemTrackerKill();
+int32_t CS_allocSystemReport();
 #else
 #define CS_allocSystemTracker(X,Y) 0 
 #define CS_allocSystemTrackerKill() 0 

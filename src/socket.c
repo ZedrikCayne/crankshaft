@@ -21,11 +21,12 @@
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/util.h>
 #include <crankshaft/thread.h>
+#include <stdint.h>
 
 struct CS_Socket {
     bool ownSocket;
-    int socket;
-    int port;
+    int32_t socket;
+    int32_t port;
     SSL *ssl;
     bool ipv6;
     void *context;
@@ -45,9 +46,9 @@ struct CS_Socket {
 
 struct autoSocketContext {
     struct CS_Socket *socket;
-    int inputBufferSize;
-    int outputBufferSize;
-    bool (*cycle)(struct CS_Thread *socket, int socketEnum, struct CS_Socket *newSocket );
+    int32_t inputBufferSize;
+    int32_t outputBufferSize;
+    bool (*cycle)(struct CS_Thread *socket, int32_t socketEnum, struct CS_Socket *newSocket );
     bool inputMutex;
     bool outputMutex;
 };
@@ -57,7 +58,7 @@ static struct CS_SlabAllocator *socketContexts = NULL;
 
 static pthread_mutex_t socketsMutex = PTHREAD_MUTEX_INITIALIZER;
 
-struct CS_Socket *CS_socketInit( int socket, int port, SSL *ssl, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex ) {
+struct CS_Socket *CS_socketInit( int32_t socket, int32_t port, SSL *ssl, int32_t inputBufferSize, int32_t outputBufferSize, bool inputMutex, bool outputMutex ) {
     CS_PMUTEX_PROTECT_GLOBAL( sockets, &socketsMutex ) {
         sockets = CS_slabInit( "SOCKETS", sizeof( struct CS_Socket ), 64, sizeof( void * ) );
         socketContexts = CS_slabInit( "AUTOACCEPT CONTEXTS", sizeof( struct autoSocketContext ), 64, sizeof( void * ) );
@@ -98,7 +99,7 @@ ERROR_INIT:
     return NULL;
 }
 
-struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int port, bool wantSSL, bool TLSv1, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex ) {
+struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int32_t port, bool wantSSL, bool TLSv1, int32_t inputBufferSize, int32_t outputBufferSize, bool inputMutex, bool outputMutex ) {
     struct CS_Socket *returnValue = CS_socketInit( -1, port, NULL, inputBufferSize, outputBufferSize, inputMutex, outputMutex );
     if( returnValue == NULL ) return NULL;
     //Lookup address
@@ -107,7 +108,7 @@ struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int 
 
     //Cycle the infos
     struct addrinfo *addrInfoIter = addrInfos;
-    int connectValue = -1;
+    int32_t connectValue = -1;
 
     //Set that we 'own the socket' so when we destroy ourselves we will kill it.
     returnValue->ownSocket = true;
@@ -202,12 +203,12 @@ void CS_socketUnlockOutputBuffer( struct CS_Socket *socket ) {
     if( socket->outputMutex ) CS_mutexUnlock( socket->outputMutex );
 }
 
-int CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock ) {
+int32_t CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock ) {
     if( socket == NULL || socket->socket < 0 ) return -1;
     struct CS_PushPullBuffer *pp = lock?CS_socketLockOutputBuffer( socket ):socket->output;
     if( pp == NULL ) return -1;
     signal(SIGPIPE,SIG_IGN);
-    int returnValue = socket->ssl?CS_PP_writeToSSL( pp, socket->ssl ):CS_PP_writeToFile( pp, socket->socket );
+    int32_t returnValue = socket->ssl?CS_PP_writeToSSL( pp, socket->ssl ):CS_PP_writeToFile( pp, socket->socket );
     if( returnValue < 0 ) {
         CS_socketClose( socket );
     }
@@ -215,12 +216,12 @@ int CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock ) {
     return returnValue;
 }
 
-int CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock ) {
+int32_t CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock ) {
     if( socket == NULL || socket->socket < 0 ) return -1;
     struct CS_PushPullBuffer *pp = lock?CS_socketLockInputBuffer( socket ):socket->buffer;
     if( pp == NULL ) return -1;
     signal(SIGPIPE,SIG_IGN);
-    int returnValue = socket->ssl?CS_PP_readFromSSL( pp, socket->ssl ):CS_PP_readFromFile( pp, socket->socket );
+    int32_t returnValue = socket->ssl?CS_PP_readFromSSL( pp, socket->ssl ):CS_PP_readFromFile( pp, socket->socket );
     if( returnValue < 0 ) {
         CS_socketClose( socket );
     }
@@ -228,15 +229,15 @@ int CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock ) {
     return returnValue;
 }
 
-struct CS_Socket *CS_socketBind(int port, bool ipv6, bool wantSSL) {
-    int finalPortNum = 0;
-    int listenSocket = ipv6?socket(AF_INET6,SOCK_STREAM,0):socket(AF_INET, SOCK_STREAM,0);
+struct CS_Socket *CS_socketBind(int32_t port, bool ipv6, bool wantSSL) {
+    int32_t finalPortNum = 0;
+    int32_t listenSocket = ipv6?socket(AF_INET6,SOCK_STREAM,0):socket(AF_INET, SOCK_STREAM,0);
     if( listenSocket < 0 ) {
         CS_LOG_ERROR("Failed to open socket for listening.");
         return NULL;
     }
 
-    int optVal = 1;
+    int32_t optVal = 1;
 
     if( setsockopt( listenSocket, SOL_SOCKET, SO_REUSEADDR, &optVal, sizeof(optVal) ) < 0 ) {
         CS_LOG_ERROR("Failed to set socket options.");
@@ -290,16 +291,16 @@ ERR_SOCK:
     return NULL;
 }
 
-struct CS_Socket *CS_socketAccept( struct CS_Socket *boundSocket, bool blocking, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex ) {
+struct CS_Socket *CS_socketAccept( struct CS_Socket *boundSocket, bool blocking, int32_t inputBufferSize, int32_t outputBufferSize, bool inputMutex, bool outputMutex ) {
     do {
         struct pollfd pollMe = {boundSocket->socket, POLLIN, 0};
         pollMe.revents = 0;
-        int pollVal = poll(&pollMe, 1, 500);
+        int32_t pollVal = poll(&pollMe, 1, 500);
         if( pollVal < 0 ) break;
         if( pollVal == 1 && pollMe.revents == POLLIN ) {
             struct sockaddr clientSocketAddress;
             socklen_t addrSize = sizeof(struct sockaddr);
-            int newSock = accept(boundSocket->socket, &clientSocketAddress, &addrSize);
+            int32_t newSock = accept(boundSocket->socket, &clientSocketAddress, &addrSize);
             if( newSock < 0 ) {
                 CS_LOG_ERROR("Socket failed to accept %s", strerror(errno));
                 break;
@@ -328,7 +329,7 @@ struct CS_Socket *CS_socketAccept( struct CS_Socket *boundSocket, bool blocking,
     return NULL;
 }
 
-bool cycleWrapper( struct CS_Thread *thread, int threadStateEnum, void *context ) {
+bool cycleWrapper( struct CS_Thread *thread, int32_t threadStateEnum, void *context ) {
     struct autoSocketContext *autoContext = (struct autoSocketContext *)context;
     bool returnValue = ((struct autoSocketContext *)context)->cycle( thread, threadStateEnum, autoContext->socket );
     if( threadStateEnum == CS_THREAD_STOP ) {
@@ -338,7 +339,7 @@ bool cycleWrapper( struct CS_Thread *thread, int threadStateEnum, void *context 
 }
 
 //Driver for a CS_Thread.
-bool autoThreadAccept( struct CS_Thread *thread, int threadStateEnum, void *context ) {
+bool autoThreadAccept( struct CS_Thread *thread, int32_t threadStateEnum, void *context ) {
     struct autoSocketContext *socketContext = (struct autoSocketContext *)context;
 
     if( CS_THREAD_STOP != threadStateEnum ) {
@@ -356,7 +357,7 @@ bool autoThreadAccept( struct CS_Thread *thread, int threadStateEnum, void *cont
     return false;
 }
 
-struct CS_Thread *CS_socketAutoAccept( const char *threadName, struct CS_Socket *boundSocket, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex, bool (*cycle)(struct CS_Thread *thread, int threadSateEnum, struct CS_Socket *incoming ) ) {
+struct CS_Thread *CS_socketAutoAccept( const char *threadName, struct CS_Socket *boundSocket, int32_t inputBufferSize, int32_t outputBufferSize, bool inputMutex, bool outputMutex, bool (*cycle)(struct CS_Thread *thread, int32_t threadSateEnum, struct CS_Socket *incoming ) ) {
     struct autoSocketContext *newContext = CS_slabTakeZero( socketContexts );
     if( newContext == NULL ) return NULL;
     newContext->inputBufferSize = inputBufferSize;

@@ -19,6 +19,7 @@
  **************************************/
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,8 +35,8 @@ void *CS_slabTakeZero(struct CS_SlabAllocator *slab);
 void *CS_slabTakeCopy(struct CS_SlabAllocator *slab, const void *source);
 bool CS_slabReturn(struct CS_SlabAllocator *slab, void *toReturn);
 
-struct CS_SlabAllocator *CS_slabInit( const char *name, int size, int count, int alignment );
-struct CS_SlabAllocator *CS_slabInitMalloc( const char *name, int size, int count, int alignment );
+struct CS_SlabAllocator *CS_slabInit( const char *name, int32_t size, int32_t count, int32_t alignment );
+struct CS_SlabAllocator *CS_slabInitMalloc( const char *name, int32_t size, int32_t count, int32_t alignment );
 bool CS_slabFree( struct CS_SlabAllocator *allocation );
 bool CS_slabReset( struct CS_SlabAllocator *allocation );
 

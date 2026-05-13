@@ -14,6 +14,7 @@
 #include <crankshaft/stack.h>
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/logger.h>
+#include <stdint.h>
 
 
 #define JSON_NODE_ALIGNMENT 8
@@ -35,7 +36,7 @@
 
 struct _hexToInt {
     char hex;
-    int hexInt;
+    int32_t hexInt;
 };
 
 static char hexdigit[]  = "0123456789abcdef0123456789abcdef";
@@ -43,19 +44,19 @@ static char hexdigit1[] = "00000000000000001111111111111111";
 
 
 
-static int hexDigitToInt( const char *u ) {
+static int32_t hexDigitToInt( const char *u ) {
     if( *u < '0' ) return -1;
     if( *u > 'f' ) return -1;
-    if( *u <= '9' ) return (int)( *u - '0' );
-    if( *u >= 'a' ) return (int)( *u - 'a' ) + 10;
+    if( *u <= '9' ) return (int32_t)( *u - '0' );
+    if( *u >= 'a' ) return (int32_t)( *u - 'a' ) + 10;
     if( *u > 'F' ) return -1;
-    if( *u >= 'A' ) return (int)( *u - 'A' ) + 10;
+    if( *u >= 'A' ) return (int32_t)( *u - 'A' ) + 10;
     return -1;
 }
 
-static int u4ToUTF8( const char *u4, char *out, int length ) {
-    int u8Char = 0;
-    int i;
+static int32_t u4ToUTF8( const char *u4, char *out, int32_t length ) {
+    int32_t u8Char = 0;
+    int32_t i;
     i = hexDigitToInt( (u4 + 0 ) );
     if( i < 0 ) return -1;
     u8Char = i;
@@ -71,10 +72,10 @@ static int u4ToUTF8( const char *u4, char *out, int length ) {
     return CS_utf8FromInt( u8Char, out, length );
 }
 
-static struct CS_StringBuilder *privateQuoteString(const char *inputString, int len, struct CS_StringBuilder *out) {
+static struct CS_StringBuilder *privateQuoteString(const char *inputString, int32_t len, struct CS_StringBuilder *out) {
     struct CS_StringBuilder *returnValue = out;
     const char *sourceBuff = inputString;
-    for( int i = 0; i < len && *sourceBuff != 0; ++i ) {
+    for( int32_t i = 0; i < len && *sourceBuff != 0; ++i ) {
         if( *sourceBuff < ' ' ) {
             CS_SB_appendChar( returnValue, '\\' );
             switch( *sourceBuff ) {
@@ -95,8 +96,8 @@ static struct CS_StringBuilder *privateQuoteString(const char *inputString, int 
                     break;
                 default:
                     if( CS_SB_append( returnValue, "u00" ) == NULL ) return NULL;
-                    if( CS_SB_appendChar( returnValue, hexdigit1[ (int)*sourceBuff ] ) == NULL ) return NULL;
-                    if( CS_SB_appendChar( returnValue, hexdigit[ (int)*sourceBuff ] ) == NULL ) return NULL;
+                    if( CS_SB_appendChar( returnValue, hexdigit1[ (int32_t)*sourceBuff ] ) == NULL ) return NULL;
+                    if( CS_SB_appendChar( returnValue, hexdigit[ (int32_t)*sourceBuff ] ) == NULL ) return NULL;
                     break;
             }
         } else {
@@ -114,11 +115,11 @@ static struct CS_StringBuilder *privateQuoteString(const char *inputString, int 
     return returnValue;
 }
 
-struct CS_StringBuilder *CS_jsonQuoteStringToStringBuilder(const char *inputString, int len, struct CS_StringBuilder *out) {
+struct CS_StringBuilder *CS_jsonQuoteStringToStringBuilder(const char *inputString, int32_t len, struct CS_StringBuilder *out) {
     return privateQuoteString(inputString,len,out);
 }
 
-struct CS_StringBuilder *CS_jsonQuoteString(const char *inputString, int len) {
+struct CS_StringBuilder *CS_jsonQuoteString(const char *inputString, int32_t len) {
     struct CS_StringBuilder *returnValue = CS_SB_create( len * 2 );
     if( returnValue == NULL ) {
         return NULL;
@@ -192,7 +193,7 @@ static struct CS_JsonNode *privateClose( struct CS_JsonNode *aNode ) {
     return aNode;
 }
 
-static struct CS_JsonNode *privateInitJson( int stackSize, void *linearAllocator ) {
+static struct CS_JsonNode *privateInitJson( int32_t stackSize, void *linearAllocator ) {
     void *linearAlloc = linearAllocator?linearAllocator:CS_linearInit( stackSize );
     if( linearAlloc == NULL ) return NULL;
     struct CS_JsonNode *root = jsonNode(linearAlloc);
@@ -287,7 +288,7 @@ enum JSON_TOKEN_TYPES {
     JSON_TOKEN_ERROR
 };
 
-static int privateJsonTokenToEnumType( int jsonTokenEnum ) {
+static int32_t privateJsonTokenToEnumType( int32_t jsonTokenEnum ) {
     switch( jsonTokenEnum ) {
         case JSON_TOKEN_START_OBJECT:
             return CS_JSON_OBJECT;
@@ -316,13 +317,13 @@ struct JsonToken {
     const char *start;
     const char *end;
     const char *err;
-    int enumType;
+    int32_t enumType;
 };
 
 #define TRACE_TOKEN(__TOK) CS_LOG_TRACE("Found a %s",privateJsonTokenEnumToString(__TOK))
 #define ONE_CHAR_RETURN(TOK) out->start=out->end=current;out->enumType=TOK;TRACE_TOKEN(TOK);return TOK
 
-static int privateParseQuotedString( struct JsonToken *out, const char *input, int inputLength ) {
+static int32_t privateParseQuotedString( struct JsonToken *out, const char *input, int32_t inputLength ) {
     const char *current = input;
     const char *end = input + inputLength;
     if( *input != QUOTE )
@@ -347,7 +348,7 @@ static int privateParseQuotedString( struct JsonToken *out, const char *input, i
                     ++current;
                     continue;
                 case 'u':
-                    for( int i = 0; i < 4; ++i ) {
+                    for( int32_t i = 0; i < 4; ++i ) {
                         ++current;
                         if( current >= end ) goto END_OF_STRING;
                         switch(*current) {
@@ -402,17 +403,17 @@ END_OF_STRING:
     return JSON_TOKEN_ERROR;
 }
 
-static int privateParseString( struct JsonToken *out,
+static int32_t privateParseString( struct JsonToken *out,
                                const char *input,
-                               int inputLength,
+                               int32_t inputLength,
                                const char *cmpTo,
-                               int cmpLength,
-                               int returnValue ) {
+                               int32_t cmpLength,
+                               int32_t returnValue ) {
     if( inputLength < cmpLength ) {
         out->err = CS_tempBuffSnprintf( 256, "Not enough characters left in buffer to parse %s", cmpTo );
         return JSON_TOKEN_ERROR;
     }
-    for( int i = 1; i < cmpLength; ++i ) if( input[i] != cmpTo[i] ) {
+    for( int32_t i = 1; i < cmpLength; ++i ) if( input[i] != cmpTo[i] ) {
         out->err = CS_tempBuffSnprintf( 256, "Error parsing %s", cmpTo );
         return JSON_TOKEN_ERROR;
     }
@@ -438,7 +439,7 @@ enum ParseNumberState {
     PN_E_DECIMAL,
 };
 
-const char *privateJsonTokenEnumToString(int jsonTokenEnum) {
+const char *privateJsonTokenEnumToString(int32_t jsonTokenEnum) {
     switch( jsonTokenEnum ) {
         case JSON_TOKEN_START_OBJECT:
             return "JSON_TOKEN_START_OBJECT";
@@ -472,7 +473,7 @@ const char *privateJsonTokenEnumToString(int jsonTokenEnum) {
     return "INVALID ENUM";
 }
 
-static const char *numberStateToString( int enumParseNumberState ) {
+static const char *numberStateToString( int32_t enumParseNumberState ) {
     switch( enumParseNumberState ) {
     	case PN_OKAY:
             return "PN_OKAY";
@@ -506,14 +507,14 @@ static const char *numberStateToString( int enumParseNumberState ) {
     
 
 #define RETURN_ERROR(STRING) out->err=STRING;out->end=current;return JSON_TOKEN_ERROR
-static int privateParseNumber( struct JsonToken *out, const char *input, int inputLength ) {
+static int32_t privateParseNumber( struct JsonToken *out, const char *input, int32_t inputLength ) {
     const char *current = input;
     const char *end = input + inputLength;
     out->start = input;
     out->end = NULL;
     out->err = 0;
-    int enumValue = JSON_TOKEN_INTEGER;
-    int parseState = PN_INTEGER;
+    int32_t enumValue = JSON_TOKEN_INTEGER;
+    int32_t parseState = PN_INTEGER;
     if( *current == '-' )
         parseState = PN_INITIAL_SIGN;
     if( *current == '0' )
@@ -608,7 +609,7 @@ static int privateParseNumber( struct JsonToken *out, const char *input, int inp
 static char *printableStringOfThisChar(char *thisChar) {
     char * returnValue = CS_tempBuff(PRINTABLE_CHAR_LENGTH);
     if( *thisChar < 32 || *thisChar > 127 ) {
-        snprintf( returnValue, PRINTABLE_CHAR_LENGTH, "0x%02X", (int)(*thisChar) );
+        snprintf( returnValue, PRINTABLE_CHAR_LENGTH, "0x%02X", (int32_t)(*thisChar) );
     } else {
         snprintf( returnValue, PRINTABLE_CHAR_LENGTH, "'%c'", *thisChar );
     }
@@ -616,10 +617,10 @@ static char *printableStringOfThisChar(char *thisChar) {
 }
 #pragma GCC diagnostic pop
 
-static int privateParseNext( struct JsonToken *out, const char *input, int inputLength) {
+static int32_t privateParseNext( struct JsonToken *out, const char *input, int32_t inputLength) {
     const char *current = input;
     const char *end = input + inputLength;
-    int foundEnum = 0;
+    int32_t foundEnum = 0;
     while( current < end ) {
         switch( *current ) {
             case 0:
@@ -696,7 +697,7 @@ static const char *copyOrMangleInPlace( struct JsonToken *token, struct CS_JsonN
     } else {
         end++;
     }
-    int len = (end - start);
+    int32_t len = (end - start);
     char *stringValue = NULL;
     if( copy ) {
         stringValue = CS_linearTake(node->voidLinearAllocator, len + 1, 1);
@@ -782,7 +783,7 @@ static struct CS_JsonNode *pushOn( struct JsonToken *token, const char *name, st
     return returnValue;
 }
 
-struct CS_JsonNode *privateParseJson(const char *input, int inputLength, int allocSize, bool copy, void *linearAllocator ) {
+struct CS_JsonNode *privateParseJson(const char *input, int32_t inputLength, int32_t allocSize, bool copy, void *linearAllocator ) {
     struct CS_JsonNode *returnValue = privateInitJson( allocSize, linearAllocator );
     const char *current;
     const char *end;
@@ -796,10 +797,10 @@ struct CS_JsonNode *privateParseJson(const char *input, int inputLength, int all
     const char *name[2] = {NULL,NULL};
 
     bool needAComma = false;
-    int tokenType = JSON_TOKEN_ERROR;
-    int lastToken = JSON_TOKEN_ERROR;
-    int nextToken = JSON_TOKEN_ERROR;
-    int outToggle = 0;
+    int32_t tokenType = JSON_TOKEN_ERROR;
+    int32_t lastToken = JSON_TOKEN_ERROR;
+    int32_t nextToken = JSON_TOKEN_ERROR;
+    int32_t outToggle = 0;
     nextToken = privateParseNext( out + outToggle, current, inputLength - (current - input) );
 
     while(current < end) {
@@ -897,27 +898,27 @@ ERROR_DEL_JSON:
     return NULL;
 }
 
-struct CS_JsonNode *CS_jsonParseCopyWithAllocator(const char *input, int inputLength, void *linearAllocator ) {
+struct CS_JsonNode *CS_jsonParseCopyWithAllocator(const char *input, int32_t inputLength, void *linearAllocator ) {
     struct CS_JsonNode *returnValue = privateParseJson(input,inputLength,0,true,linearAllocator);
     if( returnValue ) privateClearAllocators( returnValue );
     return returnValue;
 }
 
-struct CS_JsonNode *CS_jsonParseCopy(const char *input, int inputLength, int allocSize) {
+struct CS_JsonNode *CS_jsonParseCopy(const char *input, int32_t inputLength, int32_t allocSize) {
     return privateParseJson(input,inputLength,allocSize,true,NULL);
 }
 
-struct CS_JsonNode *CS_jsonParse(const char *input, int inputLength, int allocSize) {
+struct CS_JsonNode *CS_jsonParse(const char *input, int32_t inputLength, int32_t allocSize) {
     return privateParseJson(input,inputLength,allocSize,false,NULL);
 }
 
-static int unquotePrivate( char *output, char *inputString, int len ) {
+static int32_t unquotePrivate( char *output, char *inputString, int32_t len ) {
     char *outputBuffer = output;
     char *outputBufferEnd = outputBuffer + len;
     const char *sourceBuffer;
     const char *sourceBufferEnd = inputString + len;
 
-    for( int i = 0 ; i < len; ++i ) {
+    for( int32_t i = 0 ; i < len; ++i ) {
         sourceBuffer = inputString + i;
         if( *sourceBuffer == 0 )
             break;
@@ -963,7 +964,7 @@ static int unquotePrivate( char *output, char *inputString, int len ) {
                         CS_LOG_ERROR("Ran out of characters decoding \\u unquoting json");
                         return -1;
                     }
-                    int length = u4ToUTF8( sourceBuffer, outputBuffer, outputBufferEnd - outputBuffer );
+                    int32_t length = u4ToUTF8( sourceBuffer, outputBuffer, outputBufferEnd - outputBuffer );
                     if( length < 0 ) {
                         CS_LOG_ERROR("Output buffer too smaall during unquoting json");
                         return -1;
@@ -990,14 +991,14 @@ static int unquotePrivate( char *output, char *inputString, int len ) {
     return outputBuffer - output;
 }
 
-bool CS_unquoteInPlace(char *inputString, int len) {
+bool CS_unquoteInPlace(char *inputString, int32_t len) {
     return unquotePrivate(inputString, inputString, len) >= 0;
 }
 
-struct CS_StringBuilder *CS_jsonUnquoteString(const char *inputString, int len) {
+struct CS_StringBuilder *CS_jsonUnquoteString(const char *inputString, int32_t len) {
     //No matter what, the output string will be either <= the length of the input string
     struct CS_StringBuilder *returnValue = CS_SB_create(len + 2);
-    int newLength = unquotePrivate( returnValue->buffer, (char*)inputString, len );
+    int32_t newLength = unquotePrivate( returnValue->buffer, (char*)inputString, len );
     if( newLength < 0 ) {
         CS_SB_free( returnValue );
         return NULL;
@@ -1006,7 +1007,7 @@ struct CS_StringBuilder *CS_jsonUnquoteString(const char *inputString, int len) 
     return returnValue;
 }
  
-const char *CS_jsonEnumTypeAsString(const int enumType) {
+const char *CS_jsonEnumTypeAsString(const int32_t enumType) {
     switch ( enumType ) {
         case CS_JSON_ARRAY:
             return "CS_JSON_ARRAY";
@@ -1246,7 +1247,7 @@ struct CS_StringBuilder *CS_jsonNodePrintableToStringBuilder(const struct CS_Jso
     return sb;
 }
 
-static char *privateAllocStringWithLength( struct CS_JsonNode *from, const char *nullTermString, int len ) {
+static char *privateAllocStringWithLength( struct CS_JsonNode *from, const char *nullTermString, int32_t len ) {
     char *buff = CS_linearTake( from->voidLinearAllocator, len + 1, 1 );
     if( buff ) {
         strncpy( buff, nullTermString, len + 1 );
@@ -1255,7 +1256,7 @@ static char *privateAllocStringWithLength( struct CS_JsonNode *from, const char 
 }
 
 static char *privateAllocString( struct CS_JsonNode *from, const char *nullTermString ) {
-    int len = strlen( nullTermString );
+    int32_t len = strlen( nullTermString );
     return privateAllocStringWithLength( from, nullTermString, len );
 }
 
@@ -1433,7 +1434,7 @@ struct CS_JsonNode *CS_jsonNodeAppendQuotedString( struct CS_JsonNode *appendTo,
         return NULL;
     }
     const char *stackAllocatedString = privateAllocString(appendTo,value);
-    int nBytes = strlen(value);
+    int32_t nBytes = strlen(value);
     returnValue->nItemsOrLength = nBytes;
     if( stackAllocatedString == NULL ) {
         char *newBuff = CS_alloc(nBytes+1);
@@ -1453,7 +1454,7 @@ struct CS_JsonNode *CS_jsonNodeAppendQuotedString( struct CS_JsonNode *appendTo,
     return returnValue;
 }
 
-struct CS_JsonNode *CS_jsonNodeNew( int allocSize ) {
+struct CS_JsonNode *CS_jsonNodeNew( int32_t allocSize ) {
     return privateInitJson( allocSize, NULL );
 }
 struct CS_JsonNode * CS_jsonNodeReset( struct CS_JsonNode *resetMe ) {
@@ -1484,7 +1485,7 @@ struct CS_JsonNode *CS_jsonNodeAddUnquotedString( struct CS_JsonNode *addTo, con
     }
     return stuffQuotedSBOntoJsonNodeAndFreeSB( returnValue, quoted );
 }
-struct CS_JsonNode *CS_jsonNodeAddUnquotedStringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int length ) {
+struct CS_JsonNode *CS_jsonNodeAddUnquotedStringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int32_t length ) {
     struct CS_StringBuilder *quoted = CS_jsonQuoteString( value, length );
     if( quoted == NULL ) return NULL;
     struct CS_JsonNode *returnValue = privateAdd( addTo, name );
@@ -1527,7 +1528,7 @@ struct CS_JsonNode *CS_jsonNodeAddArray( struct CS_JsonNode *addTo, const char *
 }
 struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTree ) {
     struct CS_JsonNode *current = in;
-    int newLength;
+    int32_t newLength;
     long long newInteger;
     double newFloat;
     char *endOfValue;
@@ -1632,7 +1633,7 @@ struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *pa
                 }
             } else {
                 char *endPtr;
-                int index=strtol( currToken, &endPtr, 10);
+                int32_t index=strtol( currToken, &endPtr, 10);
                 if( endPtr == currToken ) {
                     CS_LOG_ERROR("CS_jsonNodeByPath: Trying to index into an array with a non numerical value");
                     return NULL;
@@ -1642,7 +1643,7 @@ struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *pa
                     return NULL;
                 }
                 current = current->container;
-                for( int i = 0; i < index && current != NULL; ++i ) {
+                for( int32_t i = 0; i < index && current != NULL; ++i ) {
                     current = current->next;
                 }
                 if( current == NULL ) {

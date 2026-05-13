@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <openssl/ssl.h>
+#include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,10 +17,10 @@ extern "C" {
  */
 
 struct CS_PushPullBuffer {
-    int size;
-    int err;
-    int currentReadOffset;
-    int currentWriteOffset;
+    int32_t size;
+    int32_t err;
+    int32_t currentReadOffset;
+    int32_t currentWriteOffset;
     char *buff;
 };
 
@@ -37,10 +38,10 @@ struct CS_PushPullBuffer {
  * know what you are doing and have allocated one
  *
  **********************************/
-struct CS_PushPullBuffer *CS_PP_defaultAlloc(int initialSize);
-struct CS_PushPullBuffer *CS_PP_onStaticBuffer(int initialSize, char *buff);
+struct CS_PushPullBuffer *CS_PP_defaultAlloc(int32_t initialSize);
+struct CS_PushPullBuffer *CS_PP_onStaticBuffer(int32_t initialSize, char *buff);
 struct CS_PushPullBuffer *CS_PP_fromFile(char *fileName);
-void CS_PP_init(struct CS_PushPullBuffer *initMe, int initialSize, char *buff);
+void CS_PP_init(struct CS_PushPullBuffer *initMe, int32_t initialSize, char *buff);
 
 void CS_PP_defaultFree(struct CS_PushPullBuffer *freeMe);
 
@@ -49,16 +50,16 @@ void CS_PP_defaultFree(struct CS_PushPullBuffer *freeMe);
 #define CS_PP_dataSize(PPBUFF) ((PPBUFF)->currentReadOffset - (PPBUFF)->currentWriteOffset)
 #define CS_PP_bufferRemaining(PPBUFF) ((PPBUFF)->size - (PPBUFF)->currentReadOffset)
 
-int CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int fileDescriptor);
-int CS_PP_readFromBuffer(struct CS_PushPullBuffer *buffer, const void *source, int nBytes);
-int CS_PP_readFromSSL(struct CS_PushPullBuffer *buffer, SSL *ssl);
-int CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file);
+int32_t CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int32_t fileDescriptor);
+int32_t CS_PP_readFromBuffer(struct CS_PushPullBuffer *buffer, const void *source, int32_t nBytes);
+int32_t CS_PP_readFromSSL(struct CS_PushPullBuffer *buffer, SSL *ssl);
+int32_t CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file);
 #define CS_PP_read(PPbuff,PPnBytes) CS_PP_readFromBuffer(PPbuff,NULL,PPnBytes)
 
-int CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int fileDescriptor);
-int CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination, int nBytes);
-int CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl);
-int CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file);
+int32_t CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int32_t fileDescriptor);
+int32_t CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination, int32_t nBytes);
+int32_t CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl);
+int32_t CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file);
 #define CS_PP_write(PPbuff,PPnBytes) CS_PP_writeToBuffer(PPbuff,NULL,PPnBytes)
 
 #define CS_PP_setFull(PPBUFF) ((PPBUFF)->currentReadOffset=(PPBUFF)->size)
@@ -66,13 +67,13 @@ int CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file);
 #define CS_PP_hasError(PPBUFF) ((PPBUFF)->err!=0)
 #define CS_PP_reset(PPBUFF) ((PPBUFF)->currentWriteOffset=(PPBUFF)->currentReadOffset=0)
 
-bool CS_PP_removeOffEnd( struct CS_PushPullBuffer *buffer, int nBytes );
-bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int offset, int nBytes );
+bool CS_PP_removeOffEnd( struct CS_PushPullBuffer *buffer, int32_t nBytes );
+bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int32_t offset, int32_t nBytes );
 bool CS_PP_makeRoom( struct CS_PushPullBuffer *buffer );
 char *CS_PP_findChar( struct CS_PushPullBuffer *buffer, char needle );
 
 //Moves as much as possible from the source to the destination.
-int CS_PP_moveBuffer( struct CS_PushPullBuffer *source, struct CS_PushPullBuffer *destination );
+int32_t CS_PP_moveBuffer( struct CS_PushPullBuffer *source, struct CS_PushPullBuffer *destination );
 
 #define CS_PP_printf(PPbuff,...) CS_PP_read(PPbuff,snprintf((char*)CS_PP_endOfData(PPbuff),CS_PP_bufferRemaining(PPbuff),__VA_ARGS__));
 

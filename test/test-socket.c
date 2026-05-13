@@ -11,11 +11,12 @@
 #include <crankshaft/socket.h>
 #include <crankshaft/pushpull.h>
 #include <crankshaft/json.h>
+#include <stdint.h>
 
 extern bool test_socket(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 static struct CS_Route testRoutes[] = {
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 }
@@ -45,14 +46,14 @@ bool test_socket(void) {
             if( ppOutput ) {
                 CS_PP_printf( ppOutput, "GET /test HTTP/1.1\r\n\r\n" );
                 CS_socketUnlockOutputBuffer( testSocket );
-                int length = CS_socketEmptyOutputBuffer( testSocket, true );
+                int32_t length = CS_socketEmptyOutputBuffer( testSocket, true );
                 CS_FAIL_ON_TRUE( length < 0, "Send the request.", "Failed" );
                 length = CS_socketFillIncomingBuffer( testSocket, true );
                 CS_FAIL_ON_TRUE( length < 0, "Send the request.", "Failed" );
                 struct CS_PushPullBuffer *ppInput = CS_socketLockInputBuffer( testSocket );
                 CS_FAIL_ON_NULL( ppInput, "Lock input buffer", "NULL" );
                 char *start = CS_PP_startOfData( ppInput );
-                for( int i = 0; i < CS_PP_dataSize( ppInput ); ++i ) {
+                for( int32_t i = 0; i < CS_PP_dataSize( ppInput ); ++i ) {
                     if( *start == '{' ) break;
                     ++start;
                 }

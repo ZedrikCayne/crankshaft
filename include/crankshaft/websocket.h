@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include <crankshaft/server.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -60,9 +61,9 @@ struct CS_WebSocketFrame {
     bool rsv1;
     bool rsv2;
     bool rsv3;
-    int  opcode;
+    int32_t  opcode;
     bool mask;
-    int payloadLength;
+    int32_t payloadLength;
     void *payload; 
     void *extensionData;
     void *applicationData;
@@ -76,10 +77,10 @@ bool CS_WS_requestWantsWebsocket( struct CS_ClientInfo *clientInfo );
 struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *applicationData );
 struct CS_ClientInfo *CS_WS_destroy( struct CS_WebSocket *ws );
 void *CS_WS_getApplicationData( struct CS_WebSocket *ws );
-void CS_WS_close( struct CS_WebSocket *ws, int closeCode );
+void CS_WS_close( struct CS_WebSocket *ws, int32_t closeCode );
 
 //Frame management
-struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int opcode, bool masked, const void *payload, int payloadSize );
+struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int32_t opcode, bool masked, const void *payload, int32_t payloadSize );
 struct CS_WebSocketFrame *CS_WS_getEmptyFrame( struct CS_WebSocket *ws );
 bool CS_WS_returnFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame );
 

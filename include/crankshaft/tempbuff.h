@@ -2,6 +2,7 @@
 #define __crankshafttempbuffdoth__
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /****************************************
  *
@@ -45,19 +46,19 @@ extern "C" {
 
 struct CS_TempBuffer;
 
-void *CS_tempBuff(int size);
-void *CS_tempBuffZero( int size );
+void *CS_tempBuff(int32_t size);
+void *CS_tempBuffZero( int32_t size );
 char *CS_tempStringCopy(const char *copyMe);
-char *CS_tempStringCopyWithPad(const char *copyme, int size, char pad, int *outLength, int aligned);
-void *CS_tempMemCopy(const void *from, int size);
-bool CS_tempAllocateGlobal(int globalSize);
+char *CS_tempStringCopyWithPad(const char *copyme, int32_t size, char pad, int32_t *outLength, int32_t aligned);
+void *CS_tempMemCopy(const void *from, int32_t size);
+bool CS_tempAllocateGlobal(int32_t globalSize);
 bool CS_tempFreeGlobal();
-char *CS_tempBuffSnprintf(int max, const char *fmt, ...);
+char *CS_tempBuffSnprintf(int32_t max, const char *fmt, ...);
 
 #define CS_MAX_TEMP_BUFF_TEMP_NAME 64
 
-struct CS_TempBuffer *CS_tempAllocManual(const char *name, int size );
-void *CS_tempGetManual(struct CS_TempBuffer *manualTempBuff, int size, int align);
+struct CS_TempBuffer *CS_tempAllocManual(const char *name, int32_t size );
+void *CS_tempGetManual(struct CS_TempBuffer *manualTempBuff, int32_t size, int32_t align);
 void CS_tempFreeManual(struct CS_TempBuffer *manualTempBuff);
 
 #ifdef __cplusplus

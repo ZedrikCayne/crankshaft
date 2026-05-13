@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include <crankshaft/stringbuilder.h>
+#include <stdint.h>
 
 
 /********************************************************************
@@ -43,10 +44,10 @@ struct CS_HtmlNode {
     void *linearAllocator;
 };
 
-struct CS_HtmlNode *CS_htmlCreateRoot(const char *name, int initialAlloc);
+struct CS_HtmlNode *CS_htmlCreateRoot(const char *name, int32_t initialAlloc);
 struct CS_HtmlAttribute *CS_htmlAddAttribute(struct CS_HtmlNode *node, const char *attributeName, const char *attributeValue);
 struct CS_HtmlAttribute *CS_htmlGetAttributes(struct CS_HtmlNode *node, const char *attributeName);
-struct CS_HtmlNode *CS_htmlRemoveAttributeIndex(struct CS_HtmlNode *node, const char *attributeName, int index ); 
+struct CS_HtmlNode *CS_htmlRemoveAttributeIndex(struct CS_HtmlNode *node, const char *attributeName, int32_t index ); 
 struct CS_HtmlNode *CS_htmlRemoveAttributeValue(struct CS_HtmlNode *node, const char *attributeName, const char *attributeValue );
 struct CS_HtmlNode *CS_htmlRemoveAttribute(struct CS_HtmlNode *node, const char *attributeName);
 struct CS_HtmlNode *CS_htmlAddNext(struct CS_HtmlNode *node, const char *name);
@@ -55,7 +56,7 @@ struct CS_HtmlNode *CS_htmlAddContainerBefore(struct CS_HtmlNode *node, const ch
 struct CS_HtmlNode *CS_htmlAddContainerAfter(struct CS_HtmlNode *node, const char *name);
 struct CS_HtmlNode *CS_htmlSetContents(struct CS_HtmlNode *node, const char *contents, bool raw);
 void CS_htmlFree(struct CS_HtmlNode *node);
-struct CS_StringBuilder *CS_htmlToStringBuilder(struct CS_HtmlNode *node, int initialSize, bool pretty);
+struct CS_StringBuilder *CS_htmlToStringBuilder(struct CS_HtmlNode *node, int32_t initialSize, bool pretty);
 
 #ifdef __cplusplus
 }

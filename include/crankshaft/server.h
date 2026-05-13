@@ -9,6 +9,7 @@
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/http.h>
 #include <crankshaft/logfile.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -25,8 +26,8 @@ extern "C" {
 
 
 struct CS_WebServer {
-    int listenSocket;
-    int serverPort;
+    int32_t listenSocket;
+    int32_t serverPort;
     pthread_t serverThread;
     bool killMe;
     bool threadRunning;
@@ -36,9 +37,9 @@ struct CS_WebServer {
     const char *certificatePath;
     const char *defaultFileServingPath;
     const char *defaultFileServingFile;
-    int defaultFileServingCacheControlMaxAge;
+    int32_t defaultFileServingCacheControlMaxAge;
     struct CS_SlabAllocator *replyStack;
-    int routeNumbers[CS_MAX_HTTP_METHODS];
+    int32_t routeNumbers[CS_MAX_HTTP_METHODS];
     struct CS_Route *routes[CS_MAX_HTTP_METHODS];
     struct CS_LogFile *logAccess;
 };
@@ -61,7 +62,7 @@ enum {
 
 struct CS_ReplyCookie {
     bool httpOnly;
-    int sameSiteEnum;
+    int32_t sameSiteEnum;
     char cookie[ COOKIE_MAX ];
     char value[ COOKIE_VALUE_MAX ];
 };
@@ -74,27 +75,27 @@ struct CS_ReplyCookie {
 
 struct CS_RequestInfo {
     bool valid;
-    int numHeaders;
-    int numParameters;
-    int numFormParameters;
+    int32_t numHeaders;
+    int32_t numParameters;
+    int32_t numFormParameters;
     const char *uri;
     const char *method;
     const char *httpVersion;
-    int requestMethodEnum;
+    int32_t requestMethodEnum;
     struct CS_RequestHeader headers[ MAX_REQUEST_HEADERS ];
     struct CS_QueryParameter parameters[ MAX_QUERY_PARAMETERS ];
     struct CS_FormParameters formParameters[ MAX_FORM_PARAMETERS ];
 };
 
 struct CS_ClientInfo {
-    int clientSocket;
+    int32_t clientSocket;
     struct CS_WebServer *server;
     union {
         struct sockaddr clientSocketAddress;
         char sockaddrbuff[64];
     };
     void *tempLast;
-    int lastSize;
+    int32_t lastSize;
     struct CS_PushPullBuffer *buffer;
     struct CS_PushPullBuffer *output;
     void (*disconnectCallback)(struct CS_ClientInfo *info);
@@ -111,39 +112,39 @@ enum {
 };
 
 struct CS_Route {
-    int method;
-    int routeType;
-    int routeLength;
+    int32_t method;
+    int32_t routeType;
+    int32_t routeLength;
     const char *route;
     bool (*handler)(struct CS_ClientInfo *);
 };
 
 struct CS_Reply {
-    int returnStatusEnum;
-    int contentTypeEnum;
-    int numHeaders;
-    int numCookies;
+    int32_t returnStatusEnum;
+    int32_t contentTypeEnum;
+    int32_t numHeaders;
+    int32_t numCookies;
     struct CS_ReplyHeader replyHeaders[MAX_REQUEST_HEADERS];
     struct CS_ReplyCookie setCookie[MAX_REPLY_COOKIES];
     const void *outputBuffer;
-    int outputLength;
+    int32_t outputLength;
 };
 
-struct CS_WebServer *CS_serverStart(int portNum,
+struct CS_WebServer *CS_serverStart(int32_t portNum,
                                     const char *certfile,
                                     const char *keyFile,
                                     const char *selfSignHostname,
                                     const char *fileServingPath,
                                     const char *fileServingFile,
-                                    int fileCacheControlTimeInSeconds,
+                                    int32_t fileCacheControlTimeInSeconds,
                                     struct CS_Route *routes,
-                                    int nRoutes);
+                                    int32_t nRoutes);
 bool CS_serverKill(struct CS_WebServer *server);
 
 bool CS_serverDiagnostic200( struct CS_ClientInfo *info );
-bool CS_serverReplyError( struct CS_ClientInfo *info, int responseEnum, const char *details );
+bool CS_serverReplyError( struct CS_ClientInfo *info, int32_t responseEnum, const char *details );
 bool CS_serverFileServer( struct CS_ClientInfo *info );
-bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int cacheSeconds, struct CS_Reply *useMe );
+bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int32_t cacheSeconds, struct CS_Reply *useMe );
 
 void CS_serverRemoveRequestHeader( struct CS_ClientInfo *info, const char *header );
 const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const char *name );
@@ -153,18 +154,18 @@ const char *CS_serverGetRequestCookie( struct CS_ClientInfo *info, const char *c
 const char *CS_serverGetReplyHeader( struct CS_Reply *reply, const char *header );
 const char *CS_serverGetRequestTempIdAddress( struct CS_ClientInfo *info );
 bool CS_serverSetReplyHeader( struct CS_Reply *reply, const char *header, const char *value );
-bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int value );
+bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int32_t value );
 bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value );
-bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int value );
-bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly, int sameSiteEnum );
+bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int32_t value );
+bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly, int32_t sameSiteEnum );
 
-struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int responseEnum, int mimeEnum, void *replyBuffer, int replyLength );
+struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int32_t responseEnum, int32_t mimeEnum, void *replyBuffer, int32_t replyLength );
 void CS_serverReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
 bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
 
-int CS_serverKillClientSocket( struct CS_ClientInfo *info );
-int CS_serverFillIncomingBuffer( struct CS_ClientInfo *info );
-int CS_serverWriteOutputBuffer( struct CS_ClientInfo *info );
+int32_t CS_serverKillClientSocket( struct CS_ClientInfo *info );
+int32_t CS_serverFillIncomingBuffer( struct CS_ClientInfo *info );
+int32_t CS_serverWriteOutputBuffer( struct CS_ClientInfo *info );
 
 #ifdef __cplusplus
 }

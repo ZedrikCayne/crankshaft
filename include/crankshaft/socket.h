@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 
 #include <crankshaft/pushpull.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,11 +30,11 @@ extern "C" {
  ********************************************************************/
 struct CS_Socket;
 
-struct CS_Socket *CS_socketInit( int socket, int portNum, SSL *ssl, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex );
-struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int port, bool wantSSL, bool TLSv1, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex );
-struct CS_Socket *CS_socketBind(int port, bool ipv6, bool wantSSL );
-struct CS_Socket *CS_socketAccept( struct CS_Socket *boundSocket, bool blocking, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex );
-struct CS_Thread *CS_socketAutoAccept( const char *threadName, struct CS_Socket *boundSocket, int inputBufferSize, int outputBufferSize, bool inputMutex, bool outputMutex, bool (*cycle)(struct CS_Thread *thread, int threadSateEnum, struct CS_Socket *incoming ) );
+struct CS_Socket *CS_socketInit( int32_t socket, int32_t portNum, SSL *ssl, int32_t inputBufferSize, int32_t outputBufferSize, bool inputMutex, bool outputMutex );
+struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int32_t port, bool wantSSL, bool TLSv1, int32_t inputBufferSize, int32_t outputBufferSize, bool inputMutex, bool outputMutex );
+struct CS_Socket *CS_socketBind(int32_t port, bool ipv6, bool wantSSL );
+struct CS_Socket *CS_socketAccept( struct CS_Socket *boundSocket, bool blocking, int32_t inputBufferSize, int32_t outputBufferSize, bool inputMutex, bool outputMutex );
+struct CS_Thread *CS_socketAutoAccept( const char *threadName, struct CS_Socket *boundSocket, int32_t inputBufferSize, int32_t outputBufferSize, bool inputMutex, bool outputMutex, bool (*cycle)(struct CS_Thread *thread, int32_t threadSateEnum, struct CS_Socket *incoming ) );
 bool CS_socketDestroy( struct CS_Socket *socket );
 bool CS_socketClose( struct CS_Socket *socket );
 bool CS_socketIsClosed( struct CS_Socket *socket );
@@ -44,8 +45,8 @@ struct CS_PushPullBuffer *CS_socketLockOutputBuffer( struct CS_Socket *socket );
 void CS_socketUnlockOutputBuffer( struct CS_Socket *socket );
 //Returns -1 on socket write/read fails. Might return 0 if there's no data
 //that is ready to go out.
-int CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock );
-int CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock );
+int32_t CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock );
+int32_t CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock );
 void *CS_socketGetContext( struct CS_Socket *socket );
 void *CS_socketPutContext( struct CS_Socket *socket, void *context );
 

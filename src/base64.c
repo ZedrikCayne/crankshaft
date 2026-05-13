@@ -62,17 +62,17 @@ static unsigned char decoding_table[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static int requiredSpaceToEncode( int inputBufferSize ) {
+static int32_t requiredSpaceToEncode( int32_t inputBufferSize ) {
     return 4 * ((inputBufferSize + 2)/3);
 }
 
-static int requiredSpaceToDecode( int inputBufferSize ) {
+static int32_t requiredSpaceToDecode( int32_t inputBufferSize ) {
     return inputBufferSize / 4 * 3;
 }
 
-static int privateEncode( const void *toEncode, int encodeLength, void *encodeBuffer, int encodeBufferLength ) {
-    int outputLength = requiredSpaceToEncode( encodeLength );
-    int endingEquals = 0;
+static int32_t privateEncode( const void *toEncode, int32_t encodeLength, void *encodeBuffer, int32_t encodeBufferLength ) {
+    int32_t outputLength = requiredSpaceToEncode( encodeLength );
+    int32_t endingEquals = 0;
     if( outputLength > encodeBufferLength ) return -1;
     switch( encodeLength % 3 ) {
         case 0:
@@ -89,7 +89,7 @@ static int privateEncode( const void *toEncode, int encodeLength, void *encodeBu
     const unsigned char *input = (const unsigned char *)toEncode;
     const unsigned char *end = input + encodeLength;
 
-    unsigned int threeBytes = 0;
+    uint32_t threeBytes = 0;
     while( input < end - 3 ) {
         threeBytes = *input++ << 16;
         threeBytes += *input++ << 8;
@@ -109,18 +109,18 @@ static int privateEncode( const void *toEncode, int encodeLength, void *encodeBu
     *output++ = encoding_table[ (threeBytes >> 12) & 0x3F ];
     *output++ = endingEquals == 2?'=':encoding_table[ (threeBytes >>  6) & 0x3F ];
     *output++ = endingEquals >= 1?'=':encoding_table[ (threeBytes      ) & 0x3F ];
-/*    for( int i = 0; i < endingEquals; ++i ) {
+/*    for( int32_t i = 0; i < endingEquals; ++i ) {
         *--output = '=';
     } */
 
     return outputLength;
 }
 
-static int privateDecode( void *toDecode, int decodeLength, void *decodedBuffer, int decodeBufferLength ) {
+static int32_t privateDecode( void *toDecode, int32_t decodeLength, void *decodedBuffer, int32_t decodeBufferLength ) {
     char *output = decodedBuffer;
     unsigned char *input = (unsigned char *)toDecode;
     unsigned char *end = input + decodeLength;
-    int outputLength = (decodeLength / 4) * 3;
+    int32_t outputLength = (decodeLength / 4) * 3;
 
     if( decodeLength % 4 ) {
         CS_LOG_ERROR("Tring to decode base64 on a buffer that isn't a multiple of 4 bytes long. (was %d)", decodeLength);
@@ -134,7 +134,7 @@ static int privateDecode( void *toDecode, int decodeLength, void *decodedBuffer,
         return -1;
     }
     
-    unsigned int threeBytes;
+    uint32_t threeBytes;
     while( input < end - 4 ) {
         threeBytes  = decoding_table[ *input++ ] << 18;
         threeBytes += decoding_table[ *input++ ] << 12;
@@ -159,11 +159,11 @@ static int privateDecode( void *toDecode, int decodeLength, void *decodedBuffer,
     return output - (char*)decodedBuffer;
 }
 
-char *CS_base64Encode( void *toEncode, int length, int *outputLength ) {
-    int requiredSpace = requiredSpaceToEncode( length );
+char *CS_base64Encode( void *toEncode, int32_t length, int32_t *outputLength ) {
+    int32_t requiredSpace = requiredSpaceToEncode( length );
     char *output = CS_alloc( requiredSpace + 2 );
     if( output == NULL ) return NULL;
-    int outLength = privateEncode( toEncode, length, output, requiredSpace );
+    int32_t outLength = privateEncode( toEncode, length, output, requiredSpace );
     if( outLength < 0 ) {
         CS_free(output);
         return NULL;
@@ -171,62 +171,62 @@ char *CS_base64Encode( void *toEncode, int length, int *outputLength ) {
     if( outputLength ) *outputLength = outLength;
     return output;
 }
-char *CS_base64EncodeTemp( void *toEncode, int length, int *outputLength ) {
-    int requiredSpace = requiredSpaceToEncode(length);
+char *CS_base64EncodeTemp( void *toEncode, int32_t length, int32_t *outputLength ) {
+    int32_t requiredSpace = requiredSpaceToEncode(length);
     char *output = CS_tempBuff(requiredSpace + 2 );
     if( output == NULL ) return NULL;
-    int outLength = privateEncode( toEncode, length, output, requiredSpace );
+    int32_t outLength = privateEncode( toEncode, length, output, requiredSpace );
     if( outLength < 0 ) return NULL;
     output[ requiredSpace ] = 0;
     if( outputLength ) *outputLength = outLength;
     return output;
 }
-struct CS_StringBuilder *CS_base64EncodeAppend( const void *toEncode, int length,  struct CS_StringBuilder *appendTo ) {
-    int requiredSpace = requiredSpaceToEncode(length);
+struct CS_StringBuilder *CS_base64EncodeAppend( const void *toEncode, int32_t length,  struct CS_StringBuilder *appendTo ) {
+    int32_t requiredSpace = requiredSpaceToEncode(length);
     if( CS_SB_expandBy( appendTo, requiredSpace ) ) return NULL;
     char *output = CS_SB_writePosition( appendTo );
-    int outLength = privateEncode( (void*)toEncode, length, output, requiredSpace );
+    int32_t outLength = privateEncode( (void*)toEncode, length, output, requiredSpace );
     if( outLength < 0 ) { *output = 0; return NULL; }
     CS_SB_fakeAppend( appendTo, outLength );
     return appendTo;
 }
 
-void *CS_base64Decode( const char *toDecode, int length, int *outputLength ) {
-    int required = requiredSpaceToDecode(length);
+void *CS_base64Decode( const char *toDecode, int32_t length, int32_t *outputLength ) {
+    int32_t required = requiredSpaceToDecode(length);
     void *output = CS_alloc(required);
     if( output == NULL ) return NULL;
-    int outLength = privateDecode( (void*)toDecode, length, output, required);
+    int32_t outLength = privateDecode( (void*)toDecode, length, output, required);
     if( outLength < 0 ) return NULL;
     if( outputLength ) *outputLength = outLength;
     return output;
 }
-void *CS_base64DecodeTemp( const char *toDecode, int length, int *outputLength ) {
-    int required = requiredSpaceToDecode(length);
+void *CS_base64DecodeTemp( const char *toDecode, int32_t length, int32_t *outputLength ) {
+    int32_t required = requiredSpaceToDecode(length);
     void *output = CS_tempBuff(required);
     if( output == NULL ) return NULL;
-    int outLength = privateDecode( (void*)toDecode, length, output, required);
+    int32_t outLength = privateDecode( (void*)toDecode, length, output, required);
     if( outLength < 0 ) return NULL;
     if( outputLength ) *outputLength = outLength;
     return output;
 }
-void *CS_base64DecodeInPlace( char *toDecode, int length, int *outputLength ) {
-    int required = requiredSpaceToDecode( length );
-    int outLength = privateDecode( toDecode, length, toDecode, required );
+void *CS_base64DecodeInPlace( char *toDecode, int32_t length, int32_t *outputLength ) {
+    int32_t required = requiredSpaceToDecode( length );
+    int32_t outLength = privateDecode( toDecode, length, toDecode, required );
     if( outLength < 0 ) return NULL;
     if( outputLength ) *outputLength = outLength;
     return toDecode;
 }
-void *CS_base64DecodeLinearAlloc( const char *toDecode, int length, int *outputLength, void *linearAllocator ) {
-    int required = requiredSpaceToDecode( length );
+void *CS_base64DecodeLinearAlloc( const char *toDecode, int32_t length, int32_t *outputLength, void *linearAllocator ) {
+    int32_t required = requiredSpaceToDecode( length );
     void *output = CS_linearTake( linearAllocator, length, sizeof(void*) );
     if( output == NULL ) return NULL;
-    int outLength = privateDecode( (void*)toDecode, length, output, required );
+    int32_t outLength = privateDecode( (void*)toDecode, length, output, required );
     if( outLength < 0 ) return NULL;
     if( outputLength ) *outputLength = outLength;
     return output;
 }
-static void privateSwapUrl( char *in, int length ) {
-    for( int i = 0; i < length; ++i ) {
+static void privateSwapUrl( char *in, int32_t length ) {
+    for( int32_t i = 0; i < length; ++i ) {
         switch(in[i]) {
             case '-':
                 in[i]='+';
@@ -237,31 +237,31 @@ static void privateSwapUrl( char *in, int length ) {
         }
     }
 }
-void *CS_base64DecodeUrl( const char *toDecode, int length, int *outputLength ) {
-    int newLength;
+void *CS_base64DecodeUrl( const char *toDecode, int32_t length, int32_t *outputLength ) {
+    int32_t newLength;
     char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
     if( copy == NULL ) return NULL;
     privateSwapUrl(copy, newLength);
     return CS_base64Decode( copy, newLength, outputLength );
 }
-void *CS_base64DecodeUrlTemp( const char *toDecode, int length, int *outputLength ) {
-    int newLength;
+void *CS_base64DecodeUrlTemp( const char *toDecode, int32_t length, int32_t *outputLength ) {
+    int32_t newLength;
     char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
     if( copy == NULL ) return NULL;
     privateSwapUrl(copy, newLength);
     return CS_base64DecodeTemp(copy, newLength, outputLength);
 }
-void *CS_base64DecodeUrlInPlace( char *toDecode, int length, int *outputLength ) {
-    int newLength;
+void *CS_base64DecodeUrlInPlace( char *toDecode, int32_t length, int32_t *outputLength ) {
+    int32_t newLength;
     char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
     if( copy == NULL ) return NULL;
     privateSwapUrl(copy,newLength);
-    int outLength = privateDecode(copy, newLength, toDecode, length );
+    int32_t outLength = privateDecode(copy, newLength, toDecode, length );
     if( outLength < 0 ) return NULL;
     return toDecode;
 }
-void *CS_base64DecodeUrlLinearAlloc( const char *toDecode, int length, int *outputLength, void *linearAllocator ) {
-    int newLength;
+void *CS_base64DecodeUrlLinearAlloc( const char *toDecode, int32_t length, int32_t *outputLength, void *linearAllocator ) {
+    int32_t newLength;
     char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
     if( copy == NULL ) return NULL;
     privateSwapUrl(copy, newLength);

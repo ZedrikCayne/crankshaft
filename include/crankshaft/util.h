@@ -1,6 +1,7 @@
 #ifndef __crankshaftutildoth__
 #define __crankshaftutildoth__
 #include <stdbool.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -14,14 +15,14 @@
 extern "C" {
 #endif
 
-__inline__ static int CS_align(int root, int alignment) {
-    int mod = root % alignment;
+__inline__ static int32_t CS_align(int32_t root, int32_t alignment) {
+    int32_t mod = root % alignment;
     if( mod == 0 ) return root;
     return root + alignment - mod;
 }
 
-__inline__ static void *CS_alignVoid(void *root, int alignment) {
-    int mod = ((long long)root) % alignment;
+__inline__ static void *CS_alignVoid(void *root, int32_t alignment) {
+    int32_t mod = ((long long)root) % alignment;
     if( mod == 0 ) return root;
     return (void *)(((char*)root) + (alignment - mod));
 }
@@ -32,7 +33,7 @@ __inline__ static void *CS_alignVoid(void *root, int alignment) {
 //of course gcc might compile the second check out.
 #define CS_PMUTEX_PROTECT_GLOBAL(__GLOBAL,__XMUTEX) if(!(__GLOBAL)&&(pthread_mutex_lock(__XMUTEX)==0)&&!(__GLOBAL))
 
-void *CS_utilLoadWholeFile( const char *filename, int *outSize );
+void *CS_utilLoadWholeFile( const char *filename, int32_t *outSize );
 
 #ifdef __cplusplus
 }

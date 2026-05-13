@@ -9,12 +9,13 @@
 
 #include <crankshaft/mutex.h>
 #include <crankshaft/util.h>
+#include <stdint.h>
 
 
 struct CS_Mutex {
     char name[ MUTEX_MAX_NAME ];
     const char *file;
-    int line;
+    int32_t line;
     bool locked;
     pthread_mutex_t *mutex;
 };
@@ -70,11 +71,11 @@ static void privateReturnMutex( pthread_mutex_t *mutex ) {
     CS_slabReturn( mutexes, mutex );
 }
 
-static void printMutex( struct CS_Mutex *mutex, const char *what, const char *file, int line ) {
+static void printMutex( struct CS_Mutex *mutex, const char *what, const char *file, int32_t line ) {
     if( veryVerboseMutexLogs ) CS_LOG_LOUD( "MUTEX %s(%d) %s: %s %s %d", mutex->file, mutex->line, mutex->name, what, file, line );
 }
 
-struct CS_Mutex *CS_mutexTakeDetailled( const char *name, const char *file, int line ) {
+struct CS_Mutex *CS_mutexTakeDetailled( const char *name, const char *file, int32_t line ) {
     struct CS_Mutex *returnValue = privateTakeCSMutex();
     if( returnValue == NULL ) {
         CS_LOG_ERROR("MUTEX %s(%d) CS_Mutex failed to alloc", file, line );
@@ -100,7 +101,7 @@ struct CS_Mutex *CS_mutexTakeDetailled( const char *name, const char *file, int 
     return returnValue;
 }
 
-bool CS_mutexReturnDetailled(struct CS_Mutex *returnMe, const char *file, int line) {
+bool CS_mutexReturnDetailled(struct CS_Mutex *returnMe, const char *file, int32_t line) {
     if( !returnMe ) return false;
     printMutex(returnMe,"Return",file, line);
     CS_LOG_ERROR_IF( returnMe->locked, "MUTEX Returning a locked mutex. %s(%d) %s at %s(%d)", returnMe->file, returnMe->line, returnMe->name, file, line );
@@ -109,7 +110,7 @@ bool CS_mutexReturnDetailled(struct CS_Mutex *returnMe, const char *file, int li
     return true;
 }
 
-bool CS_mutexLockDetailled(struct CS_Mutex *toLock, int msec, const char *file, int line) {
+bool CS_mutexLockDetailled(struct CS_Mutex *toLock, int32_t msec, const char *file, int32_t line) {
     printMutex(toLock, "lock", file, line);
     if( msec == 0 ) {
         pthread_mutex_lock( toLock->mutex );
@@ -126,7 +127,7 @@ bool CS_mutexLockDetailled(struct CS_Mutex *toLock, int msec, const char *file, 
     return true;
 }
 
-bool CS_mutexUnlockDetailled(struct CS_Mutex *toUnlock,const char *file, int line) {
+bool CS_mutexUnlockDetailled(struct CS_Mutex *toUnlock,const char *file, int32_t line) {
     toUnlock->locked = false;
     pthread_mutex_unlock( toUnlock->mutex );
     printMutex(toUnlock, "unlock", file, line);

@@ -3,19 +3,20 @@
 #include <string.h>
 #include <stdbool.h>
 #include <crankshaft/commandline.h>
+#include <stdint.h>
 
-const char *CS_argsParse(int argc, char **argv, struct CS_ArgTable *argTable) {
+const char *CS_argsParse(int32_t argc, char **argv, struct CS_ArgTable *argTable) {
     static const char *argErr1 = "Invalid # of arguments";
     static const char *argErr2 = "Invalid argument.";
     argTable->outNRemainders = 0;
     argTable->remainders = NULL;
-    for( int i = 1; i < argc; ++i ) {
+    for( int32_t i = 1; i < argc; ++i ) {
         char *currentArg = argv[ i ];
         if( *currentArg == '-' ) {
             bool cmp = false;
-            for( int j = 0; j < argTable->nArgs && !cmp; ++j ) {
+            for( int32_t j = 0; j < argTable->nArgs && !cmp; ++j ) {
                 const struct CS_ArgElement *currentElement = argTable->elements + j;
-                for( int k = 0; k < currentElement->nCmp; ++k ) {
+                for( int32_t k = 0; k < currentElement->nCmp; ++k ) {
                     const char *currentCmp = currentElement->cmp[k];
                     if( strcmp(currentCmp,currentArg) == 0 ) {
                         cmp = true;
@@ -23,7 +24,7 @@ const char *CS_argsParse(int argc, char **argv, struct CS_ArgTable *argTable) {
                             case CS_INT_ARG:
                                 ++i;
                                 if( i > argc ) return argErr1;
-                                *((int*)currentElement->out) = atoi(argv[i]);
+                                *((int32_t*)currentElement->out) = atoi(argv[i]);
                                 break;
                             case CS_STRING_ARG:
                                 ++i;
@@ -50,12 +51,12 @@ const char *CS_argsParse(int argc, char **argv, struct CS_ArgTable *argTable) {
 void CS_argsPrint(struct CS_ArgTable *argTable) {
     static const char firstBetween[] = " ";
     static const char restBetween[] = " | ";
-    for( int i = 0; i < argTable->nArgs; ++i ) {
+    for( int32_t i = 0; i < argTable->nArgs; ++i ) {
         const char * currentBetween = firstBetween;
         const struct CS_ArgElement *currentArg = argTable->elements + i;
         //       12345678901234567890123456789012345678901234567890123456789012345678901234567890
         printf( "  *" );
-        for( int j = 0; j < currentArg->nCmp; ++j ) {
+        for( int32_t j = 0; j < currentArg->nCmp; ++j ) {
             printf( "%s%s", currentBetween, currentArg->cmp[ j ]);
             switch(currentArg->what) {
                 case CS_INT_ARG:

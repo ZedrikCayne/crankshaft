@@ -5,15 +5,16 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct addrinfo *CS_networkLookupAddress( const char *address, int portNum );
+struct addrinfo *CS_networkLookupAddress( const char *address, int32_t portNum );
 void CS_networkReleaseAddressInfos( struct addrinfo *infos );
 
-int CS_networkSockaddrSize( struct sockaddr *addr );
+int32_t CS_networkSockaddrSize( struct sockaddr *addr );
 bool CS_networkCopySockaddr( struct sockaddr *to, struct sockaddr *addr );
 const char *CS_networkAddressToTempString( struct sockaddr *addr );
 

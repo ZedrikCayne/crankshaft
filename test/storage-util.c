@@ -8,18 +8,19 @@
 #include <crankshaft/test.h>
 
 #include <crankshaft/storage.h>
+#include <stdint.h>
 
 extern bool util_test_generic_storage(const struct CS_Storage * storage);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 #define NUM_THINGS 200
 #define MAX_SIZE_OF_THING 1024
 
 struct Thing {
     char *buffer;
-    int size;
+    int32_t size;
 };
 
 static struct Thing *newThing() {
@@ -28,7 +29,7 @@ static struct Thing *newThing() {
         newThing->size = CS_testRandMax( MAX_SIZE_OF_THING - 1 ) + 1;
         newThing->buffer = CS_alloc( newThing->size );
         if( newThing->buffer ) {
-            for( int i = 0; i < newThing->size; ++i ) {
+            for( int32_t i = 0; i < newThing->size; ++i ) {
                 newThing->buffer[ i ] = CS_testRandMax( 255 );
             }
         } else {
@@ -46,7 +47,7 @@ static struct Thing *copyThing( struct Thing *copyMe ) {
         newThing->size = copyMe->size;
         newThing->buffer = CS_alloc( newThing->size );
         if( newThing->buffer ) {
-            for( int i = 0; i < newThing->size; ++i ) {
+            for( int32_t i = 0; i < newThing->size; ++i ) {
                 newThing->buffer[ i ] = copyMe->buffer[ i ];
             }
         } else {
@@ -68,7 +69,7 @@ static void freeThing( struct Thing *aThing ) {
 static void modifyThing( struct Thing *aThing ) {
     if( aThing ) {
         if( aThing->buffer ) {
-            int index = CS_testRandMax( aThing->size - 1 );
+            int32_t index = CS_testRandMax( aThing->size - 1 );
             aThing->buffer[index] = aThing->buffer[index] ^ 0x34;
         }
     }
@@ -76,7 +77,7 @@ static void modifyThing( struct Thing *aThing ) {
 
 static bool compareThing( struct Thing *aThing, struct Thing *bThing ) {
     if( aThing->size != bThing->size ) return true;
-    for( int i = 0; i < aThing->size; ++i ) {
+    for( int32_t i = 0; i < aThing->size; ++i ) {
         if( aThing->buffer[ i ] != bThing->buffer[ i ] ) {
             return true;
         }
@@ -98,25 +99,25 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
     struct Thing ** stored = CS_alloc( sizeof(struct Thing) * NUM_THINGS );
     struct Thing ** stored2 = CS_alloc( sizeof(struct Thing) * NUM_THINGS );
     if(stored) {
-        for( int i = 0; i < NUM_THINGS; ++i ) {
+        for( int32_t i = 0; i < NUM_THINGS; ++i ) {
             stored[ i ] = newThing();
             stored2[ i ] = copyThing( stored[ i ] );
         }
         bool bError = false;
-        for( int i = 0; i < NUM_THINGS; ++i ) {
+        for( int32_t i = 0; i < NUM_THINGS; ++i ) {
             if( !stored[ i ] ) { bError = true; break; };
             if( !stored2[ i ] ) { bError = true; break; };
         }
         CS_FAIL_ON_TRUE( bError, "Allocate test data.", "Failed." );
         if( bError ) {
-            for( int i = 0; i < NUM_THINGS; ++i ) {
+            for( int32_t i = 0; i < NUM_THINGS; ++i ) {
                 freeThing( stored[ i ] );
                 stored[ i ] = NULL;
             }
         } else {
             //Store everything.
             struct CS_StorageItem *alreadyThere;
-            for( int i = 0; i < NUM_THINGS; ++i ) {
+            for( int32_t i = 0; i < NUM_THINGS; ++i ) {
                 char *key = CS_tempBuffSnprintf( 64, "Index %d", i );
                 struct CS_StorageItem *putIn =
                     CS_storagePut( storage, key, stored[i]->buffer, stored[i]->size, 0, NULL );
@@ -124,10 +125,10 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
                 if( putIn ) CS_storageReturnItem( putIn );
             }
             //Modify the sources
-            for( int i = 0; i < NUM_THINGS; ++i ) {
+            for( int32_t i = 0; i < NUM_THINGS; ++i ) {
                 while( !compareThing( stored[i],stored2[i] ) ) modifyThing( stored[i] );
             }
-            for( int i = 0; i < NUM_THINGS; ++i ) {
+            for( int32_t i = 0; i < NUM_THINGS; ++i ) {
                 char *key = CS_tempBuffSnprintf( 64, "Index %d", i );
                 struct CS_StorageItem *putInFalse =
                     CS_storagePut( storage, key, stored[0]->buffer, stored[0]->size, 0, &alreadyThere  );
@@ -143,7 +144,7 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
                     alreadyThere = NULL;
                 }
             }
-            for( int i = 0; i < NUM_THINGS; ++i ) {
+            for( int32_t i = 0; i < NUM_THINGS; ++i ) {
                 char *key = CS_tempBuffSnprintf( 64, "Index %d", i );
                 struct CS_StorageItem *taken = CS_storageGet( storage, key );
                 CS_FAIL_ON_NULL( taken, CS_tempBuffSnprintf(64, "Taking %s",key), "Failed." );
@@ -165,18 +166,18 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
             }
 
             //Remove everything.
-            for( int i = 0; i < NUM_THINGS; ++i ) {
+            for( int32_t i = 0; i < NUM_THINGS; ++i ) {
                 char *key = CS_tempBuffSnprintf(64, "Index %d", i);
                 CS_FAIL_ON_TRUE( CS_storageRemove( storage, key ), CS_tempBuffSnprintf( 64, "Removing '%s'", key), "Failed." );
             }
             //Try to remove it a 2nd time
-            for( int i = 0; i < NUM_THINGS; ++i ) {
+            for( int32_t i = 0; i < NUM_THINGS; ++i ) {
                 char *key = CS_tempBuffSnprintf(64, "Index %d", i);
                 CS_FAIL_ON_FALSE( CS_storageRemove( storage, key ), CS_tempBuffSnprintf( 64, "Removing '%s'", key), "Failed." );
             }
 
             //Re adding everything with a timeout in the past.
-            for( int i = 0; i < NUM_THINGS; ++i ) {
+            for( int32_t i = 0; i < NUM_THINGS; ++i ) {
                 char *key = CS_tempBuffSnprintf( 64, "Index %d", i );
                 struct CS_StorageItem *putIn =
                     CS_storagePut( storage, key, stored[i]->buffer, stored[i]->size, 1, NULL );
@@ -184,7 +185,7 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
                 if( putIn ) CS_storageReturnItem( putIn );
             }
             //Putting it in a second time should succeed...
-            for( int i = 0; i < NUM_THINGS; ++i ) {
+            for( int32_t i = 0; i < NUM_THINGS; ++i ) {
                 char *key = CS_tempBuffSnprintf( 64, "Index %d", i );
                 struct CS_StorageItem *putIn =
                     CS_storagePut( storage, key, stored[i]->buffer, stored[i]->size, 1, NULL );
@@ -194,7 +195,7 @@ bool util_test_generic_storage(const struct CS_Storage * storage) {
         }
     }
 
-    for( int i = 0; i < NUM_THINGS; ++i ) {
+    for( int32_t i = 0; i < NUM_THINGS; ++i ) {
         if( stored ) freeThing(stored[i]);
         if( stored2 ) freeThing(stored2[i]);
     }

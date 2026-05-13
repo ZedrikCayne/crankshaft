@@ -12,15 +12,16 @@
 #include <crankshaft/mime.h>
 #include <crankshaft/compress.h>
 #include <crankshaft/pushpull.h>
+#include <stdint.h>
 
 extern bool test_compression_server(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 static bool large_response_handler(struct CS_ClientInfo *info) {
     // Create a large text response that is highly compressible
-    int size = 10000;
+    int32_t size = 10000;
     char *data = CS_alloc(size);
     memset(data, 'A', size);
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_TXT, data, size);
@@ -66,7 +67,7 @@ bool test_compression_server(void) {
             CS_FAIL_ON_FALSE(strcmp(ce, "gzip") == 0, "Content-Encoding should be gzip", "Got %s", ce);
         }
         
-        int compressedSize = CS_PP_dataSize(reply->buffer);
+        int32_t compressedSize = CS_PP_dataSize(reply->buffer);
         CS_LOG_INFO("Original size: 10000, Compressed size: %d", compressedSize);
         CS_FAIL_ON_FALSE(compressedSize < 10000, "Compressed size should be smaller", "Got %d", compressedSize);
 
@@ -84,7 +85,7 @@ bool test_compression_server(void) {
         
         char *outData = CS_PP_startOfData(out);
         bool match = true;
-        for(int i = 0; i < 10000; ++i) {
+        for(int32_t i = 0; i < 10000; ++i) {
             if (outData[i] != 'A') {
                 match = false;
                 break;

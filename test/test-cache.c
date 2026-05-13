@@ -9,13 +9,14 @@
 #include <crankshaft/test.h>
 
 #include <crankshaft/cache.h>
+#include <stdint.h>
 
 extern bool test_cache(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
-static int numFetches = 0;
+static int32_t numFetches = 0;
 static bool fetchFail = false;
 static bool lowercaseV = false;
 
@@ -59,7 +60,7 @@ bool test_cache(void) {
         CS_FAIL_ON_NULL( testCache, "Create test cache.", "Failed to create test cache.");
 
         if( testCache ) {
-            for( int i = 0; i < NUM_ITEMS; ++i ) {
+            for( int32_t i = 0; i < NUM_ITEMS; ++i ) {
                 char *key = CS_tempBuffSnprintf( 64, "Key %d", i );
                 char *expectedVal = CS_tempBuffSnprintf( 64, "Val %d", i );
                 struct CS_StorageItem *item = CS_cacheGet( testCache, key );
@@ -70,7 +71,7 @@ bool test_cache(void) {
                 }
             }
             //Set the 'fetch' so it'll put in lowercase val.
-            for( int i = 0; i < NUM_ITEMS; ++i ) {
+            for( int32_t i = 0; i < NUM_ITEMS; ++i ) {
                 char *key = CS_tempBuffSnprintf( 64, "Key %d", i );
                 char *expectedVal = CS_tempBuffSnprintf( 64, "Val %d", i );
                 lowercaseV = true;
@@ -84,7 +85,7 @@ bool test_cache(void) {
 
             sleep(3);
 
-            for( int i = 0; i < NUM_ITEMS; ++i ) {
+            for( int32_t i = 0; i < NUM_ITEMS; ++i ) {
                 char *key = CS_tempBuffSnprintf( 64, "Key %d", i );
                 char *expectedVal = CS_tempBuffSnprintf( 64, "val %d", i );
                 lowercaseV = true;

@@ -9,18 +9,19 @@
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/hashtable.h>
 #include <crankshaft/logger.h>
+#include <stdint.h>
 
 //Hash table functions for storing the extra data for tracking
 struct CS_AllocInfo {
     const char *file;
-    int line;
+    int32_t line;
     unsigned long size;
 };
 
 static pthread_mutex_t trackingSystemMutex = PTHREAD_MUTEX_INITIALIZER;
 static CS_SlabAllocator *trackingSystemSlabAllocator = NULL;
 static struct CS_HashTable *trackingSystemHashTable = NULL;
-static unsigned int trackingFlags = 0;
+static uint32_t trackingFlags = 0;
 
 #define GRAB_MUTEX() pthread_mutex_lock(&trackingSystemMutex)
 #define RELEASE_MUTEX() pthread_mutex_unlock(&trackingSystemMutex)
@@ -29,24 +30,24 @@ static unsigned long currentlyAllocated = 0;
 static unsigned long maxAllocated = 0;
 
 //Hopefully just storing the lowest 32 bits should be unique enough hash.
-static int keyHash(struct CS_HashTable *table,const void *key) {
-    return (int)(((unsigned long long)key)&0x0000FFFFl);
+static int32_t keyHash(struct CS_HashTable *table,const void *key) {
+    return (int32_t)(((unsigned long long)key)&0x0000FFFFl);
 }
 //Keys are just void *'s... we can 100% compare the keys and be fully correct.
-static int keyCompare(struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *rightKey, int rightKeyHash) {
+static int32_t keyCompare(struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *rightKey, int32_t rightKeyHash) {
     return entry->fullKey != rightKey;
 }
 //We're not going to use the key prefix to try and make lookups shorter...so no need to set them.
-static int entryInit(struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value) {
+static int32_t entryInit(struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int32_t hash, const void *value) {
     entry->fullKey = key;
     entry->keyHash = hash;
     entry->value = value;
     return 0;
 }
-static int entryRemove(struct CS_HashTable *table, struct CS_HashTableEntry *entry) {
+static int32_t entryRemove(struct CS_HashTable *table, struct CS_HashTableEntry *entry) {
     return 0;
 }
-static int cleanup(struct CS_HashTable *table) {
+static int32_t cleanup(struct CS_HashTable *table) {
     return 0;
 }
 
@@ -54,7 +55,7 @@ static int cleanup(struct CS_HashTable *table) {
 #define TOP_COUNT 10
 static struct CS_AllocInfo TOP[TOP_COUNT];
 
-int CS_allocSystemTracker(int concurrentTrackingSlots, unsigned int flags) {
+int32_t CS_allocSystemTracker(int32_t concurrentTrackingSlots, uint32_t flags) {
     if( trackingSystemSlabAllocator ) return 1;
     trackingFlags = flags;
 
@@ -72,7 +73,7 @@ int CS_allocSystemTracker(int concurrentTrackingSlots, unsigned int flags) {
     return 0;
 }
 
-int CS_allocSystemTrackerKill() {
+int32_t CS_allocSystemTrackerKill() {
     if( !trackingSystemSlabAllocator ) return 1;
     void *oldAllocator = trackingSystemSlabAllocator;
     trackingSystemSlabAllocator = NULL;
@@ -83,12 +84,12 @@ int CS_allocSystemTrackerKill() {
     return 0;
 }
 
-int CS_allocSystemReport() {
+int32_t CS_allocSystemReport() {
     CS_LOG_LOUD("Tracking report:");
     CS_LOG_LOUD("Current %d", currentlyAllocated);
     CS_LOG_LOUD("Max %d", maxAllocated);
     CS_LOG_LOUD("Top Allocations:");
-    for( int i = 0; i < TOP_COUNT; ++i ) {
+    for( int32_t i = 0; i < TOP_COUNT; ++i ) {
         CS_LOG_LOUD("%-25d %s line %d", TOP[i].size, TOP[i].file, TOP[i].line);
     }
     if( !trackingSystemSlabAllocator ) return 1;
@@ -96,7 +97,7 @@ int CS_allocSystemReport() {
     return 0;
 }
 
-static bool track(const void *pointer, int size, const char *file, int line) {
+static bool track(const void *pointer, int32_t size, const char *file, int32_t line) {
     struct CS_AllocInfo *newInfo = CS_slabTake( trackingSystemSlabAllocator );
     if( newInfo == NULL ) return true;
     currentlyAllocated += size;
@@ -104,9 +105,9 @@ static bool track(const void *pointer, int size, const char *file, int line) {
     newInfo->file = file;
     newInfo->line = line;
     newInfo->size = size;
-    for( int i = 0; i < TOP_COUNT; ++i ) {
+    for( int32_t i = 0; i < TOP_COUNT; ++i ) {
         if( size > TOP[i].size ) {
-            for( int j = TOP_COUNT - 1; j > i; --j ) {
+            for( int32_t j = TOP_COUNT - 1; j > i; --j ) {
                 TOP[ j ].file = TOP[ j - 1 ].file;
                 TOP[ j ].line = TOP[ j - 1 ].line;
                 TOP[ j ].size = TOP[ j - 1 ].size;
@@ -147,7 +148,7 @@ static void returnInfo(struct CS_AllocInfo *old,const void *pointer) {
     }
 }
 
-static void *trackMalloc(unsigned int size, const char *file, int line) {
+static void *trackMalloc(uint32_t size, const char *file, int32_t line) {
     GRAB_MUTEX();
     void *returnValue = malloc(size);
     if( returnValue ) {
@@ -157,7 +158,7 @@ static void *trackMalloc(unsigned int size, const char *file, int line) {
     return returnValue;
 }
 
-static void trackFree(const void *freeMe, const char *file, int line) {
+static void trackFree(const void *freeMe, const char *file, int32_t line) {
     GRAB_MUTEX();
     struct CS_AllocInfo *old = untrack(freeMe);
     if( old && trackingFlags&CS_ALLOC_FLAG_WARN_LOCALITY ) {
@@ -170,7 +171,7 @@ static void trackFree(const void *freeMe, const char *file, int line) {
     RELEASE_MUTEX();
 }
 
-static void *trackRealloc(const void *reallocMe, unsigned int size, const char *file, int line) {
+static void *trackRealloc(const void *reallocMe, uint32_t size, const char *file, int32_t line) {
     GRAB_MUTEX();
     void *returnValue = realloc((void*)reallocMe, size);
     if( returnValue ) {
@@ -202,37 +203,37 @@ static void *trackRealloc(const void *reallocMe, unsigned int size, const char *
 #define MAX_FAIL_RATE 100
 
 #ifndef CS_ALLOC_USE_MALLOC
-static int mallocFailRate = 0;
-static int mallocFailSize = 0;
+static int32_t mallocFailRate = 0;
+static int32_t mallocFailSize = 0;
 
 static struct CS_LCG_rand_state memoryRNG = {0xBADF00D};
 
-void CS_setFailAlloc(int percentageOfTheTime) {
+void CS_setFailAlloc(int32_t percentageOfTheTime) {
     mallocFailRate = percentageOfTheTime;
     if( mallocFailRate < MIN_FAIL_RATE ) mallocFailRate = MIN_FAIL_RATE;
     if( mallocFailRate > MAX_FAIL_RATE ) mallocFailRate = MAX_FAIL_RATE;
 }
 
-void CS_setMaxAlloc(int maxSize) {
+void CS_setMaxAlloc(int32_t maxSize) {
     mallocFailSize = maxSize;
     if( maxSize < 0 ) maxSize = 0;
 }
 
-void *CS_alloc_detailled(unsigned long size,const char *file,int line) {
+void *CS_alloc_detailled(unsigned long size,const char *file,int32_t line) {
     if( mallocFailSize > 0 ) if( size > mallocFailSize ) return NULL;
     if( mallocFailRate > 0 ) if( (CS_LCG_rand(&memoryRNG)%MAX_FAIL_RATE) < mallocFailRate ) return NULL;
     return CS_MALLOC(size);
 }
-void CS_free_detailled(void *freeMe,const char *file, int line) {
+void CS_free_detailled(void *freeMe,const char *file, int32_t line) {
     return CS_FREE(freeMe);
 }
-void *CS_realloc_detailled(void *reallocMe,unsigned long size,const char *file, int line) {
+void *CS_realloc_detailled(void *reallocMe,unsigned long size,const char *file, int32_t line) {
     if( mallocFailSize > 0 ) if( size > mallocFailSize ) return NULL;
     if( mallocFailRate > 0 ) if( (CS_LCG_rand(&memoryRNG)%MAX_FAIL_RATE) < mallocFailRate ) return NULL;
     return CS_REALLOC(reallocMe,size);
 }
 
-void *CS_allocDuplicate_detailled(const void *duplicateMe, unsigned long size, const char *file, int line) {
+void *CS_allocDuplicate_detailled(const void *duplicateMe, unsigned long size, const char *file, int32_t line) {
     void *returnValue = CS_alloc_detailled( size, file, line );
     if( returnValue ) {
         memcpy(returnValue, duplicateMe, size);
@@ -240,7 +241,7 @@ void *CS_allocDuplicate_detailled(const void *duplicateMe, unsigned long size, c
     return returnValue;
 }
 
-void *CS_allocZero_detailled(unsigned long size, const char *file, int line) {
+void *CS_allocZero_detailled(unsigned long size, const char *file, int32_t line) {
     void *returnValue = CS_alloc_detailled( size, file, line );
     if( returnValue ) memset( returnValue, 0, size );
     return returnValue;

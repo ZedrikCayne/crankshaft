@@ -11,6 +11,7 @@
 
 #include <crankshaft/uuid.h>
 #include <crankshaft/random.h>
+#include <stdint.h>
 
 static pthread_mutex_t uuidMutex = PTHREAD_MUTEX_INITIALIZER;
 struct CS_LCG_rand_state uuidRand = {0};
@@ -20,7 +21,7 @@ static char *hexDigit = "0123456789abcdef";
 static void sixteenBytesToText( const struct CS_UUID *uuid, char *output ) {
     const unsigned char *in = uuid->uuid;
     char *out = output;
-    for( int i = 0; i < 16; ++i ) {
+    for( int32_t i = 0; i < 16; ++i ) {
         switch(i) {
             case 4:
             case 6:
@@ -36,23 +37,23 @@ static void sixteenBytesToText( const struct CS_UUID *uuid, char *output ) {
     *out = 0;
 }
 
-static int hexDigitToInt( const char *u ) {
+static int32_t hexDigitToInt( const char *u ) {
     if( *u < '0' ) return -1;
     if( *u > 'f' ) return -1;
-    if( *u <= '9' ) return (int)( *u - '0' );
-    if( *u >= 'a' ) return (int)( *u - 'a' ) + 10;
+    if( *u <= '9' ) return (int32_t)( *u - '0' );
+    if( *u >= 'a' ) return (int32_t)( *u - 'a' ) + 10;
     if( *u > 'F' ) return -1;
-    if( *u >= 'A' ) return (int)( *u - 'A' ) + 10;
+    if( *u >= 'A' ) return (int32_t)( *u - 'A' ) + 10;
     return -1;
 }
 
 static bool textToSixteenBytes( const char *inString, struct CS_UUID *uuid ) {
     const char *in = inString;
     unsigned char *out = (unsigned char *)uuid->uuid;
-    int nextNibble;
-    int whichByte = 0;
-    int byteAccumulator = 0;
-    for( int i = 0; i < UUID_CHAR_SIZE_BYTES - 1; ++i ) {
+    int32_t nextNibble;
+    int32_t whichByte = 0;
+    int32_t byteAccumulator = 0;
+    for( int32_t i = 0; i < UUID_CHAR_SIZE_BYTES - 1; ++i ) {
         switch(i) {
             case 8:
             case 13:
@@ -87,7 +88,7 @@ static bool textToSixteenBytes( const char *inString, struct CS_UUID *uuid ) {
 #define RELEASE_MUTEX() pthread_mutex_unlock(&uuidMutex)
 
 void setSixteenBytesUuid4( struct CS_UUID *uuid ) {
-    int *sixteenBytes = (int*)uuid->uuid;
+    int32_t *sixteenBytes = (int32_t*)uuid->uuid;
     GRAB_MUTEX();
     sixteenBytes[0] = CS_LCG_rand( &uuidRand );
     sixteenBytes[1] = CS_LCG_rand( &uuidRand );
@@ -104,7 +105,7 @@ void CS_uuidInit() {
     if( uuidRand.seed == 0 ) CS_uuidSetSeed(0);
 }
 
-void CS_uuidSetSeed( int seed ) {
+void CS_uuidSetSeed( int32_t seed ) {
     GRAB_MUTEX();
     CS_LCG_rand_init(&uuidRand,seed?seed:time(NULL));
     RELEASE_MUTEX();
@@ -155,7 +156,7 @@ const char *CS_uuid4StringTemp(void) {
     return returnValue;
 }
 
-const char *CS_uuid4StringOut(char *out, int length) {
+const char *CS_uuid4StringOut(char *out, int32_t length) {
     struct CS_UUID uuid;
     if( length < UUID_CHAR_SIZE_BYTES ) {
         return NULL;
@@ -177,7 +178,7 @@ const char *CS_uuidToStringTemp(const struct CS_UUID *uuid) {
     return returnValue;
 }
 
-const struct CS_UUID *CS_uuidFromString(char *in, int length) {
+const struct CS_UUID *CS_uuidFromString(char *in, int32_t length) {
     if( length < UUID_CHAR_SIZE_BYTES ) return NULL;
     struct CS_UUID *returnValue = CS_slabTake(voidSlabAllocator);
     if( returnValue ) {
@@ -189,14 +190,14 @@ const struct CS_UUID *CS_uuidFromString(char *in, int length) {
     return returnValue;
 }
 
-const struct CS_UUID *CS_uuidFromStringTemp(char *in, int length) {
+const struct CS_UUID *CS_uuidFromStringTemp(char *in, int32_t length) {
     if( length < UUID_CHAR_SIZE_BYTES ) return NULL;
     struct CS_UUID *returnValue = CS_tempBuff( sizeof(struct CS_UUID) );
     if( returnValue && textToSixteenBytes( in, returnValue ) ) return NULL;
     return returnValue;
 }
 
-const char *CS_uuidToStringOut(const struct CS_UUID *uuid, char *out, int outLength) {
+const char *CS_uuidToStringOut(const struct CS_UUID *uuid, char *out, int32_t outLength) {
     if( outLength < UUID_CHAR_SIZE_BYTES ) return NULL;
     sixteenBytesToText( uuid, out );
     return out;

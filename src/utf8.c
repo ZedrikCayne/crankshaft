@@ -2,6 +2,7 @@
 
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/utf8.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -157,7 +158,7 @@ static struct CS_Utf8Output charToUtf8Output[] = {
     { 0, {0xFE,0x00,0x00,0x00} },{ 0, {0xFF,0x00,0x00,0x00} }
 };
 
-int codePointFromChar1252[] = {
+int32_t codePointFromChar1252[] = {
     0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
     0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
     0x0010, 0x0011, 0x0012, 0x0013, 0x0014, 0x0015, 0x0016, 0x0017,
@@ -192,7 +193,7 @@ int codePointFromChar1252[] = {
     0x00F8, 0x00F9, 0x00FA, 0x00FB, 0x00FC, 0x00FD, 0x00FE, 0x00FF
 };
 
-int CS_utf8FromInt( int codePoint, char *out, int length ) {
+int32_t CS_utf8FromInt( int32_t codePoint, char *out, int32_t length ) {
     if( length <= 0 || codePoint < 0 ) return 0;                              // 0 = 0000
     if( codePoint <= 0x00007F ) {                                             // 1 = 0001
         if( length < 1 ) return -1;                                           // 2 = 0010
@@ -223,8 +224,8 @@ int CS_utf8FromInt( int codePoint, char *out, int length ) {
     return -1;
 }
 
-int CS_utf8Length( const char *checkMe ) {
-    int returnValue = -1;
+int32_t CS_utf8Length( const char *checkMe ) {
+    int32_t returnValue = -1;
     if( checkMe == NULL ) return -1;
     unsigned char toCheck = *(unsigned char *)checkMe;
     //If the high bit isn't set, we're ascii (the usual case in english)
@@ -232,14 +233,14 @@ int CS_utf8Length( const char *checkMe ) {
     if( (toCheck & 0xF8) == 0xF0 ) returnValue = 4;
     else if( (toCheck & 0xF0) == 0xE0 ) returnValue = 3;
     else if( (toCheck & 0xE0) == 0xC0 ) returnValue = 2;
-    for( int i = 1; i < returnValue + 1; ++i ) {
+    for( int32_t i = 1; i < returnValue + 1; ++i ) {
         if( (checkMe[i] & 0xB0) != 0x80 ) return -1;
     }
     return returnValue;
 }
 
 const struct CS_Utf8Output *CS_utf8FromWin1252( const char *win1252Char ) {
-    unsigned int toCheck = *win1252Char;
+    uint32_t toCheck = *win1252Char;
     struct CS_Utf8Output *returnValue = charToUtf8Output + toCheck;
     if( returnValue->length == 0 ) {
         returnValue->length = CS_utf8FromInt( codePointFromChar1252[ toCheck ], returnValue->chars, 4 );
@@ -247,12 +248,12 @@ const struct CS_Utf8Output *CS_utf8FromWin1252( const char *win1252Char ) {
     return returnValue;
 }
 
-int CS_utf8CountChars( const char *start, const char *end ) {
+int32_t CS_utf8CountChars( const char *start, const char *end ) {
     const char *current = start;
-    int charCount = 1;
+    int32_t charCount = 1;
     while( current < end ) {
         ++charCount;
-        int nLen = CS_utf8Length( current );
+        int32_t nLen = CS_utf8Length( current );
         if( nLen < 0 ) return -1;
         current += nLen;
     }

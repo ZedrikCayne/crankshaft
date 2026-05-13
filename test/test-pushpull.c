@@ -7,11 +7,12 @@
 #include <crankshaft/test.h>
 #include <crankshaft/pushpull.h>
 #include <crankshaft/tempbuff.h>
+#include <stdint.h>
 
 extern bool test_pushpull();
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 #define TEST_BUFF_SIZE 256
 #define TEST_READ_SIZE 55
@@ -49,18 +50,18 @@ bool test_pushpull() {
     CS_PP_reset(testBuffer1);
     
     char *temp = CS_tempBuff(256);
-    for( int i = 0; i < TEST_BUFF_SIZE; ++i ) {
+    for( int32_t i = 0; i < TEST_BUFF_SIZE; ++i ) {
         temp[i] = (char)i;
     }
 
-    int bytesWritten = 0;
+    int32_t bytesWritten = 0;
     while( (bytesWritten += CS_PP_readFromBuffer( testBuffer1, temp + bytesWritten, TEST_WRITE_SIZE )) < TEST_BUFF_SIZE );
-    for( int i = 0; i < TEST_BUFF_SIZE; ++i ) {
+    for( int32_t i = 0; i < TEST_BUFF_SIZE; ++i ) {
         CS_FAIL_ON_FALSE( temp[i] == testBuffer1->buff[i], "Known buffer contents written. (Ascending bytes)", "Buffer wrong at index %d", i);
     }
 
     temp = CS_tempBuff(256);
-    for( int i = 0; i < TEST_BUFF_SIZE; ++i ) {
+    for( int32_t i = 0; i < TEST_BUFF_SIZE; ++i ) {
         temp[i] = (char)TEST_BUFF_SIZE - i - 1;
     }
 
@@ -68,7 +69,7 @@ bool test_pushpull() {
 
     bytesWritten = 0;
     while( (bytesWritten += CS_PP_readFromBuffer( testBuffer1, temp + bytesWritten, TEST_WRITE_SIZE )) < TEST_BUFF_SIZE );
-    for( int i = 0; i < TEST_BUFF_SIZE; ++i ) {
+    for( int32_t i = 0; i < TEST_BUFF_SIZE; ++i ) {
         CS_FAIL_ON_FALSE( temp[i] == testBuffer1->buff[i], "Known buffer contents written. (Descending bytes)", "Buffer wrong at index %d", i);
     }
 
@@ -81,17 +82,17 @@ bool test_pushpull() {
     CS_PP_reset(testBuffer1);
     CS_PP_readFromBuffer( testBuffer1, temp, TEST_BUFF_SIZE );
     CS_PP_removeChunk( testBuffer1, 0, 15 );
-    for( int i = 0; i < TEST_BUFF_SIZE - 15; ++i ) {
+    for( int32_t i = 0; i < TEST_BUFF_SIZE - 15; ++i ) {
         CS_FAIL_ON_FALSE( temp[i + 15] == testBuffer1->buff[i], "Known buffer contents written. (Descending bytes with 15 bytes removed off the front)", "Buffer wrong at index %d", i );
     }
 
     CS_PP_reset(testBuffer1);
     CS_PP_readFromBuffer( testBuffer1, temp, TEST_BUFF_SIZE);
     CS_PP_removeChunk( testBuffer1, 32, 15 );
-    for( int i = 0; i < 32; ++i ) {
+    for( int32_t i = 0; i < 32; ++i ) {
         CS_FAIL_ON_FALSE( temp[i] == testBuffer1->buff[i], "Known buffer contents written. (Descending bytes with 15 bytes removed at offset 32)", "Buffer wrong at index %d", i );
     }
-    for( int i = 32; i < TEST_BUFF_SIZE - 15; ++i ) {
+    for( int32_t i = 32; i < TEST_BUFF_SIZE - 15; ++i ) {
         CS_FAIL_ON_FALSE( temp[i + 15] == testBuffer1->buff[i], "Known buffer contents written. (Descending bytes with 15 bytes removed at offset 32)", "Buffer wrong at index %d", i );
     }
 

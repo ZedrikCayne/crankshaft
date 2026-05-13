@@ -18,6 +18,7 @@
 #include <crankshaft/base64.h>
 #include <crankshaft/random.h>
 #include <crankshaft/mutex.h>
+#include <stdint.h>
 
 static const char *opcodeToString[] = {
     "CS_WS_OPCODE_CONTINUE",
@@ -89,7 +90,7 @@ struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *appli
         if( incomingKey ) {
             unsigned char outgoingHash[ SHA_DIGEST_LENGTH ];
             const char *combined = CS_tempBuffSnprintf( 128, "%s%s", incomingKey, wsAcceptConcat );
-            int length = strlen( combined );
+            int32_t length = strlen( combined );
             SHA1( (const unsigned char*)combined, length, outgoingHash );
             const char *encoded = CS_base64EncodeTemp( outgoingHash, SHA_DIGEST_LENGTH, NULL );
             CS_serverSetReplyHeader( reply, "Sec-WebSocket-Accept",  encoded );
@@ -115,7 +116,7 @@ struct CS_ClientInfo *CS_WS_destroy( struct CS_WebSocket *ws ) {
     return clientInfo;
 }
 
-struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int opcode, bool masked, const void *payload, int payloadSize ) {
+struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int32_t opcode, bool masked, const void *payload, int32_t payloadSize ) {
     if( payload && payloadSize <= 0 ) {
         CS_LOG_ERROR( "Trying to put a payload in with no payload supplied." );
         return NULL;
@@ -134,10 +135,10 @@ struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int opcode
             }
             if( masked ) {
                 frame->mask = true;
-                for( int i = 0; i < CS_WS_NUM_MASK_BYTES; ++i ) {
+                for( int32_t i = 0; i < CS_WS_NUM_MASK_BYTES; ++i ) {
                     frame->maskBytes[i] = CS_rand();
                 }
-                for( int i = 0; i < payloadSize; ++i ) {
+                for( int32_t i = 0; i < payloadSize; ++i ) {
                     ((char*)frame->payload)[ i ] = ((char*)payload)[ i ] ^ frame->maskBytes[ i % CS_WS_NUM_MASK_BYTES ];
                 }
             } else {
@@ -184,7 +185,7 @@ bool CS_WS_returnFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame
 //Parse incoming frame off of the open websocket.
 #define READ_WS(__WS) ((__WS)->clientInfo->ssl?CS_PP_readFromSSL((__WS)
 struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
-    int bytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
+    int32_t bytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
 
     if( bytesRead < 0 ) {
         return NULL;
@@ -198,7 +199,7 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
 
     unsigned char *top = (unsigned char*)CS_PP_startOfData( ws->clientInfo->buffer );
     
-    unsigned int current = (unsigned int)*top;
+    uint32_t current = (uint32_t)*top;
 
     frame->completed = 0;
     frame->fin  = (current & 0x80) != 0;
@@ -239,14 +240,14 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
         goto ERROR_READING;
     }
 
-    int numBytesTransferred = 0;
+    int32_t numBytesTransferred = 0;
 
     while( numBytesTransferred < frame->payloadLength ) {
-        int numBytesAvailable = CS_PP_dataSize( ws->clientInfo->buffer );
+        int32_t numBytesAvailable = CS_PP_dataSize( ws->clientInfo->buffer );
         if( numBytesAvailable > frame->payloadLength ) numBytesAvailable = frame->payloadLength;
         if( frame->mask ) {
             char *current = CS_PP_startOfData( ws->clientInfo->buffer );
-            for( int currentXfer = 0; currentXfer < numBytesAvailable; ++currentXfer ) {
+            for( int32_t currentXfer = 0; currentXfer < numBytesAvailable; ++currentXfer ) {
                 ((char*)frame->payload)[ numBytesTransferred ] = current[ numBytesTransferred ] ^ frame->maskBytes[ numBytesTransferred % CS_WS_NUM_MASK_BYTES ];
                 ++numBytesTransferred;
             }
@@ -256,7 +257,7 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
         }
         //Do we have enough, suck in moreif we don't.
         if( numBytesTransferred < frame->payloadLength ) {
-            int numBytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
+            int32_t numBytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
             if( numBytesRead < 0 ) {
                 CS_LOG_ERROR("Error reading from client socket.");
                 goto ERROR_READING;
@@ -321,11 +322,11 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame, 
         CS_PP_readFromBuffer( pp, frame->maskBytes, 4 );
     }
 
-    int currentHeaderSize = CS_PP_dataSize( pp );
-    int bytesTotallyTransferred = 0;
+    int32_t currentHeaderSize = CS_PP_dataSize( pp );
+    int32_t bytesTotallyTransferred = 0;
 
     while( bytesTotallyTransferred < (frame->payloadLength + currentHeaderSize) ) {
-        int lastTransfer = 
+        int32_t lastTransfer = 
             CS_PP_readFromBuffer( pp,
                          ((char*)frame->payload) + bytesTotallyTransferred,
                          frame->payloadLength - bytesTotallyTransferred );
@@ -333,7 +334,7 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame, 
             CS_LOG_ERROR("Websocket failed to push data to the output buffer.");
             return true;
         }
-        int lastWriteToSocket = CS_serverWriteOutputBuffer( ws->clientInfo );
+        int32_t lastWriteToSocket = CS_serverWriteOutputBuffer( ws->clientInfo );
         if( lastWriteToSocket < 0 ) {
             CS_LOG_ERROR("Websocket write failed.");
             return true;
@@ -345,7 +346,7 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame, 
     return false;
 }
 
-void CS_WS_close( struct CS_WebSocket *ws, int closeCode ) {
+void CS_WS_close( struct CS_WebSocket *ws, int32_t closeCode ) {
     char closeCodeDataBuffer[ 2 ];
     closeCodeDataBuffer[0] = (closeCode & 0xFF00) >> 8;
     closeCodeDataBuffer[1] = (closeCode & 0x00FF);

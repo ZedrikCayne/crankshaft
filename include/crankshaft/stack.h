@@ -1,6 +1,7 @@
 #ifndef __crankshaftstackdoth__
 #define __crankshaftstackdoth__
 #include <stdbool.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -14,17 +15,17 @@ extern "C" {
 #endif
 
 struct CS_Stack {
-    int itemSize;
-    int itemsPerSlab;
-    int sizePerItem;
-    int alignment;
-    int current;
+    int32_t itemSize;
+    int32_t itemsPerSlab;
+    int32_t sizePerItem;
+    int32_t alignment;
+    int32_t current;
     struct CS_Stack *nextStack;
     char *buff;
 };
 
-struct CS_Stack *CS_stackAlloc( int sizePerItem, int itemsPerSlab, int itemAlignment );
-struct CS_Stack *CS_stackAllocPointer( int itemsPerSlab );
+struct CS_Stack *CS_stackAlloc( int32_t sizePerItem, int32_t itemsPerSlab, int32_t itemAlignment );
+struct CS_Stack *CS_stackAllocPointer( int32_t itemsPerSlab );
 void CS_stackFree( struct CS_Stack *freeMe );
 
 //Generic cases...

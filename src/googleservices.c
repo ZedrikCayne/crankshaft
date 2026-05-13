@@ -14,6 +14,7 @@
 #include <crankshaft/googleservices.h>
 #include <crankshaft/http.h>
 #include <crankshaft/base64.h>
+#include <stdint.h>
 
 static const char *googleKeysEndpoint = "https://www.googleapis.com/oauth2/v3/certs";
 
@@ -67,7 +68,7 @@ bool CS_GS_initWithEnvironmentVariable( const char *variableName ) {
     privateClearSecret();
     const char * varValue = getenv( variableName ) ;
     if( varValue ) {
-        int nLen = strlen( varValue );
+        int32_t nLen = strlen( varValue );
         googleServicesJson = CS_jsonParseCopy( varValue, nLen, SECRET_ALLOC_SIZE );
         if( googleServicesJson )
             returnValue = false;
@@ -80,7 +81,7 @@ bool CS_GS_initWithEmbeddedJson( const char *json ) {
     bool returnValue = true;
     privateClearSecret();
     if( json ) {
-        int nLen = strlen( json );
+        int32_t nLen = strlen( json );
         googleServicesJson = CS_jsonParseCopy( json, nLen, SECRET_ALLOC_SIZE );
         if( googleServicesJson )
             returnValue = false;

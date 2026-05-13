@@ -41,8 +41,8 @@ const struct CS_String *CS_stringInitCopyCstring( struct CS_String *out, const c
 const struct CS_String *CS_stringInitReferenceCstring( struct CS_String *out, const char *in, int32_t length );
 const struct CS_String *CS_stringCopy( struct CS_String *in );
 void CS_stringFree( const struct CS_String *toFree );
-int CS_stringStrncmp( const struct CS_String *left, const struct CS_String *right, int32_t maxLength );
-int CS_stringCstrncmp( const struct CS_String *left, const char *right, int32_t length );
+int32_t CS_stringStrncmp( const struct CS_String *left, const struct CS_String *right, int32_t maxLength );
+int32_t CS_stringCstrncmp( const struct CS_String *left, const char *right, int32_t length );
 const char *CS_stringStrstr( const struct CS_String *haystack, const struct CS_String *needle );
 const char *CS_stringCStrstr( const struct CS_String *haystack, const char *needle, int32_t length );
 const char *CS_stringStrstrC( const char *haystack, int32_t length, const struct CS_String *needle );

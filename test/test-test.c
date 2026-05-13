@@ -4,11 +4,12 @@
 #include <crankshaft/alloc.h>
 #include <crankshaft/logger.h>
 #include <crankshaft/test.h>
+#include <stdint.h>
 
 extern bool test_test();
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 bool test_test() {
 #ifndef CS_TEST_SKIP_TESTTEST

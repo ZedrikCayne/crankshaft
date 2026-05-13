@@ -7,11 +7,12 @@
 #include <crankshaft/test.h>
 
 #include <crankshaft/stack.h>
+#include <stdint.h>
 
 extern bool test_stack();
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 

@@ -11,8 +11,9 @@
 #include <crankshaft/tempbuff.h>
 
 #include <crankshaft/html.h>
+#include <stdint.h>
 
-static int okayTable[] = {
+static int32_t okayTable[] = {
    //NUL   SOH   STX   ETX   EOT   ENQ   ACK   BEL
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
    // BS   TAB    LF    VT    FF    CR    SO    SI
@@ -48,10 +49,10 @@ static int okayTable[] = {
 }; 
 
 static bool privateCheckOk(const char *in) {
-    if( *in < 127 && okayTable[(int)*in] == 2 ) return false;
+    if( *in < 127 && okayTable[(int32_t)*in] == 2 ) return false;
     const char *current = in;
     while( *current ) {
-        if( *current < 127 && !okayTable[(int)*current] )
+        if( *current < 127 && !okayTable[(int32_t)*current] )
             return false;
         ++current;
     }
@@ -150,14 +151,14 @@ struct CS_HtmlNode *CS_htmlRemoveAttributeValue(struct CS_HtmlNode *node, const 
     return NULL;
 }
 
-struct CS_HtmlNode *CS_htmlRemoveAttributeIndex(struct CS_HtmlNode *node, const char *attributeName, int index ) {
+struct CS_HtmlNode *CS_htmlRemoveAttributeIndex(struct CS_HtmlNode *node, const char *attributeName, int32_t index ) {
     if( index < 0 ) return NULL;
     struct CS_HtmlAttribute *previous = NULL;
     struct CS_HtmlAttribute *attribute = privateFindAttribute( node, attributeName, &previous );
     if( !attribute ) return NULL;
     struct CS_HtmlValue *previousValue= NULL;
     struct CS_HtmlValue *toRemove = attribute->values;
-    for( int i = 0; i < index && toRemove; ++i ) {
+    for( int32_t i = 0; i < index && toRemove; ++i ) {
         previousValue = toRemove;
         toRemove = toRemove->next;
     }
@@ -179,7 +180,7 @@ struct CS_HtmlNode *CS_htmlRemoveAttributeIndex(struct CS_HtmlNode *node, const 
     return NULL;
 }
 
-struct CS_HtmlNode *CS_htmlCreateRoot(const char *name, int initialAlloc) {
+struct CS_HtmlNode *CS_htmlCreateRoot(const char *name, int32_t initialAlloc) {
     if( !privateCheckOk( name ) ) {
         CS_LOG_ERROR("Attempt to create an HTML node with an invalid name.");
         return NULL;
@@ -306,7 +307,7 @@ void CS_htmlFree(struct CS_HtmlNode *node) {
 }
 
 struct lengthAndValue {
-    int length;
+    int32_t length;
     char *value;
 };
 
@@ -345,29 +346,29 @@ static struct lengthAndValue quoteLookup[] = {
     { 1, NULL }, { 1, NULL }, { 1, NULL }, { 1, NULL }, { 1, NULL }, { 1, NULL }, { 1, NULL }, { 0, NULL },
 };
 
-static int prettyDepth( struct CS_HtmlNode *node ) {
-    int count = 0;
+static int32_t prettyDepth( struct CS_HtmlNode *node ) {
+    int32_t count = 0;
     struct CS_HtmlNode *up = node;
     while( up ) { ++count; up = up->up; }
     return count;
 }
-static void prettyPrint( struct CS_StringBuilder *sb, bool pretty, int depth ) {
+static void prettyPrint( struct CS_StringBuilder *sb, bool pretty, int32_t depth ) {
     if( !pretty ) return;
     CS_SB_appendChar(sb, '\n');
-    for( int i = 0; i < depth; ++i ) {
+    for( int32_t i = 0; i < depth; ++i ) {
         CS_SB_append( sb, "    " );
     }
 }
 
 static char *privateHtmlQuoted( const char * in ) {
     if( !in ) return NULL;
-    int nLen = 0;
+    int32_t nLen = 0;
     const char *current = in;
     while( *current ) {
         if( *current < 0 ) {
             ++nLen;
         } else {
-            nLen += quoteLookup[ (int)*current ].length;
+            nLen += quoteLookup[ (int32_t)*current ].length;
         }
         ++current;
     }
@@ -395,17 +396,17 @@ static char *privateHtmlQuoted( const char * in ) {
     return quoted;
 }
 static char *privateStripQuotes(const char *in) {
-    int nLen = strlen(in);
+    int32_t nLen = strlen(in);
     char *returnValue = CS_tempBuff(nLen + 1);
     if( returnValue ) {
-        for( int i = 0; i < nLen; ++i ) returnValue[i]=in[i]=='"'?'\'':in[i];
+        for( int32_t i = 0; i < nLen; ++i ) returnValue[i]=in[i]=='"'?'\'':in[i];
         returnValue[nLen] = 0;
     }
     return returnValue;
 }
 
 static struct CS_HtmlNode *privatePrintNodeIntro( struct CS_HtmlNode *node, struct CS_StringBuilder *sb, bool pretty ) {
-    int depth = prettyDepth( node );
+    int32_t depth = prettyDepth( node );
     prettyPrint( sb, pretty, depth );
     CS_SB_printf( sb, "<%s", node->name );
     struct CS_HtmlAttribute *current = node->attributes;
@@ -470,7 +471,7 @@ struct CS_StringBuilder *CS_htmlAppend(struct CS_HtmlNode *node, struct CS_Strin
     return sb;
 }
 
-struct CS_StringBuilder *CS_htmlToStringBuilder(struct CS_HtmlNode *node, int initialSize, bool pretty) {
+struct CS_StringBuilder *CS_htmlToStringBuilder(struct CS_HtmlNode *node, int32_t initialSize, bool pretty) {
     if( !node ) return NULL;
 
     struct CS_StringBuilder *sb = CS_SB_create(initialSize); 

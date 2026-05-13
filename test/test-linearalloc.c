@@ -6,11 +6,12 @@
 #include <crankshaft/logger.h>
 #include <crankshaft/test.h>
 #include <crankshaft/linearalloc.h>
+#include <stdint.h>
 
 extern bool test_linearalloc(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 #define SIZE_OF_ALLOCATOR 256
 

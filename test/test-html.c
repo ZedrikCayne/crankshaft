@@ -8,11 +8,12 @@
 #include <crankshaft/test.h>
 
 #include <crankshaft/html.h>
+#include <stdint.h>
 
 extern bool test_html(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 static char *outputComparison = "<html><head>HEAD</head><body><div>||&quot;'&lt;foo&gt;||</div><div>||FRUNK-&quot;Fudge&quot;||</div>BODY</body></html>";
 

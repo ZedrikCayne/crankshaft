@@ -1,6 +1,7 @@
 #ifndef __crankshaftrandomdoth__
 #define __crankshaftrandomdoth__
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,13 +16,13 @@ extern "C" {
  *
  *********************************************/
 struct CS_LCG_rand_state {
-    int seed;
+    int32_t seed;
 };
 
 extern struct CS_LCG_rand_state globalState;
 
-int CS_LCG_rand( struct CS_LCG_rand_state *state );
-void CS_LCG_rand_init( struct CS_LCG_rand_state *state, int seed );
+int32_t CS_LCG_rand( struct CS_LCG_rand_state *state );
+void CS_LCG_rand_init( struct CS_LCG_rand_state *state, int32_t seed );
 
 #define CS_randMod(__X) ((CS_LCG_rand(&globalState)&0x7FFFFFFF)%__X)
 #define CS_rand() CS_LCG_rand(&globalState)

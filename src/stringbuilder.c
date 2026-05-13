@@ -7,8 +7,9 @@
 #include <crankshaft/logger.h>
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/tempbuff.h>
+#include <stdint.h>
 
-struct CS_StringBuilder *CS_SB_create( int initialSize ) {
+struct CS_StringBuilder *CS_SB_create( int32_t initialSize ) {
     struct CS_StringBuilder *returnValue = CS_alloc(sizeof(struct CS_StringBuilder));
     if( returnValue != NULL ) {
         returnValue->buffer = CS_alloc(initialSize);
@@ -23,9 +24,9 @@ struct CS_StringBuilder *CS_SB_create( int initialSize ) {
     return returnValue;
 }
 
-const bool expandIfNeeded( struct CS_StringBuilder *buffer, int bytesNeeded ) {
+const bool expandIfNeeded( struct CS_StringBuilder *buffer, int32_t bytesNeeded ) {
     if( buffer->currentHead + bytesNeeded + 1 > buffer->currentSize ) {
-        int newSize = buffer->currentSize;
+        int32_t newSize = buffer->currentSize;
         while( newSize < buffer->currentHead + bytesNeeded + 1 ) newSize+=buffer->originalSize;
         void *newBuff = CS_realloc( buffer->buffer, newSize );
         if( newBuff == NULL ) {
@@ -46,7 +47,7 @@ struct CS_StringBuilder *CS_SB_appendChar( struct CS_StringBuilder *buffer, cons
 }
 
 struct CS_StringBuilder *CS_SB_append( struct CS_StringBuilder *buffer, const char *string ) {
-    int bytesNeeded = strlen(string);
+    int32_t bytesNeeded = strlen(string);
     if( expandIfNeeded( buffer, bytesNeeded ) ) return NULL;
     memcpy( buffer->buffer + buffer->currentHead, string, bytesNeeded + 1 );
     buffer->currentHead += bytesNeeded;
@@ -54,15 +55,15 @@ struct CS_StringBuilder *CS_SB_append( struct CS_StringBuilder *buffer, const ch
     return buffer;
 }
 
-bool CS_SB_expandBy( struct CS_StringBuilder *buffer, int minimumNewCapacity ) {
+bool CS_SB_expandBy( struct CS_StringBuilder *buffer, int32_t minimumNewCapacity ) {
     return expandIfNeeded( buffer, minimumNewCapacity );
 }
 
-struct CS_StringBuilder *CS_SB_vsnprintf( struct CS_StringBuilder *buffer, int maxAppend, const char *fmt, va_list ap ) {
-    int remain;
-    int currentMax;
+struct CS_StringBuilder *CS_SB_vsnprintf( struct CS_StringBuilder *buffer, int32_t maxAppend, const char *fmt, va_list ap ) {
+    int32_t remain;
+    int32_t currentMax;
     va_list apCpy;
-    int bytesNeeded;
+    int32_t bytesNeeded;
 
 ONCE_MORE_UNTO_THE_BREACH:
     va_copy(apCpy,ap);
@@ -83,7 +84,7 @@ ONCE_MORE_UNTO_THE_BREACH:
     return buffer;
 }
 
-struct CS_StringBuilder *CS_SB_snprintf( struct CS_StringBuilder *buffer, int maxAppend, const char *fmt, ... ) {
+struct CS_StringBuilder *CS_SB_snprintf( struct CS_StringBuilder *buffer, int32_t maxAppend, const char *fmt, ... ) {
     struct CS_StringBuilder *returnValue;
     va_list ap;
     va_start(ap,fmt);

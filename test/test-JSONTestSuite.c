@@ -11,13 +11,14 @@
 #include <crankshaft/test.h>
 #include <crankshaft/json.h>
 #include <crankshaft/pushpull.h>
+#include <stdint.h>
 
 extern bool test_JSONTestSuite();
 
 #pragma GCC diagnostic ignored "-Wformat-truncation="
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 static char *testSuiteFiles = "../JSONTestSuite/test_parsing";
 
@@ -52,9 +53,9 @@ bool test_JSONTestSuite() {
         while( (ep = readdir( dp )) != NULL ) {
             if( ep->d_name[0] == '.' ) continue;
             snprintf( pathToFile, PATH_MAX, "%s/%s", testSuiteFiles, ep->d_name );
-            int f = open( pathToFile, 0 );
+            int32_t f = open( pathToFile, 0 );
             if( f != -1 ) {
-                int bytesRead = CS_PP_readFromFile( pp, f );
+                int32_t bytesRead = CS_PP_readFromFile( pp, f );
                 CS_FAIL_ON_TRUE( bytesRead < 0 || bytesRead >= CS_PP_BUFFER_SIZE, pathToFile, "Failed to read or too big." );
                 CS_PP_readFromBuffer( pp, nullBuffer, 1 );
                 memcpy(dupeBuffer, pp->buff, bytesRead);

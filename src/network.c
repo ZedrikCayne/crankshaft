@@ -8,8 +8,9 @@
 #include <crankshaft/util.h>
 #include <crankshaft/network.h>
 #include <crankshaft/tempbuff.h>
+#include <stdint.h>
 
-struct addrinfo *CS_networkLookupAddress( const char *address, int portNum ) {
+struct addrinfo *CS_networkLookupAddress( const char *address, int32_t portNum ) {
     struct addrinfo hints = { 0 };
     char portNumString[64];
     snprintf( portNumString, 64, "%d", portNum );
@@ -31,7 +32,7 @@ void CS_networkReleaseAddressInfos( struct addrinfo *infos ) {
 const char *CS_networkAddressToTempString( struct sockaddr *inputAddr ) {
     if( inputAddr->sa_family == AF_INET ) {
         unsigned char *addr = (unsigned char*)&(((struct sockaddr_in*)inputAddr)->sin_addr.s_addr);
-        return CS_tempBuffSnprintf( 64, "%d.%d.%d.%d", (int)addr[0], (int)addr[1], (int)addr[2], (int)addr[3] );
+        return CS_tempBuffSnprintf( 64, "%d.%d.%d.%d", (int32_t)addr[0], (int32_t)addr[1], (int32_t)addr[2], (int32_t)addr[3] );
     }
     if( inputAddr->sa_family == AF_INET6 ) {
         unsigned char *addr = ((struct sockaddr_in6*)inputAddr)->sin6_addr.s6_addr;
@@ -40,14 +41,14 @@ const char *CS_networkAddressToTempString( struct sockaddr *inputAddr ) {
     return "BAD SOCKADDR";
 }
 
-int CS_networkSockaddrSize( struct sockaddr *addr ) {
+int32_t CS_networkSockaddrSize( struct sockaddr *addr ) {
     if( addr->sa_family == AF_INET ) return sizeof( struct sockaddr_in );
     if( addr->sa_family == AF_INET6 ) return sizeof( struct sockaddr_in6 );
     return 0;
 }
 
 bool CS_networkCopySockaddr( struct sockaddr *to, struct sockaddr *addr ) {
-    int size = CS_networkSockaddrSize( addr );
+    int32_t size = CS_networkSockaddrSize( addr );
     if( size ) {
         memcpy( to, addr, size );
         return false;
@@ -96,14 +97,14 @@ static struct unRoutable_v6 unroutable_v6[] = {
 };
 
 bool CS_networkAddressRoutable( struct sockaddr *addr ) {
-    int numMatch;
+    int32_t numMatch;
     if( addr->sa_family == AF_INET ) {
         struct sockaddr_in *inAddr = (struct sockaddr_in *)addr;
         unsigned char *bytes = (unsigned char *)&(inAddr->sin_addr.s_addr);
-        for( int i = 0; i < CS_ARRAY_SIZE( unroutable_v4 ); ++i ) {
+        for( int32_t i = 0; i < CS_ARRAY_SIZE( unroutable_v4 ); ++i ) {
             struct unRoutable_v4 *route = unroutable_v4 + i;
             numMatch = 0;
-            for( int b = 0; b < IPV4_ADDRESS_BYTES; ++b ) {
+            for( int32_t b = 0; b < IPV4_ADDRESS_BYTES; ++b ) {
                 if( route->ipv4[ b ] == (route->mask[ b ] & bytes[ b ]) ) ++numMatch;
                 else break;
             }
@@ -114,10 +115,10 @@ bool CS_networkAddressRoutable( struct sockaddr *addr ) {
     if( addr->sa_family == AF_INET6 ) {
         struct sockaddr_in6 *inAddr = (struct sockaddr_in6 *)addr;
         unsigned char *bytes = inAddr->sin6_addr.s6_addr;
-        for( int i = 0; i < CS_ARRAY_SIZE( unroutable_v6 ); ++i ) {
+        for( int32_t i = 0; i < CS_ARRAY_SIZE( unroutable_v6 ); ++i ) {
             struct unRoutable_v6 *route = unroutable_v6 + i;
             numMatch = 0;
-            for( int b = 0; b < IPV6_ADDRESS_BYTES; ++b ) {
+            for( int32_t b = 0; b < IPV6_ADDRESS_BYTES; ++b ) {
                 if( route->ipv6[ b ] == (route->mask[ b ] & bytes[ b ]) ) ++numMatch;
                 else break;
             }

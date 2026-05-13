@@ -7,14 +7,15 @@
 #include <crankshaft/linearalloc.h>
 #include <crankshaft/alloc.h>
 #include <crankshaft/util.h>
+#include <stdint.h>
 
 struct CS_LinearAllocator {
-    int size;
-    int current;
+    int32_t size;
+    int32_t current;
     struct CS_LinearAllocator *next;
 };
 
-static struct CS_LinearAllocator *privateAlloc(int size) {
+static struct CS_LinearAllocator *privateAlloc(int32_t size) {
     if( size < 0 ) {
         CS_LOG_ERROR("Size must be bigger than 0 on a linear allocator.");
         return NULL;
@@ -31,7 +32,7 @@ static struct CS_LinearAllocator *privateAlloc(int size) {
     return returnValue;
 }
 
-inline static void *privateTake(struct CS_LinearAllocator *linearAllocator, int size, int alignment ) {
+inline static void *privateTake(struct CS_LinearAllocator *linearAllocator, int32_t size, int32_t alignment ) {
     char *root = (char*)(linearAllocator + 1);
     char *base = root + linearAllocator->current;
     char *aligned = (char*)CS_alignVoid(base, alignment);
@@ -40,7 +41,7 @@ inline static void *privateTake(struct CS_LinearAllocator *linearAllocator, int 
     return aligned;
 }
 
-void *CS_linearTake(struct CS_LinearAllocator *linearAllocator, int size, int alignment ) {
+void *CS_linearTake(struct CS_LinearAllocator *linearAllocator, int32_t size, int32_t alignment ) {
     if( size > linearAllocator->size ) {
         CS_LOG_ERROR("Cannot take %d out of an allocator sized of %d", size, linearAllocator->size);
     }
@@ -59,14 +60,14 @@ void *CS_linearTake(struct CS_LinearAllocator *linearAllocator, int size, int al
     return returnValue;
 }
 
-void *CS_linearTakeZero(struct CS_LinearAllocator *linearAllocator, int size, int alignment ) {
+void *CS_linearTakeZero(struct CS_LinearAllocator *linearAllocator, int32_t size, int32_t alignment ) {
     void *returnValue = CS_linearTake( linearAllocator, size, alignment );
     if( returnValue ) memset( returnValue, 0, size );
     return returnValue;
 }
 
 char *CS_linearCopyString(struct CS_LinearAllocator *linearAllocator, const char *string ) {
-    int len = strlen( string );
+    int32_t len = strlen( string );
     void *returnValue = CS_linearTake( linearAllocator, len+1, sizeof(void*) );
     if( returnValue ) strncpy( returnValue, string, len + 1 );
     return returnValue;
@@ -79,7 +80,7 @@ void CS_linearReset( struct CS_LinearAllocator *linearAllocator ) {
     }
 }
 
-struct CS_LinearAllocator *CS_linearInit( int size ) {
+struct CS_LinearAllocator *CS_linearInit( int32_t size ) {
     return privateAlloc(size);
 }
 

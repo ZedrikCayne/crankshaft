@@ -1,6 +1,7 @@
 #ifndef __crankshafthashdoth__
 #define __crankshafthashdoth__
 #include <stdbool.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -12,8 +13,8 @@
 extern "C" {
 #endif
 
-unsigned int CS_hash(const char *str);
-unsigned int CS_hashBin(const char *blob, int length);
+uint32_t CS_hash(const char *str);
+uint32_t CS_hashBin(const char *blob, int32_t length);
 
 #ifdef __cplusplus
 }

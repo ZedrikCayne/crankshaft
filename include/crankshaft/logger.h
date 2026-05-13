@@ -2,6 +2,7 @@
 #define __crankshaftloggerdoth__
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -86,8 +87,8 @@ extern bool CS_LOG_VERBOSE_BOOL;
 #define CS_LOG_TRACE_IF(_PREDICATE,...) if(CS_LOG_TRACE_BOOL&&(_PREDICATE)){CS_log(__FILE__,__LINE__,__VA_ARGS__);}
 #endif
 
-void CS_log(const char *file, int line, const char *fmt, ... );
-void CS_logRotate(int maxHistory);
+void CS_log(const char *file, int32_t line, const char *fmt, ... );
+void CS_logRotate(int32_t maxHistory);
 void CS_logFile(char *fileName);
 
 bool CS_logInit( const char *fileName );

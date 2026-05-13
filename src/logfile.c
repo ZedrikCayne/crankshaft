@@ -14,6 +14,7 @@
 #include <crankshaft/mutex.h>
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/tempbuff.h>
+#include <stdint.h>
 
 struct CS_LogFile {
     FILE *openLogFile;
@@ -21,9 +22,9 @@ struct CS_LogFile {
     struct CS_Mutex *mutex;
     struct CS_StringBuilder *forOutput;
     size_t currentFileBytes;
-    int maxBytes;
-    int maxRotates;
-    int secondsPerRotate;
+    int32_t maxBytes;
+    int32_t maxRotates;
+    int32_t secondsPerRotate;
     time_t lastRotate;
 };
 
@@ -31,7 +32,7 @@ static bool privateRotate(struct CS_LogFile *logfile);
 static bool privateClose(struct CS_LogFile *logfile);
 static bool privateOpen(struct CS_LogFile *logfile );
 
-static char *fileName(struct CS_LogFile *logfile, int which ) {
+static char *fileName(struct CS_LogFile *logfile, int32_t which ) {
     CS_SB_reset( logfile->forOutput );
     CS_SB_append( logfile->forOutput, logfile->fileName );
     if( which ) {
@@ -40,7 +41,7 @@ static char *fileName(struct CS_LogFile *logfile, int which ) {
     return CS_SB_buffer( logfile->forOutput );
 }
 
-static bool fileExist(struct CS_LogFile *logfile, int which ) {
+static bool fileExist(struct CS_LogFile *logfile, int32_t which ) {
     struct stat fileStat;
     return stat( fileName(logfile,which), &fileStat ) == 0;
 }
@@ -79,7 +80,7 @@ static bool privateRotate( struct CS_LogFile *logfile ) {
 
     char *moveTo = CS_tempStringCopy( fileName( logfile, logfile->maxRotates ) );
     if( fileExistString( moveTo ) ) remove( moveTo );
-    for( int i = logfile->maxRotates - 1; i >= 0; --i ) {
+    for( int32_t i = logfile->maxRotates - 1; i >= 0; --i ) {
         char *moveFrom = CS_tempStringCopy( fileName( logfile, i ) );
         if( fileExistString( moveFrom ) ) {
             if( rename( moveFrom, moveTo ) ) return true;
@@ -90,10 +91,10 @@ static bool privateRotate( struct CS_LogFile *logfile ) {
     if( reopenFile ) return privateOpen(logfile);
     return false;
 }
-int CS_logfilePrintf(struct CS_LogFile *logfile, const char *format, ...) {
+int32_t CS_logfilePrintf(struct CS_LogFile *logfile, const char *format, ...) {
     if( !logfile || !logfile->mutex || !logfile->openLogFile ) return -1;
     char timeOutputBuff[ 42 ] = {0};
-    int returnValue = -1;
+    int32_t returnValue = -1;
     CS_mutexLock( logfile->mutex );
 
     time_t currentTime = time(NULL);
@@ -144,7 +145,7 @@ ERR_UNLOCK:
     CS_mutexUnlock( logfile->mutex );
     return returnValue;
 }
-struct CS_LogFile *CS_logfileCreate(const char *filename, int rotates, int maxBytes, int secondsPerRotate) {
+struct CS_LogFile *CS_logfileCreate(const char *filename, int32_t rotates, int32_t maxBytes, int32_t secondsPerRotate) {
     struct CS_LogFile *returnValue = CS_allocZero( sizeof( struct CS_LogFile ) );
 
     if( !returnValue ) goto ERR;

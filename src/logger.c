@@ -12,6 +12,7 @@
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/logger.h>
+#include <stdint.h>
 
 bool CS_LOG_ERROR_BOOL = true;
 bool CS_LOG_WARN_BOOL = true;
@@ -75,7 +76,7 @@ bool CS_logKill(void) {
     return false;
 }
 
-void CS_log(const char *file, int line, const char *fmt, ... ) {
+void CS_log(const char *file, int32_t line, const char *fmt, ... ) {
     if( loggingInitialized ) {
         pthread_mutex_lock(&logMutex);
         va_list ap;
@@ -96,7 +97,7 @@ void CS_log(const char *file, int line, const char *fmt, ... ) {
 
 
 
-void CS_logRotate(int maxHistory) {
+void CS_logRotate(int32_t maxHistory) {
 }
 
 void CS_logFile(char *fileName) {

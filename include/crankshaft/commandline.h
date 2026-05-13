@@ -1,6 +1,7 @@
 #ifndef __crankshaftcommandlinedoth__
 #define __crankshaftcommandlinedoth__
 
+#include <stdint.h>
 /********************************************************************
  *
  * Command line handling. Check main.cpp for an example.
@@ -16,7 +17,7 @@
  *
  * struct CS_ArgTable myCS_ArgTable = { sizeof(myArgs)/sizeof(CS_ArgElement), 0, NULL, myArgs };
  *
- * int main(int argc, char *argv[] ) {
+ * int32_t main(int32_t argc, char *argv[] ) {
  *    const char * error = CS_argsParse(argc, argv, &myCS_ArgTable);
  *    if( error != NULL || wantHelp ) {
  *        if( error ) printf( error );
@@ -37,7 +38,7 @@ enum CS_ARG_WHAT {
 };
 
 struct CS_ArgElement {
-    int nCmp;
+    int32_t nCmp;
     enum CS_ARG_WHAT what;
     void *out;
     const char **cmp;
@@ -45,15 +46,15 @@ struct CS_ArgElement {
 };
 
 struct CS_ArgTable {
-    int nArgs;
-    int outNRemainders;
+    int32_t nArgs;
+    int32_t outNRemainders;
     char **remainders;
     const struct CS_ArgElement *elements;
 };
 
 void CS_argsPrint(struct CS_ArgTable *argTable);
 
-const char *CS_argsParse(int argc, char **argv, struct CS_ArgTable *argTable);
+const char *CS_argsParse(int32_t argc, char **argv, struct CS_ArgTable *argTable);
 
 #define CS_ARG_DEF(varName,cmpString,helpString) static const char *CMP_##varName[] = cmpString; static const char HELP_##varName[] = helpString;
 #define CS_ARG_ELEMENT(varName,varType) { sizeof(CMP_##varName)/sizeof(CMP_##varName[0]), varType, &varName, CMP_##varName, HELP_##varName }

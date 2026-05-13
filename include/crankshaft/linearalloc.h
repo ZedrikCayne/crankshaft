@@ -1,6 +1,7 @@
 #ifndef __crankshaftlinearallocdoth__
 #define __crankshaftlinearallocdoth__
 #include <stdbool.h>
+#include <stdint.h>
 
 /**********************************************
  *
@@ -21,12 +22,12 @@ extern "C" {
 
 struct CS_LinearAllocator;
 
-void *CS_linearTake(struct CS_LinearAllocator *linearAllocator, int size, int alignment );
-void *CS_linearTakeZero(struct CS_LinearAllocator *linearAllocator, int size, int alignment );
+void *CS_linearTake(struct CS_LinearAllocator *linearAllocator, int32_t size, int32_t alignment );
+void *CS_linearTakeZero(struct CS_LinearAllocator *linearAllocator, int32_t size, int32_t alignment );
 char *CS_linearCopyString(struct CS_LinearAllocator *linearAllocator, const char *string );
 void CS_linearReset(struct CS_LinearAllocator *linearAllocator);
 
-struct CS_LinearAllocator *CS_linearInit( int size );
+struct CS_LinearAllocator *CS_linearInit( int32_t size );
 void CS_linearFree( struct CS_LinearAllocator *voidAllocator );
 
 #ifdef __cplusplus

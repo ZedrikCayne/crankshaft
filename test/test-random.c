@@ -7,11 +7,12 @@
 #include <crankshaft/logger.h>
 #include <crankshaft/test.h>
 #include <crankshaft/random.h>
+#include <stdint.h>
 
 extern bool test_random(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 #define NUM_RANDOM_INTS 789
 
@@ -19,10 +20,10 @@ static int testSucceeded = 0;
 bool test_random(void) {
     //Tests go here:
     struct CS_LCG_rand_state testState = {0};
-    int newSeed = CS_testRand();
+    int32_t newSeed = CS_testRand();
 
-    int *testBuff1 = CS_alloc( sizeof( int ) * NUM_RANDOM_INTS );
-    int i;
+    int32_t *testBuff1 = CS_alloc( sizeof( int32_t ) * NUM_RANDOM_INTS );
+    int32_t i;
 
     CS_FAIL_ON_FALSE( (testBuff1 != NULL), "Allocating memory for random tests.", "Got null on one of our test buffers, bailing." );
 
@@ -41,10 +42,10 @@ bool test_random(void) {
             snprintf( tBuff, 256, "Random #%d", i );
             CS_FAIL_ON_FALSE( CS_LCG_rand( &testState ) == testBuff1[i], tBuff, "Did not match." );
         }
-        int counters[6] = {0};
-        int totalRolled = 0;
+        int32_t counters[6] = {0};
+        int32_t totalRolled = 0;
         for( i = 0; i < NUM_RANDOM_INTS; ++i ) {
-            int a = testBuff1[i] & 0x7;
+            int32_t a = testBuff1[i] & 0x7;
             if( a < 6 ) {
                 counters[a]++;
                 totalRolled++;

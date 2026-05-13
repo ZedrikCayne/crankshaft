@@ -11,6 +11,7 @@
 #include <crankshaft/list.h>
 
 #include <crankshaft/thread.h>
+#include <stdint.h>
 
 static struct CS_SlabAllocator *threadSlabs;
 static struct CS_List *trackedThreads;
@@ -21,8 +22,8 @@ static pthread_mutex_t threadMutex = PTHREAD_MUTEX_INITIALIZER;
 struct CS_Thread {
     char name[ ACTUAL_THREAD_MAX ];
     pthread_t threadId;
-    bool (*cycle)(struct CS_Thread *myThread, int threadState, void *context );
-    int threadStateEnum;
+    bool (*cycle)(struct CS_Thread *myThread, int32_t threadState, void *context );
+    int32_t threadStateEnum;
     bool killThread;
     struct CS_Mutex *mutex;
     void *context;
@@ -74,7 +75,7 @@ static void *threadDriver( void *context ) {
 
 struct CS_Thread *CS_threadStart(const char *threadName,
         void *context,
-        bool (*cycle)(struct CS_Thread *myThread, int threadState, void *context)) {
+        bool (*cycle)(struct CS_Thread *myThread, int32_t threadState, void *context)) {
     struct CS_Thread *returnValue = privateGetThread();
 
     pthread_attr_t threadAttr;
@@ -112,7 +113,7 @@ bool CS_threadReturn( struct CS_Thread *thread ) {
     return false;
 }
 
-int CS_threadState( struct CS_Thread *thread ) {
+int32_t CS_threadState( struct CS_Thread *thread ) {
     return thread->threadStateEnum;
 }
 

@@ -18,6 +18,7 @@
 
 #include <crankshaft/jwt.h>
 #include <crankshaft/jwtkeychain.h>
+#include <stdint.h>
 
 //struct CS_Jwt {
 //    //Original pieces in base 64
@@ -29,10 +30,10 @@
 //    const struct CS_JsonNode *jsonPayload;
 //    const void *signatureInBinary;
 //    void *linearAllocator;
-//    int headerLength;
-//    int payloadLength;
-//    int signatureLength;
-//    int binarySignatureLength;
+//    int32_t headerLength;
+//    int32_t payloadLength;
+//    int32_t signatureLength;
+//    int32_t binarySignatureLength;
 //};
 
 enum {
@@ -43,8 +44,8 @@ enum {
 };
 
 const struct CS_Jwt *CS_jwtParse( const char *inJwt,
-       int jwtLength,
-       int linearAllocatorSize ) {
+       int32_t jwtLength,
+       int32_t linearAllocatorSize ) {
     void *linearAllocator = CS_linearInit( linearAllocatorSize );
     if( !linearAllocator ) return NULL;
     struct CS_Jwt *outJwt = CS_linearTakeZero( linearAllocator, sizeof( struct CS_Jwt ), sizeof(void*) );
@@ -57,7 +58,7 @@ const struct CS_Jwt *CS_jwtParse( const char *inJwt,
     const char *in = inJwt;
     const char *inEnd = inJwt + jwtLength;
     const char *startOfCurrentWebTokenBit = NULL;
-    int parseState = PARSE_HEADER;
+    int32_t parseState = PARSE_HEADER;
     outJwt->header = NULL;
     outJwt->payload = NULL;
     outJwt->signature = NULL;
@@ -65,7 +66,7 @@ const struct CS_Jwt *CS_jwtParse( const char *inJwt,
         if( startOfCurrentWebTokenBit == NULL )
             startOfCurrentWebTokenBit = in;
         if( *in == '.' || *in == 0 || in == (inEnd-1) ) {
-            int nLen = in - startOfCurrentWebTokenBit;
+            int32_t nLen = in - startOfCurrentWebTokenBit;
             if( in == inEnd-1 && *in != 0 ) nLen += 1;
             char * out = CS_linearTakeZero( linearAllocator, nLen + 1, sizeof(void*) );
             if( out == NULL ) goto ERROR;
@@ -97,7 +98,7 @@ const struct CS_Jwt *CS_jwtParse( const char *inJwt,
         CS_LOG_ERROR("JWT: Needs at least a header and payload.");
         goto ERROR;
     }
-    int tempJsonStringLength;
+    int32_t tempJsonStringLength;
     char *tempJsonString = CS_base64DecodeUrlTemp( outJwt->header, outJwt->headerLength, &tempJsonStringLength );
     if( tempJsonString == NULL ) goto ERROR;
     outJwt->jsonHeader = CS_jsonParseCopyWithAllocator( tempJsonString, tempJsonStringLength, linearAllocator );

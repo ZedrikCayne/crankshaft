@@ -5,11 +5,12 @@
 #include <crankshaft/logger.h>
 #include <crankshaft/test.h>
 #include <crankshaft/tempbuff.h>
+#include <stdint.h>
 
 extern bool test_tempbuff(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 bool test_tempbuff(void) {
     bool returnValue = false;

@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <crankshaft/stringbuilder.h>
+#include <stdint.h>
 
 /******************************************************************************
  *
@@ -145,9 +146,9 @@ struct CS_JsonNode {
 
 //LeakWarning: You still have to CS_jsonFree() a json node created with an external allocator
 //just in case there are alloc'd nodes.
-struct CS_JsonNode *CS_jsonParseCopyWithAllocator(const char *source, int inputLength, void *linearAllocator );
-struct CS_JsonNode *CS_jsonParseCopy(const char *source, int inputLength, int allocSize);
-struct CS_JsonNode *CS_jsonParse(const char *source, int inputLength, int allocSize);
+struct CS_JsonNode *CS_jsonParseCopyWithAllocator(const char *source, int32_t inputLength, void *linearAllocator );
+struct CS_JsonNode *CS_jsonParseCopy(const char *source, int32_t inputLength, int32_t allocSize);
+struct CS_JsonNode *CS_jsonParse(const char *source, int32_t inputLength, int32_t allocSize);
 void CS_jsonFree( struct CS_JsonNode *any );
 bool CS_jsonNodesEquivalent(struct CS_JsonNode *a, struct CS_JsonNode *b);
 struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTree );
@@ -158,13 +159,13 @@ struct CS_StringBuilder *CS_jsonNodePrintable(const struct CS_JsonNode *printMe)
 struct CS_StringBuilder *CS_jsonNodePrintableToStringBuilder(const struct CS_JsonNode *printMe, struct CS_StringBuilder *sb );
 char *CS_jsonNodePrintableTemp(const struct CS_JsonNode *printMe);
 
-bool CS_unquoteInPlace(char *inputString, int len);
+bool CS_unquoteInPlace(char *inputString, int32_t len);
 
-struct CS_StringBuilder *CS_jsonQuoteStringToStringBuilder(const char *inputString, int len, struct CS_StringBuilder *out);
-struct CS_StringBuilder *CS_jsonQuoteString(const char *inputString, int len);
-struct CS_StringBuilder *CS_jsonUnquoteString(const char *inputString, int len);
+struct CS_StringBuilder *CS_jsonQuoteStringToStringBuilder(const char *inputString, int32_t len, struct CS_StringBuilder *out);
+struct CS_StringBuilder *CS_jsonQuoteString(const char *inputString, int32_t len);
+struct CS_StringBuilder *CS_jsonUnquoteString(const char *inputString, int32_t len);
 
-const char *CS_jsonEnumTypeAsString(const int enumType);
+const char *CS_jsonEnumTypeAsString(const int32_t enumType);
 const char *CS_jsonNodeValueAsTempString( struct CS_JsonNode *mine );
 
 /****************************************************************************
@@ -174,7 +175,7 @@ const char *CS_jsonNodeValueAsTempString( struct CS_JsonNode *mine );
  ****************************************************************************/
 bool CS_jsonNodesEquivalent(struct CS_JsonNode *a, struct CS_JsonNode *b);
 
-struct CS_JsonNode *CS_jsonNodeNew( int allocSize );
+struct CS_JsonNode *CS_jsonNodeNew( int32_t allocSize );
 struct CS_JsonNode *CS_jsonNodeReset( struct CS_JsonNode *node );
 /******************************************************
  *
@@ -187,7 +188,7 @@ struct CS_JsonNode *CS_jsonNodeAppendInteger( struct CS_JsonNode *appendTo, cons
 struct CS_JsonNode *CS_jsonNodeAppendObject( struct CS_JsonNode *appendTo, const char *name );
 struct CS_JsonNode *CS_jsonNodeAppendArray( struct CS_JsonNode *appendTo, const char *name );
 struct CS_JsonNode *CS_jsonNodeAddUnquotedString( struct CS_JsonNode *addTo, const char *name, const char *value );
-struct CS_JsonNode *CS_jsonNodeAddUnquotedStringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int length );
+struct CS_JsonNode *CS_jsonNodeAddUnquotedStringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int32_t length );
 struct CS_JsonNode *CS_jsonNodeAddFloat( struct CS_JsonNode *addTo, const char *name, double value );
 struct CS_JsonNode *CS_jsonNodeAddInteger( struct CS_JsonNode *addTo, const char *name, long long value );
 struct CS_JsonNode *CS_jsonNodeAddObject( struct CS_JsonNode *addTo, const char *name );

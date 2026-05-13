@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include <crankshaft/list.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -19,8 +20,8 @@ extern "C" {
 #endif
 
 struct CS_StorageItem {
-    unsigned int cas;
-    unsigned int size;
+    uint32_t cas;
+    uint32_t size;
     time_t expires;
     const char *key;
     void *value;
@@ -55,9 +56,9 @@ void CS_storageTeardown(void);
 struct CS_StorageItem *CS_storageGet(const struct CS_Storage *storage, const char *key );
 bool CS_storageRemove( const struct CS_Storage *storage, const char *key );
 struct CS_StorageItem *CS_storageUpdate( const struct CS_Storage *storage, struct CS_StorageItem *updated );
-struct CS_StorageItem *CS_storagePut( const struct CS_Storage *storage, const char *key, const void *value, int size, time_t expires, struct CS_StorageItem **outPrevious );
-struct CS_StorageItem *CS_storageCreateItemCopyData( const char *key, unsigned int cas, unsigned int size, time_t expires, const void *data );
-struct CS_StorageItem *CS_storageItemChangeData( struct CS_StorageItem *item, unsigned int size, const time_t expires, void *data );
+struct CS_StorageItem *CS_storagePut( const struct CS_Storage *storage, const char *key, const void *value, int32_t size, time_t expires, struct CS_StorageItem **outPrevious );
+struct CS_StorageItem *CS_storageCreateItemCopyData( const char *key, uint32_t cas, uint32_t size, time_t expires, const void *data );
+struct CS_StorageItem *CS_storageItemChangeData( struct CS_StorageItem *item, uint32_t size, const time_t expires, void *data );
 void CS_storageReturnItem( struct CS_StorageItem *item );
 
 extern const struct CS_StorageBackend *CS_STORAGE_BACKEND_SQLITE;

@@ -12,18 +12,19 @@
 #include <crankshaft/list.h>
 
 #include <crankshaft/hashtable.h>
+#include <stdint.h>
 
 #define GRAB_MUTEX() if(table->flags&CS_HASHTABLE_FLAG_MUTEX){pthread_mutex_lock(&table->hashTableMutex);}
 #define RELEASE_MUTEX() if(table->flags&CS_HASHTABLE_FLAG_MUTEX){pthread_mutex_unlock(&table->hashTableMutex);}
 
-struct CS_HashTable *CS_hashtableCreateCustom( int capacity, unsigned int flags,
+struct CS_HashTable *CS_hashtableCreateCustom( int32_t capacity, uint32_t flags,
         void *applicationSpecificData,
-        int (*keyHashFunction)(struct CS_HashTable *table,const void *key),
-        int (*keyCompareFunction)(struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *rightKey, int rightKeyHash),
-        int (*entryInitFunction)(struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value),
-        int (*entryRemoveFunction)(struct CS_HashTable *table, struct CS_HashTableEntry *entry),
+        int32_t (*keyHashFunction)(struct CS_HashTable *table,const void *key),
+        int32_t (*keyCompareFunction)(struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *rightKey, int32_t rightKeyHash),
+        int32_t (*entryInitFunction)(struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int32_t hash, const void *value),
+        int32_t (*entryRemoveFunction)(struct CS_HashTable *table, struct CS_HashTableEntry *entry),
         const char *(*keyToTempString)(struct CS_HashTable *table, const struct CS_HashTableEntry *entry),
-        int (*cleanupFunction)(struct CS_HashTable *table) ) {
+        int32_t (*cleanupFunction)(struct CS_HashTable *table) ) {
     struct CS_HashTable *returnValue = CS_allocB( flags&CS_HASHTABLE_FLAG_MALLOC,sizeof( struct CS_HashTable ) );
     if( returnValue ) {
         memset( returnValue, 0, sizeof(struct CS_HashTable) );
@@ -72,7 +73,7 @@ void CS_hashtableFree( struct CS_HashTable *table ) {
     CS_free( table );
 }
 
-struct CS_HashTableEntry *privateFindEntryForKey( struct CS_HashTable *table, const void *key, int hash, struct CS_HashTableEntry **previousOut ) {
+struct CS_HashTableEntry *privateFindEntryForKey( struct CS_HashTable *table, const void *key, int32_t hash, struct CS_HashTableEntry **previousOut ) {
     struct CS_HashTableEntry *previous = NULL;
     struct CS_HashTableEntry **slot = table->entries + abs(hash % table->capacity);
     struct CS_HashTableEntry *current = *slot;
@@ -92,7 +93,7 @@ struct CS_HashTableEntry *privateFindEntryForKey( struct CS_HashTable *table, co
 
 #define INSERT_INTO_ARRAY(__ENTRIES,__CAPACITY,__ENTRY){struct CS_HashTableEntry **__SLOT=(__ENTRIES)+abs(((__ENTRY)->keyHash)%(__CAPACITY));(__ENTRY)->nextInBucket=*__SLOT;*__SLOT=(__ENTRY);}
 
-struct CS_HashTableEntry *privateInsertEntryForKey( struct CS_HashTable *table, const void *key, int hash, const void *value ) {
+struct CS_HashTableEntry *privateInsertEntryForKey( struct CS_HashTable *table, const void *key, int32_t hash, const void *value ) {
     struct CS_HashTableEntry *newEntry = CS_slabTake( table->hashTableEntrySlabAllocator );
     if( newEntry ) {
         memset( newEntry, 0, sizeof( struct CS_HashTableEntry ) );
@@ -102,11 +103,11 @@ struct CS_HashTableEntry *privateInsertEntryForKey( struct CS_HashTable *table, 
     return newEntry;
 }
 
-struct CS_HashTable *CS_hashtableResize( struct CS_HashTable *table, int newCapacity ) {
+struct CS_HashTable *CS_hashtableResize( struct CS_HashTable *table, int32_t newCapacity ) {
     struct CS_HashTableEntry **newEntries = CS_allocB( table->flags&CS_HASHTABLE_FLAG_MALLOC, newCapacity * sizeof(struct CS_HashTableEntry *) );
     memset( newEntries, 0, newCapacity * sizeof(struct CS_HashTableEntry *) );
     GRAB_MUTEX();
-    for( int i = 0; i < table->capacity; ++i ) {
+    for( int32_t i = 0; i < table->capacity; ++i ) {
         struct CS_HashTableEntry *current = table->entries[ i ];
         while( current ) {
             struct CS_HashTableEntry *next = current->nextInBucket;
@@ -127,7 +128,7 @@ bool CS_hashTableHasKey( struct CS_HashTable *table, const void *key) {
 }
 
 const void *CS_hashtablePut( struct CS_HashTable *table, const void *key, const void *value ) {
-    int hash = table->keyHashFunction( table, key );
+    int32_t hash = table->keyHashFunction( table, key );
     const void *returnValue = NULL;
     GRAB_MUTEX();
     struct CS_HashTableEntry *entry = privateFindEntryForKey( table, key, hash, NULL );
@@ -141,8 +142,8 @@ const void *CS_hashtablePut( struct CS_HashTable *table, const void *key, const 
     return returnValue;
 }
 
-const void *CS_hashtablePutMaybe( struct CS_HashTable *table, const void *key, const void *value, void *context, int (*maybe)( void *context, const void *oldValue ) ) {
-    int hash = table->keyHashFunction( table, key );
+const void *CS_hashtablePutMaybe( struct CS_HashTable *table, const void *key, const void *value, void *context, int32_t (*maybe)( void *context, const void *oldValue ) ) {
+    int32_t hash = table->keyHashFunction( table, key );
     const void *returnValue = NULL;
     GRAB_MUTEX();
 
@@ -151,7 +152,7 @@ const void *CS_hashtablePutMaybe( struct CS_HashTable *table, const void *key, c
     if( entry != NULL ) {
         entryValue = entry->value;
     }
-    int maybeValue = maybe( context, entryValue );
+    int32_t maybeValue = maybe( context, entryValue );
     switch( maybeValue ) {
         case CS_HASHTABLE_MAYBE_RETURN_ERROR:
             returnValue = CS_HASHTABLE_ERROR;
@@ -186,7 +187,7 @@ const void *CS_hashtablePutMaybe( struct CS_HashTable *table, const void *key, c
 }
 
 const void *CS_hashtableRemove( struct CS_HashTable *table, const void *key ) {
-    int hash = table->keyHashFunction( table, key );
+    int32_t hash = table->keyHashFunction( table, key );
     const void *returnValue = NULL;
     GRAB_MUTEX();
     struct CS_HashTableEntry *previous = NULL;
@@ -209,7 +210,7 @@ const void *CS_hashtableRemove( struct CS_HashTable *table, const void *key ) {
 }
 
 const void *CS_hashtableGet( struct CS_HashTable *table, const void *key ) {
-    int hash = table->keyHashFunction( table, key );
+    int32_t hash = table->keyHashFunction( table, key );
     const void *returnValue;
     GRAB_MUTEX();
 
@@ -225,8 +226,8 @@ const void *CS_hashtableGet( struct CS_HashTable *table, const void *key ) {
 }
 
 
-int CS_hashtableDefaultStringVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value ) {
-    int nLen = strlen( key );
+int32_t CS_hashtableDefaultStringVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int32_t hash, const void *value ) {
+    int32_t nLen = strlen( key );
     void *newKey = CS_allocB( table->flags&CS_HASHTABLE_FLAG_MALLOC, nLen + 1 );
     if( !newKey ) return -1;
     strncpy( newKey, key, nLen + 1 );
@@ -240,7 +241,7 @@ int CS_hashtableDefaultStringVoidEntryInit( struct CS_HashTable *table, struct C
     return 0;
 }
 
-int CS_hashtableDefaultStringKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int hash ) {
+int32_t CS_hashtableDefaultStringKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int32_t hash ) {
     if( entry->keyHash == hash ) {
         if( table->flags & CS_HASHTABLE_FLAG_PEDANTIC ) {
             if( strncmp( entry->keyPrefix, key, sizeof( entry->keyPrefix ) ) ) {
@@ -259,12 +260,12 @@ int CS_hashtableDefaultStringKeyCompare( struct CS_HashTable *table, const struc
     return 1;
 }
 
-int CS_hashtableDefaultStringVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry ) {
+int32_t CS_hashtableDefaultStringVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry ) {
     if( entry->fullKey ) CS_freeB( table->flags&CS_HASHTABLE_FLAG_MALLOC, (void*)entry->fullKey );
     return 0;
 }
 
-int CS_hashtableDefaultStringKeyHash( struct CS_HashTable *table, const void *key ) {
+int32_t CS_hashtableDefaultStringKeyHash( struct CS_HashTable *table, const void *key ) {
     return CS_hash( key );
 }
 
@@ -272,23 +273,23 @@ const char *CS_hashtableDefaultStringKeyToTempString( struct CS_HashTable *table
     return CS_tempStringCopy( entry->fullKey );
 }
 
-int CS_hashtableDefaultUuidVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int hash, const void *value ) {
+int32_t CS_hashtableDefaultUuidVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int32_t hash, const void *value ) {
     const struct CS_UUID *keyUuid = (const struct CS_UUID *)key;
     struct CS_UUID *uuid = CS_slabTake(table->applicationSpecificData);
     CS_uuidCopy( uuid, keyUuid );
-    *(int*)entry->keyPrefix = *(int*)keyUuid->uuid;
+    *(int32_t*)entry->keyPrefix = *(int32_t*)keyUuid->uuid;
     entry->keyHash = hash;
     entry->fullKey = uuid;
     entry->value = value;
     return 0;
 }
 
-int CS_hashtableDefaultUuidVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry ) {
+int32_t CS_hashtableDefaultUuidVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry ) {
     if( CS_slabReturn( table->applicationSpecificData, (void*)entry->fullKey) ) return -1;
     return 0;
 }
 
-int CS_hashtableDefaultUuidKeyHash( struct CS_HashTable *table, const void *key ) {
+int32_t CS_hashtableDefaultUuidKeyHash( struct CS_HashTable *table, const void *key ) {
     return CS_hashBin(key, sizeof(struct CS_UUID));
 }
 
@@ -297,7 +298,7 @@ const char *CS_hahstableDefaultUuidKeyToTempString( struct CS_HashTable *table, 
 }
 
 
-int CS_hashtableDefaultUuidKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int hash ) {
+int32_t CS_hashtableDefaultUuidKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int32_t hash ) {
     if( entry->keyHash == hash ) {
         if( table->flags & CS_HASHTABLE_FLAG_PEDANTIC ) {
             if( memcmp( entry->keyPrefix, key, sizeof( entry->keyPrefix ) ) ) {
@@ -317,7 +318,7 @@ int CS_hashtableDefaultUuidKeyCompare( struct CS_HashTable *table, const struct 
 }
 
 
-int CS_hashtableDefaultUuidCleanup( struct CS_HashTable *table ) {
+int32_t CS_hashtableDefaultUuidCleanup( struct CS_HashTable *table ) {
     CS_slabFree( table->applicationSpecificData );
     return 0;
 }

@@ -9,11 +9,12 @@
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/json.h>
 #include <crankshaft/linearalloc.h>
+#include <stdint.h>
 
 extern bool test_json();
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 static const char *testsource1 = "[\"foo\",\"bar\",\"baz\"]";
 static const char *testsource2 = "{\"a\":\"1\",\"b\":2,\"c\":3.3}";
@@ -81,7 +82,7 @@ static const char *invalidFloat[] = {
 #define TEMP_JSON_ALLOC_SIZE_BIG 8192 
 #define TEMP_PRINT_SIZE 512
 
-static const char *wantedButGot(int wantedEnum, struct CS_JsonNode *got) {
+static const char *wantedButGot(int32_t wantedEnum, struct CS_JsonNode *got) {
     char *returnValue = CS_tempBuff( TEMP_PRINT_SIZE );
     snprintf(returnValue, TEMP_PRINT_SIZE, "Wanted a %s but got %s.", CS_jsonEnumTypeAsString( wantedEnum ),
             got?CS_jsonEnumTypeAsString( got->typeEnum ):"NULL" );
@@ -97,13 +98,13 @@ static const char *nullButGot(struct CS_JsonNode *got) {
 #define PARSE_N_PRINT(x) __temp=CS_tempBuff(TEMP_PRINT_SIZE);snprintf(__temp,TEMP_PRINT_SIZE,"Parse \"%s\"",x[i]);js=CS_jsonParseCopy(x[i],strlen(x[i]),TEMP_JSON_ALLOC_SIZE)
 #define SET__TEMP(x) __temp=CS_tempBuff(TEMP_PRINT_SIZE);snprintf(__temp,TEMP_PRINT_SIZE,"Parse \"%s\"",x)
 
-struct CS_JsonNode *addRandom( struct CS_JsonNode *to, int index ) {
+struct CS_JsonNode *addRandom( struct CS_JsonNode *to, int32_t index ) {
     struct CS_JsonNode *current = to;
     struct CS_JsonNode *countUpNode = current;
     bool addIfTrue = (to->typeEnum==CS_JSON_OBJECT) || (to->typeEnum==CS_JSON_ARRAY);
     bool needName = false;
-    int typeToAdd = 0;
-    int countUp = 0;
+    int32_t typeToAdd = 0;
+    int32_t countUp = 0;
     bool goUpFirst = false;
     char *name = NULL;
     char *value = NULL;
@@ -204,32 +205,32 @@ bool test_json() {
     js = CS_jsonParseCopy( testsource2, strlen( t2 ), TEMP_JSON_ALLOC_SIZE );
     CS_FAIL_ON_FALSE( js && js->typeEnum == CS_JSON_OBJECT, "Parse an object.", "%s", wantedButGot( CS_JSON_OBJECT, js ) );
     if( js ) CS_jsonFree(js);
-    for( int i = 0; i < ARRAY_LENGTH( validIntegers ); ++i ) {
+    for( int32_t i = 0; i < ARRAY_LENGTH( validIntegers ); ++i ) {
         PARSE_N_PRINT(validIntegers);
         CS_FAIL_ON_FALSE( js && js->typeEnum == CS_JSON_INTEGER_AS_STRING, __temp, "%s", wantedButGot(CS_JSON_INTEGER_AS_STRING, js) );
         if( js ) CS_jsonFree(js);
     }
     
-    for( int i = 0; i < ARRAY_LENGTH( invalidIntegers ); ++i ) {
+    for( int32_t i = 0; i < ARRAY_LENGTH( invalidIntegers ); ++i ) {
         PARSE_N_PRINT(invalidIntegers);
         CS_FAIL_ON_NOT_NULL( js, __temp, "%s", nullButGot( js ) );
         if( js ) CS_jsonFree(js);
     }
 
-    for( int i = 0; i < ARRAY_LENGTH( invalidIntegersButValidToken ); ++i ) {
+    for( int32_t i = 0; i < ARRAY_LENGTH( invalidIntegersButValidToken ); ++i ) {
         PARSE_N_PRINT(invalidIntegersButValidToken);
         CS_FAIL_ON_NULL( js, __temp, "Wanted a valid js node but instead got a null." );
         CS_FAIL_ON_TRUE( js && js->typeEnum == CS_JSON_INTEGER_AS_STRING, __temp, "%s", wantedButGot( CS_JSON_ERROR, js ) );
         if( js ) CS_jsonFree(js);
     }
 
-    for( int i = 0; i < ARRAY_LENGTH( validFloat ); ++i ) {
+    for( int32_t i = 0; i < ARRAY_LENGTH( validFloat ); ++i ) {
         PARSE_N_PRINT(validFloat);
         CS_FAIL_ON_FALSE( js && js->typeEnum == CS_JSON_FLOAT_AS_STRING, __temp, "%s", wantedButGot(CS_JSON_FLOAT_AS_STRING, js ) );
         if( js ) CS_jsonFree(js);
     }
 
-    for( int i = 0; i < ARRAY_LENGTH( invalidFloat ); ++i ) {
+    for( int32_t i = 0; i < ARRAY_LENGTH( invalidFloat ); ++i ) {
         PARSE_N_PRINT(invalidFloat);
         CS_FAIL_ON_NOT_NULL( js, __temp, "%s", nullButGot( js ) );
         if( js ) CS_jsonFree(js);
@@ -256,7 +257,7 @@ bool test_json() {
     root = js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE );
 
     t1 = CS_tempGetManual( myTempBuffer, TEMP_BUFF_SIZE, CS_TEMPBUFF_ALIGNMENT );
-    for( int i = 0; i < TEMP_BUFF_SIZE; ++i ) {
+    for( int32_t i = 0; i < TEMP_BUFF_SIZE; ++i ) {
         t1[ i ] = (i % 126) + 1;
     }
     t1[TEMP_BUFF_SIZE-1] = 0;
@@ -294,10 +295,10 @@ bool test_json() {
     if( js2 != NULL ) CS_jsonFree( js2 );
     if( root != NULL ) CS_jsonFree( root );
 
-    for( int i = 0; i < 25; ++i ) {
+    for( int32_t i = 0; i < 25; ++i ) {
         root = js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE_BIG );
         js = CS_jsonNodeAppendObject( js, NULL );
-        for( int j = 0; j < 50; ++j ) {
+        for( int32_t j = 0; j < 50; ++j ) {
             js = addRandom( js, j );
         }
         struct CS_StringBuilder *out = CS_jsonNodePrintable( root );

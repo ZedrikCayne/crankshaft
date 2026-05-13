@@ -2,6 +2,7 @@
 #define __crankshaftmutexdoth__
 #include <stdbool.h>
 #include <pthread.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,10 +20,10 @@ void CS_mutexDebug( bool logDebug );
 #define CS_mutexUnlock(__MUTEX) CS_mutexUnlockDetailled( __MUTEX, __FILE__, __LINE__ )
 #define CS_mutexLockTimed(__MUTEX,__MSEC) CS_mutexLockDetailled( __MUTEX, __MSEC, __FILE__, __LINE__ );
 
-struct CS_Mutex *CS_mutexTakeDetailled( const char *name, const char *file, int line );
-bool CS_mutexReturnDetailled(struct CS_Mutex *returnMe,const char *file, int line);
-bool CS_mutexLockDetailled(struct CS_Mutex *toLock,int msec, const char *file, int line);
-bool CS_mutexUnlockDetailled(struct CS_Mutex *toUnlock,const char *file, int line);
+struct CS_Mutex *CS_mutexTakeDetailled( const char *name, const char *file, int32_t line );
+bool CS_mutexReturnDetailled(struct CS_Mutex *returnMe,const char *file, int32_t line);
+bool CS_mutexLockDetailled(struct CS_Mutex *toLock,int32_t msec, const char *file, int32_t line);
+bool CS_mutexUnlockDetailled(struct CS_Mutex *toUnlock,const char *file, int32_t line);
 
 #ifdef __cplusplus
 }

@@ -5,19 +5,20 @@
 #include <crankshaft/alloc.h>
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/logger.h>
+#include <stdint.h>
 
 struct CS_TempBuffer {
     char name[CS_MAX_TEMP_BUFF_TEMP_NAME];
     char *buffer;
     char *current;
     char *end;
-    int size;
+    int32_t size;
     pthread_mutex_t storageMutex;
 };
 
 static bool initTempBuff(struct CS_TempBuffer *storage,
                          const char *name,
-                         int totalSize ) {
+                         int32_t totalSize ) {
     CS_LOG_TRACE("Creating temporary buffer stack '%s'", name);
     if( pthread_mutex_init(&storage->storageMutex, NULL) != 0 ) {
         CS_LOG_ERROR("Cannot create mutex for temp buff named %s", name);
@@ -53,8 +54,8 @@ static void freeTempBuff(struct CS_TempBuffer *storage ) {
 
 static struct CS_TempBuffer TempBufferStorage = {0};
 
-static void *privateAllocate( struct CS_TempBuffer *buffer, int size, int align ) {
-    int realSize = size % align == 0 ?
+static void *privateAllocate( struct CS_TempBuffer *buffer, int32_t size, int32_t align ) {
+    int32_t realSize = size % align == 0 ?
                    size :
                    size + (align - (size % align));
     if( realSize > buffer->size ) return NULL;
@@ -68,7 +69,7 @@ static void *privateAllocate( struct CS_TempBuffer *buffer, int size, int align 
     return returnValue;
 }
 
-void *CS_tempBuff(int size) {
+void *CS_tempBuff(int32_t size) {
     if( size < 0 || size > CS_TEMPBUFF_MAX_SIZE ) {
         CS_LOG_ERROR( "Not a valid size for a temp buffer allocation %d", size );
         return NULL;
@@ -78,14 +79,14 @@ void *CS_tempBuff(int size) {
     return returnValue;
 }
 
-void *CS_tempBuffZero( int size ) {
+void *CS_tempBuffZero( int32_t size ) {
     void *returnValue = CS_tempBuff(size);
     if( returnValue ) memset( returnValue, 0, size );
     return returnValue;
 }
 
 char *CS_tempStringCopy(const char *copyFrom) {
-    int nLen = strlen(copyFrom) + 1;
+    int32_t nLen = strlen(copyFrom) + 1;
     char *returnValue = CS_tempBuff( nLen );
     if( returnValue ) {
         memcpy( returnValue, copyFrom, nLen );
@@ -93,18 +94,18 @@ char *CS_tempStringCopy(const char *copyFrom) {
     return returnValue;
 }
 
-char *CS_tempStringCopyWithPad(const char *copyFrom, int size, char pad, int *outLength, int aligned) {
-    int nLen = size;
-    int newLength = size%aligned==0?size:(size + aligned - ( size % aligned ) );
+char *CS_tempStringCopyWithPad(const char *copyFrom, int32_t size, char pad, int32_t *outLength, int32_t aligned) {
+    int32_t nLen = size;
+    int32_t newLength = size%aligned==0?size:(size + aligned - ( size % aligned ) );
     char *returnValue = CS_tempBuffZero( newLength + 1 );
     if( returnValue ) {
         strncpy( returnValue, copyFrom, size );
-        int oldLen = strlen( returnValue );
+        int32_t oldLen = strlen( returnValue );
         if( oldLen < size ) {
             nLen = oldLen;
             newLength = oldLen%aligned==0?oldLen:(oldLen + aligned - (oldLen % aligned));
         }
-        for( int i = nLen; i < newLength; ++i ) returnValue[ i ] = pad;
+        for( int32_t i = nLen; i < newLength; ++i ) returnValue[ i ] = pad;
         returnValue[newLength] = 0;
     }
     if( outLength ) *outLength = newLength;
@@ -112,7 +113,7 @@ char *CS_tempStringCopyWithPad(const char *copyFrom, int size, char pad, int *ou
     return returnValue;
 }
 
-void *CS_tempMemCopy( const void *from, int size ) {
+void *CS_tempMemCopy( const void *from, int32_t size ) {
     void *returnValue = CS_tempBuff(size);
     if( returnValue ) {
         memcpy(returnValue, from, size);
@@ -120,7 +121,7 @@ void *CS_tempMemCopy( const void *from, int size ) {
     return returnValue;
 }
 
-bool CS_tempAllocateGlobal(int globalSize) {
+bool CS_tempAllocateGlobal(int32_t globalSize) {
     if( TempBufferStorage.size == 0 ) {
         CS_LOG_TRACE("Temp buffers allocated size %d", globalSize);
             
@@ -144,19 +145,19 @@ bool CS_tempFreeGlobal() {
     return false;
 }
 
-char *CS_tempBuffSnprintf(int max, const char *fmt, ...) {
+char *CS_tempBuffSnprintf(int32_t max, const char *fmt, ...) {
     char *tBuff = CS_tempBuff(max);
     if( tBuff ) {
         va_list ap;
         va_start( ap, fmt );
-        int endy = vsnprintf( (char*)tBuff, max, fmt, ap );
+        int32_t endy = vsnprintf( (char*)tBuff, max, fmt, ap );
         va_end( ap );
         if( endy > max ) tBuff[max - 1] = 0;
     }
     return tBuff;
 }
 
-struct CS_TempBuffer *CS_tempAllocManual(const char *name, int size ) {
+struct CS_TempBuffer *CS_tempAllocManual(const char *name, int32_t size ) {
     if( (name == NULL) || (strlen(name) > CS_MAX_TEMP_BUFF_TEMP_NAME-1) ) {
         CS_LOG_ERROR("Trying to create a temporary buffer stack with a bad name. (Must not be null or longer than %d bytes)", CS_MAX_TEMP_BUFF_TEMP_NAME-1);
         return NULL;
@@ -184,7 +185,7 @@ void CS_tempFreeManual(struct CS_TempBuffer *manualTempBuff) {
     CS_free(manualTempBuff);
 }
 
-void *CS_tempGetManual(struct CS_TempBuffer *manualTempBuff, int size, int align) {
+void *CS_tempGetManual(struct CS_TempBuffer *manualTempBuff, int32_t size, int32_t align) {
     if( manualTempBuff == NULL ) return NULL;
     return privateAllocate( manualTempBuff, size, align );
 }

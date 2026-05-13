@@ -1,6 +1,7 @@
 #ifndef __crankshaftuuiddoth__
 #define __crankshaftuuiddoth__
 #include <stdbool.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -28,18 +29,18 @@ struct CS_UUID {
 };
 void CS_uuidInit(void);
 void CS_uuidKill(void);
-void CS_uuidSetSeed( int seed );
+void CS_uuidSetSeed( int32_t seed );
 const struct CS_UUID *CS_uuid4();
 const struct CS_UUID *CS_uuid4Temp(void);
 void CS_uuidFree(const struct CS_UUID *uuid);
 const char *CS_uuid4StringTemp(void);
 const char *CS_uuid4String(void);
-const char *CS_uuid4StringOut(char *out, int length);
-const struct CS_UUID *CS_uuidFromString(char *in, int length);
-const struct CS_UUID *CS_uuidFromStringTemp(char *in, int length);
+const char *CS_uuid4StringOut(char *out, int32_t length);
+const struct CS_UUID *CS_uuidFromString(char *in, int32_t length);
+const struct CS_UUID *CS_uuidFromStringTemp(char *in, int32_t length);
 const char *CS_uuidToString(const struct CS_UUID *uuid);
 const char *CS_uuidToStringTemp(const struct CS_UUID *uuid);
-const char *CS_uuidToStringOut(const struct CS_UUID *uuid, char *out, int outLength);
+const char *CS_uuidToStringOut(const struct CS_UUID *uuid, char *out, int32_t outLength);
 void CS_uuidFreeString( const char *uuidString );
 void CS_uuidCopy( struct CS_UUID *dest, const struct CS_UUID *source );
 

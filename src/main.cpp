@@ -22,11 +22,12 @@
 #include <crankshaft/util.h>
 
 #include <crankshaft/websocket.h>
+#include <stdint.h>
 
-int acceptSocket = 0;
+int32_t acceptSocket = 0;
 
 static bool doTest = false;
-static int testSeed = 0;
+static int32_t testSeed = 0;
 static bool onlyFails = false;
 static char defaultServerName[] = "CRANKSHAFT";
 static bool suppressErrors = false;
@@ -37,7 +38,7 @@ static bool info = false;
 static bool verbose = false;
 static bool trace = false;
 static bool runAsDaemon = false;
-static int portNum = 8080;
+static int32_t portNum = 8080;
 static char *serverName = defaultServerName;
 static char *logFile = NULL;
 static char defaultFileServingDir[] = "./root";
@@ -47,7 +48,7 @@ static char *fileServingFile = defaultFileServingFile;
 static char *certFile = NULL;
 static char *keyFile = NULL;
 static char *selfSignHostname = NULL;
-static int cacheTimeInSeconds = 0;
+static int32_t cacheTimeInSeconds = 0;
 static char localhost[] = "localhost";
 
 CS_ARG_DEF(wantHelp,CS_ARG_CMP("-?","-help","--help"),"Prints this help");
@@ -115,24 +116,24 @@ void PrintHeader() {
 static bool GotInterrupt = false;
 static bool GotHup = false;
 
-static void pipeHandler(int sig) {
+static void pipeHandler(int32_t sig) {
     signal(sig, SIG_IGN);
     signal(SIGPIPE, pipeHandler);
 }
 
-static void terminateHandler(int sig) {
+static void terminateHandler(int32_t sig) {
     signal(sig, SIG_IGN);
     GotInterrupt = true;
     signal(SIGTERM, terminateHandler);
 }
 
-static void interruptHandler(int sig) {
+static void interruptHandler(int32_t sig) {
     signal(sig, SIG_IGN);
     GotInterrupt = true;
     signal(SIGINT, interruptHandler);
 }
 
-static void hupHandler(int sig) {
+static void hupHandler(int32_t sig) {
     signal(sig, SIG_IGN);
     GotHup = true;
     signal(SIGHUP, hupHandler);
@@ -178,7 +179,7 @@ bool googleLogin( struct CS_ClientInfo *info ) {
         CS_LOG_ERROR( "Login missing credential." );
         return loginPageReturn(info);
     }
-    int nLen = strlen(credential);
+    int32_t nLen = strlen(credential);
     const struct CS_Jwt *jwt = CS_jwtParse( credential, nLen, 1024 );
     if( !jwt ) {
         CS_LOG_ERROR( "Failed to parse a jwt out of the credential." );
@@ -231,7 +232,7 @@ bool websocket( struct CS_ClientInfo *info ) {
                             copyBuff = NULL;
                         }
                         if( copyBuff ) {
-                            for( int i = 0; i < nextFrame->payloadLength; ++i ) {
+                            for( int32_t i = 0; i < nextFrame->payloadLength; ++i ) {
                                 if( copyBuff[i] >= 'a' && copyBuff[i] <= 'z' ) {
                                     copyBuff[i] -= 32;
                                 }
@@ -363,7 +364,7 @@ int main(int argc, char *argv[] ) {
         PrintHelp();
         return -1;
     }
-    int countLogMods = 0;
+    int32_t countLogMods = 0;
     if( noWarn ) ++countLogMods;
     if( quiet ) ++countLogMods;
     if( verbose ) ++countLogMods;

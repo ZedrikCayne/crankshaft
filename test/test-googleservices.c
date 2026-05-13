@@ -9,11 +9,12 @@
 
 #include <crankshaft/googleservices.h>
 #include <crankshaft/jwtkeychain.h>
+#include <stdint.h>
 
 extern bool test_googleservices(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 bool test_googleservices(void) {
     const struct CS_Storage *keysCacheBackingStorage = CS_storageOpen( "KEY_WEB_CACHE", "file=/tmp/crankshaft_key.sqlite", CS_STORAGE_BACKEND_SQLITE );

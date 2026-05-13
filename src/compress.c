@@ -9,6 +9,7 @@
 #include <crankshaft/logger.h>
 #include <crankshaft/compress.h>
 #include <crankshaft/pushpull.h>
+#include <stdint.h>
 
 // Custom allocators for zlib
 static voidpf cs_zalloc(voidpf opaque, uInt items, uInt size) {
@@ -43,7 +44,7 @@ void CS_compressDestroy(CS_Compress *ctx) {
 }
 
 // Helper to setup Zlib stream
-static int ensure_zlib_init(CS_Compress *ctx, CS_CompressType type, bool compress) {
+static int32_t ensure_zlib_init(CS_Compress *ctx, CS_CompressType type, bool compress) {
     if (ctx->initialized) {
         if (ctx->type != type) {
              CS_LOG_ERROR("Context initialized with type %d but requested %d", ctx->type, type);
@@ -61,7 +62,7 @@ static int ensure_zlib_init(CS_Compress *ctx, CS_CompressType type, bool compres
     strm->zfree = cs_zfree;
     strm->opaque = NULL;
 
-    int ret;
+    int32_t ret;
     if (compress) {
         if (type == CS_COMPRESS_TYPE_GZIP) {
             // windowBits + 16 for gzip wrapper
@@ -90,7 +91,7 @@ static int ensure_zlib_init(CS_Compress *ctx, CS_CompressType type, bool compres
     return 0;
 }
 
-static long zlib_process(CS_Compress *ctx, struct CS_PushPullBuffer *in, struct CS_PushPullBuffer *out, bool compress, int flush) {
+static long zlib_process(CS_Compress *ctx, struct CS_PushPullBuffer *in, struct CS_PushPullBuffer *out, bool compress, int32_t flush) {
     z_stream *strm = (z_stream *)ctx->ctx.zlib;
     
     strm->next_in = (Bytef *)CS_PP_startOfData(in);
@@ -102,7 +103,7 @@ static long zlib_process(CS_Compress *ctx, struct CS_PushPullBuffer *in, struct 
     long out_before = strm->total_out;
     long in_before = strm->total_in;
 
-    int ret;
+    int32_t ret;
     if (compress) {
         ret = deflate(strm, flush);
     } else {
@@ -133,7 +134,7 @@ static long zlib_process(CS_Compress *ctx, struct CS_PushPullBuffer *in, struct 
 
 long CS_compressGzip(CS_Compress *ctx, struct CS_PushPullBuffer *in, struct CS_PushPullBuffer *out) {
     if (ensure_zlib_init(ctx, CS_COMPRESS_TYPE_GZIP, true) != 0) return -1;
-    int flush = (CS_PP_dataSize(in) == 0) ? Z_FINISH : Z_NO_FLUSH;
+    int32_t flush = (CS_PP_dataSize(in) == 0) ? Z_FINISH : Z_NO_FLUSH;
     return zlib_process(ctx, in, out, true, flush);
 }
 
@@ -144,7 +145,7 @@ long CS_compressGunzip(CS_Compress *ctx, struct CS_PushPullBuffer *in, struct CS
 
 long CS_compressCompress(CS_Compress *ctx, struct CS_PushPullBuffer *in, struct CS_PushPullBuffer *out) {
     if (ensure_zlib_init(ctx, CS_COMPRESS_TYPE_ZLIB, true) != 0) return -1;
-    int flush = (CS_PP_dataSize(in) == 0) ? Z_FINISH : Z_NO_FLUSH;
+    int32_t flush = (CS_PP_dataSize(in) == 0) ? Z_FINISH : Z_NO_FLUSH;
     return zlib_process(ctx, in, out, true, flush);
 }
 

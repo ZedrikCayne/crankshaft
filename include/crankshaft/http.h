@@ -5,6 +5,7 @@
 
 #include <crankshaft/pushpull.h>
 #include <crankshaft/stringbuilder.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -114,27 +115,27 @@ struct CS_QueryParameter {
 
 #define MAX_REPLY_HEADERS 64
 struct CS_RequestReply {
-    int remoteSocket;
+    int32_t remoteSocket;
     SSL *ssl;
-    int responseEnum;
-    int numReplyHeaders;
+    int32_t responseEnum;
+    int32_t numReplyHeaders;
     //Chunked handling. chunkedBytesOffset is the # of bytes
     //from the 'read' head where we expect the # of bytes in
     //hex. (If it is negative it should already be in the
     //buffer, if positive it is beyond what we've read already)
     bool chunked;
     bool chunkCRLFStillPresent;
-    int chunkedBytesOffset;
+    int32_t chunkedBytesOffset;
     struct CS_RequestHeader replyHeaders[MAX_REPLY_HEADERS];
     struct CS_PushPullBuffer *buffer;
 };
 
 #define CS_MAX_REQUEST_LENGTH 4096
 
-int CS_httpStringToMethodEnum( const char *methodString );
-const char *CS_httpMethodEnumToString( int methodEnum );
-const char *CS_httpResponseEnumToString( int responseEnum );
-int CS_httpResponseEnumToCode( int responseEnum );
+int32_t CS_httpStringToMethodEnum( const char *methodString );
+const char *CS_httpMethodEnumToString( int32_t methodEnum );
+const char *CS_httpResponseEnumToString( int32_t responseEnum );
+int32_t CS_httpResponseEnumToCode( int32_t responseEnum );
 bool CS_httpUrlDecodeInPlace( char *toDecode );
 char *CS_httpUrlDecodeTemp( const char *doDecode ); 
 char *CS_httpUrlEncodeTemp( const char *toEncode );
@@ -142,41 +143,41 @@ struct CS_StringBuilder *CS_httpUrlDecode( const char *toDecode );
 struct CS_StringBuilder *CS_httpUrlEncode( const char *toEncode );
 struct CS_StringBuilder *CS_httpUrlDecodeAppend( const char *toDecode, struct CS_StringBuilder *appendTo );
 struct CS_StringBuilder *CS_httpUrlEncodeAppend( const char *toEncode, struct CS_StringBuilder *appendTo );
-int CS_httpUrlDecodeBinary( const void *toDecode, int decodeBufferLength, void *output, int outputBufferLength );
-int CS_httpUrlEncodeBinary( const void *toEncode, int encodeBufferLength, void *output, int outputBufferLength );
+int32_t CS_httpUrlDecodeBinary( const void *toDecode, int32_t decodeBufferLength, void *output, int32_t outputBufferLength );
+int32_t CS_httpUrlEncodeBinary( const void *toEncode, int32_t encodeBufferLength, void *output, int32_t outputBufferLength );
 
 const char *CS_httpReplyHeader( struct CS_RequestReply *reply, const char *header );
 
-struct CS_RequestReply *CS_httpStartRequest( int methodEnum,
+struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
                                             const char *uri,
                                             struct CS_RequestHeader *headers,
-                                            int numHeaders,
+                                            int32_t numHeaders,
                                             struct CS_QueryParameter *queryParameters,
-                                            int numQueryParameters,
+                                            int32_t numQueryParameters,
                                             struct CS_FormParameters *formParameters,
-                                            int numFormParameters,
+                                            int32_t numFormParameters,
                                             void *data,
-                                            int dataLength,
+                                            int32_t dataLength,
                                             struct CS_RequestReply *reuse );
 
-struct CS_RequestReply *CS_httpMakeRequest( int methodEnum,
+struct CS_RequestReply *CS_httpMakeRequest( int32_t methodEnum,
                                             const char *uri,
                                             struct CS_RequestHeader *headers,
-                                            int numHeaders,
+                                            int32_t numHeaders,
                                             struct CS_QueryParameter *queryParameters,
-                                            int numQueryParameters,
+                                            int32_t numQueryParameters,
                                             struct CS_FormParameters *formParameters,
-                                            int numFormParameters,
+                                            int32_t numFormParameters,
                                             void *data,
-                                            int dataLength,
+                                            int32_t dataLength,
                                             bool autoDecompress,
                                             struct CS_RequestReply *reuse );
 
 void CS_httpCloseRequest( struct CS_RequestReply *closeMe );
 
-int CS_httpFillReplyFromRemote( struct CS_RequestReply *requestReply );
-int CS_httpPushBufferToRemote( struct CS_RequestReply *requestReply, struct CS_PushPullBuffer *pp );
-int CS_httpPushBytesToRemote( struct CS_RequestReply *requestReply, void *data, int dataLength );
+int32_t CS_httpFillReplyFromRemote( struct CS_RequestReply *requestReply );
+int32_t CS_httpPushBufferToRemote( struct CS_RequestReply *requestReply, struct CS_PushPullBuffer *pp );
+int32_t CS_httpPushBytesToRemote( struct CS_RequestReply *requestReply, void *data, int32_t dataLength );
 
 void CS_httpCleanupReplies();
 #ifdef __cplusplus

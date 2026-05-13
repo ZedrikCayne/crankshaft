@@ -7,6 +7,7 @@
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/logger.h>
 #include <crankshaft/mutex.h>
+#include <stdint.h>
 
 struct SlabAllocItem {
     struct SlabAllocItem *next;
@@ -17,9 +18,9 @@ struct SlabAllocItem {
 //#pragma GCC diagnostic ignored "-Wformat-truncation"
 #define SLAB_NAME_MAX 32
 struct CS_SlabAllocator {
-    int size;
-    int originalSize;
-    int capacity;
+    int32_t size;
+    int32_t originalSize;
+    int32_t capacity;
     struct SlabAllocItem *head;
     struct CS_SlabAllocator *nextSlab;
     char *buffer;
@@ -46,12 +47,12 @@ static bool freeSlab( struct CS_SlabAllocator *slab ) {
 #define ALLOC_ITEM(_SLAB,_ITEM) ((struct SlabAllocItem*)(((_SLAB)->buffer)+((_ITEM)*((_SLAB)->size))))
 
 static void resetItems( struct CS_SlabAllocator *slab ) {
-    int count = slab->capacity;
+    int32_t count = slab->capacity;
     struct CS_SlabAllocator *slabToReset = slab;
     struct CS_SlabAllocator *nextSlab;
     while( slabToReset != NULL ) {
         nextSlab = slabToReset->nextSlab;
-        for( int i = 0; i < count; ++i ) { 
+        for( int32_t i = 0; i < count; ++i ) { 
             struct SlabAllocItem *current = ALLOC_ITEM(slabToReset,i);
             struct SlabAllocItem *next = (i+1>=count)?NULL:ALLOC_ITEM(slabToReset,i+1);
             current->next = next;
@@ -61,9 +62,9 @@ static void resetItems( struct CS_SlabAllocator *slab ) {
     }
 }
 
-static struct CS_SlabAllocator *initSlabAlloc( int size, int count, int alignment, bool useMalloc ) {
+static struct CS_SlabAllocator *initSlabAlloc( int32_t size, int32_t count, int32_t alignment, bool useMalloc ) {
     if( size < sizeof(struct SlabAllocItem) ) size = sizeof(struct SlabAllocItem);
-    int realSize = (size % alignment == 0) ?
+    int32_t realSize = (size % alignment == 0) ?
         size :
         size + ( alignment - (size % alignment) );
     struct CS_SlabAllocator *returnValue = useMalloc?malloc( sizeof(struct CS_SlabAllocator) ):CS_alloc( sizeof(struct CS_SlabAllocator) );
@@ -89,14 +90,14 @@ static struct CS_SlabAllocator *initSlabAlloc( int size, int count, int alignmen
     return returnValue;
 }
 
-static struct CS_SlabAllocator *privateSlabInit( const char *name, int size, int count, int alignment, bool useMalloc );
-struct CS_SlabAllocator *CS_slabInitMalloc( const char *name, int size, int count, int alignment ) {
+static struct CS_SlabAllocator *privateSlabInit( const char *name, int32_t size, int32_t count, int32_t alignment, bool useMalloc );
+struct CS_SlabAllocator *CS_slabInitMalloc( const char *name, int32_t size, int32_t count, int32_t alignment ) {
     return privateSlabInit(name,size,count,alignment,true);
 }
-struct CS_SlabAllocator *CS_slabInit( const char *name, int size, int count, int alignment ) {
+struct CS_SlabAllocator *CS_slabInit( const char *name, int32_t size, int32_t count, int32_t alignment ) {
     return privateSlabInit(name,size,count,alignment,false);
 }
-static struct CS_SlabAllocator *privateSlabInit( const char *name, int size, int count, int alignment, bool useMalloc ) {
+static struct CS_SlabAllocator *privateSlabInit( const char *name, int32_t size, int32_t count, int32_t alignment, bool useMalloc ) {
     if( alignment % CRANKSHAFT_MIN_ALIGNMENT ) {
         CS_LOG_ERROR("Alignment on a slab alloc must be a multiple of CRANKSHAFT_MIN_ALIGNMENT:%d", CRANKSHAFT_MIN_ALIGNMENT);
         return NULL;
@@ -105,7 +106,7 @@ static struct CS_SlabAllocator *privateSlabInit( const char *name, int size, int
         CS_LOG_ERROR("Name your slab please.");
         return NULL;
     }
-    int len = strlen(name);
+    int32_t len = strlen(name);
     if( len > CRANKSHAFT_SLAB_NAME_MAX ) {
         CS_LOG_ERROR("Name of slab must be less than CRANKSHAFT_SLAB_NAME_MAX:%d", CRANKSHAFT_SLAB_NAME_MAX);
         return NULL;
@@ -143,7 +144,7 @@ void *CS_slabTake(struct CS_SlabAllocator *voidSlab ) {
     struct CS_SlabAllocator *currentSlab = slab;
     pthread_mutex_lock(&slab->slabMutex);
     struct SlabAllocItem *returnValue = currentSlab->head;
-    int slabDeep = 0;
+    int32_t slabDeep = 0;
     while( returnValue == NULL ) {
         ++slabDeep;
         if( currentSlab->nextSlab == NULL ) {
@@ -210,10 +211,10 @@ const char *CS_slabDesc( struct CS_SlabAllocator *allocation ) {
     struct CS_StringBuilder *sb = CS_SB_create( 2048 );
     if( sb == NULL ) return NULL;
     pthread_mutex_lock(&slab->slabMutex);
-    int totalSize = 0;
-    int slabCount = 0;
-    int totalFree = 0;
-    int totalCapacity = 0;
+    int32_t totalSize = 0;
+    int32_t slabCount = 0;
+    int32_t totalFree = 0;
+    int32_t totalCapacity = 0;
     struct CS_SlabAllocator *current = slab;
     struct SlabAllocItem *currentItem = NULL;
     while( current ) {

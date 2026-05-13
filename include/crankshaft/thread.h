@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include <crankshaft/list.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -56,11 +57,11 @@ enum {
 
 struct CS_Thread *CS_threadStart(const char *threadName,
         void *context,
-        bool (*cycle)(struct CS_Thread *myThread, int threadState, void *context));
+        bool (*cycle)(struct CS_Thread *myThread, int32_t threadState, void *context));
 bool CS_threadStop( struct CS_Thread *thread );
 bool CS_threadIsRunning( struct CS_Thread *thread );
 bool CS_threadReturn( struct CS_Thread *thread );
-int CS_threadState( struct CS_Thread *thread );
+int32_t CS_threadState( struct CS_Thread *thread );
 struct CS_Thread *CS_threadMine();
 const char *CS_threadName( struct CS_Thread *thread );
 

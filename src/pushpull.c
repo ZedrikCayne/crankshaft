@@ -12,16 +12,17 @@
 #include <crankshaft/alloc.h>
 #include <crankshaft/pushpull.h>
 #include <crankshaft/tempbuff.h>
+#include <stdint.h>
 
 #define CS_PP_bytesRequired(x) (sizeof(struct CS_PushPullBuffer)+x)
 
-static struct CS_PushPullBuffer *internalInitAndAlloc(int initialSize, bool bufferPreInitialized, char *buff);
+static struct CS_PushPullBuffer *internalInitAndAlloc(int32_t initialSize, bool bufferPreInitialized, char *buff);
 
-struct CS_PushPullBuffer *CS_PP_defaultAlloc(int initialSize) {
+struct CS_PushPullBuffer *CS_PP_defaultAlloc(int32_t initialSize) {
     return internalInitAndAlloc(initialSize, false, NULL);
 }
 
-struct CS_PushPullBuffer *CS_PP_onStaticBuffer(int initialSize, char *buff) {
+struct CS_PushPullBuffer *CS_PP_onStaticBuffer(int32_t initialSize, char *buff) {
     return internalInitAndAlloc(initialSize, true, buff);
 }
 
@@ -30,7 +31,7 @@ struct CS_PushPullBuffer *CS_PP_fromFile(char *fileName) {
     if( stat(fileName, &fileStat) != 0 ) return NULL;
     struct CS_PushPullBuffer *returnValue = NULL;
 
-    int readFile = open(fileName,0);
+    int32_t readFile = open(fileName,0);
     if( readFile >= 0 ) {
         returnValue = CS_PP_defaultAlloc( fileStat.st_size );
         if( returnValue ) {
@@ -45,7 +46,7 @@ struct CS_PushPullBuffer *CS_PP_fromFile(char *fileName) {
     return returnValue;
 }
 
-void CS_PP_init(struct CS_PushPullBuffer *buffer, int initialSize, char *buff) {
+void CS_PP_init(struct CS_PushPullBuffer *buffer, int32_t initialSize, char *buff) {
     buffer->size = initialSize;
     buffer->err = 0;
     buffer->currentReadOffset = 0;
@@ -53,8 +54,8 @@ void CS_PP_init(struct CS_PushPullBuffer *buffer, int initialSize, char *buff) {
     buffer->buff = buff;
 }
 
-static struct CS_PushPullBuffer *internalInitAndAlloc(int initialSize, bool bufferPreInitialized, char *buff) {
-    int bytesRequired = buff==NULL?CS_PP_bytesRequired(initialSize):sizeof(struct CS_PushPullBuffer);
+static struct CS_PushPullBuffer *internalInitAndAlloc(int32_t initialSize, bool bufferPreInitialized, char *buff) {
+    int32_t bytesRequired = buff==NULL?CS_PP_bytesRequired(initialSize):sizeof(struct CS_PushPullBuffer);
     struct CS_PushPullBuffer *returnValue = CS_alloc(bytesRequired);
     if( returnValue == NULL ) {
         return NULL;
@@ -71,10 +72,10 @@ void CS_PP_defaultFree(struct CS_PushPullBuffer *freeMe) {
     CS_free(freeMe);
 }
 
-int CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int fileDescriptor) {
+int32_t CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int32_t fileDescriptor) {
     buffer->err = 0;
     if( buffer->currentReadOffset < buffer->size ) {
-        int bytesRead = read( fileDescriptor,
+        int32_t bytesRead = read( fileDescriptor,
                               CS_PP_endOfData(buffer),
                               CS_PP_bufferRemaining(buffer) );
         if( bytesRead < 0 || (bytesRead == 0 && errno != 0) ) {
@@ -87,10 +88,10 @@ int CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int fileDescriptor) {
     return 0;
 }
 
-int CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int fileDescriptor) {
+int32_t CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int32_t fileDescriptor) {
     buffer->err = 0;
     if( buffer->currentWriteOffset < buffer->currentReadOffset ) {
-        int bytesWritten = write( fileDescriptor,
+        int32_t bytesWritten = write( fileDescriptor,
                                   CS_PP_startOfData(buffer),
                                   CS_PP_dataSize(buffer) );
         if( bytesWritten < 0 || (bytesWritten == 0 && errno != 0) ) {
@@ -107,9 +108,9 @@ int CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int fileDescriptor) {
     return 0;
 }
 
-int CS_PP_readFromBuffer(struct CS_PushPullBuffer *buffer, const void *source, int nBytes) {
+int32_t CS_PP_readFromBuffer(struct CS_PushPullBuffer *buffer, const void *source, int32_t nBytes) {
     if( buffer->currentReadOffset < buffer->size ) {
-        int bytesPulled = nBytes;
+        int32_t bytesPulled = nBytes;
         if( buffer->currentReadOffset + nBytes > buffer->size ) {
             bytesPulled = buffer->size - buffer->currentReadOffset;
         }
@@ -120,9 +121,9 @@ int CS_PP_readFromBuffer(struct CS_PushPullBuffer *buffer, const void *source, i
     return 0;
 }
 
-int CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination, int nBytes) {
+int32_t CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination, int32_t nBytes) {
     if( buffer->currentWriteOffset < buffer->currentReadOffset ) {
-        int bytesPushed = nBytes;
+        int32_t bytesPushed = nBytes;
         if( buffer->currentWriteOffset + nBytes >= buffer->currentReadOffset ) {
             bytesPushed = buffer->currentReadOffset - buffer->currentWriteOffset;
         }
@@ -136,10 +137,10 @@ int CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination, int
     return 0;
 }
 
- int CS_PP_readFromSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
+ int32_t CS_PP_readFromSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
     buffer->err = 0;
     if( buffer->currentReadOffset < buffer->size ) {
-        int bytesRead = SSL_read( ssl,
+        int32_t bytesRead = SSL_read( ssl,
                                   CS_PP_endOfData(buffer),
                                   CS_PP_bufferRemaining(buffer) );
         if( bytesRead <= 0 ) {
@@ -153,10 +154,10 @@ int CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination, int
     return 0;
 }
 
-int CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
+int32_t CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
     buffer->err = 0;
     if( buffer->currentWriteOffset < buffer->currentReadOffset ) {
-        int bytesWritten = SSL_write( ssl,
+        int32_t bytesWritten = SSL_write( ssl,
                                       CS_PP_startOfData(buffer),
                                       CS_PP_dataSize(buffer) );
         if( bytesWritten < 0 || (bytesWritten == 0 && errno != 0) ) {
@@ -173,10 +174,10 @@ int CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
     return 0;
 }
 
-int CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
+int32_t CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
     buffer->err = 0;
     if( buffer->currentReadOffset < buffer->size ) {
-        int bytesRead = fread( CS_PP_endOfData(buffer),
+        int32_t bytesRead = fread( CS_PP_endOfData(buffer),
                                1,
                                CS_PP_bufferRemaining(buffer),
                                file );
@@ -191,10 +192,10 @@ int CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
     return 0;
 }
 
-int CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
+int32_t CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
     buffer->err = 0;
     if( buffer->currentWriteOffset < buffer->currentReadOffset ) {
-        int bytesWritten = fwrite( CS_PP_startOfData(buffer),
+        int32_t bytesWritten = fwrite( CS_PP_startOfData(buffer),
                                    1,
                                    CS_PP_dataSize(buffer),
                                    file );
@@ -215,14 +216,14 @@ int CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
 #define MOVE(_PP,_OFFSET,_NUM){char *out=_PP->buff+_PP->currentWriteOffset+_OFFSET;char *end=_PP->buff+_PP->currentReadOffset;char *in=out+_NUM;while(in<end)*out++=*in++;}
 #define BACKFILL(_PP,_NUM){char *out=_PP->buff+_PP->currentReadOffset;char *end=out+_NUM;while(out<end)*out++='%';}
 
-bool CS_PP_removeOffEnd( struct CS_PushPullBuffer *buffer, int nBytes ) {
+bool CS_PP_removeOffEnd( struct CS_PushPullBuffer *buffer, int32_t nBytes ) {
     if( nBytes > CS_PP_dataSize(buffer) ) return true;
     buffer->currentReadOffset -= nBytes;
     BACKFILL(buffer,nBytes);
     return false;
 }
 
-bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int offset, int nBytes ) {
+bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int32_t offset, int32_t nBytes ) {
     //Can't remove more than we have data available.
     if( nBytes + offset > CS_PP_dataSize(buffer) ) return true;
     //memmove( buffer->buff + buffer->currentWriteOffset + offset,
@@ -235,7 +236,7 @@ bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int offset, int nBytes
 }
 
 bool CS_PP_makeRoom( struct CS_PushPullBuffer *buffer ) {
-    int nBytesToMove = buffer->currentWriteOffset;
+    int32_t nBytesToMove = buffer->currentWriteOffset;
     if( nBytesToMove == 0 ) return true;
     //memmove( buffer->buff,
              //buffer->buff + nBytesToMove,
@@ -254,12 +255,12 @@ char *CS_PP_findChar( struct CS_PushPullBuffer *buffer, char needle ) {
 }
 
 
-int CS_PP_moveBuffer( struct CS_PushPullBuffer *source, struct CS_PushPullBuffer *destination ) {
-    int sourceSize = CS_PP_dataSize( source );
+int32_t CS_PP_moveBuffer( struct CS_PushPullBuffer *source, struct CS_PushPullBuffer *destination ) {
+    int32_t sourceSize = CS_PP_dataSize( source );
     if( sourceSize == 0 ) return 0;
-    int destinationSize = CS_PP_bufferRemaining( destination );
+    int32_t destinationSize = CS_PP_bufferRemaining( destination );
     if( destinationSize == 0 ) return 0;
-    int moveSize = sourceSize < destinationSize?sourceSize:destinationSize;
+    int32_t moveSize = sourceSize < destinationSize?sourceSize:destinationSize;
     //updates the destination pointers.
     CS_PP_readFromBuffer( destination, CS_PP_startOfData( source ), moveSize );
     //updates the source pointers.

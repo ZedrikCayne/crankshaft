@@ -5,11 +5,12 @@
 #include <crankshaft/alloc.h>
 #include <crankshaft/logger.h>
 #include <crankshaft/test.h>
+#include <stdint.h>
 
 extern bool test_testfail(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 bool test_testfail(void) {
     //Tests go here:

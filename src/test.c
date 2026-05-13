@@ -3,25 +3,27 @@
 #include <time.h>
 
 #include <crankshaft/alloc.h>
+#include <stdint.h>
 #include <crankshaft/logger.h>
 #include <crankshaft/test.h>
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/random.h>
 #include <crankshaft/alloc.h>
+#include <stdint.h>
 
 extern bool TEST_AUTO(void);
 
 static struct CS_LCG_rand_state testRandState = {0};
 
 bool CS_TEST_PRINT_ONLY_ERRORS = false;
-int CS_TEST_seed = 0;
+int32_t CS_TEST_seed = 0;
 
 bool CS_testMain(void) {
     if( CS_TEST_seed == 0 ) {
         CS_srand(time(NULL));
         CS_TEST_seed = CS_rand();
     }
-    int allocSystemError = CS_allocSystemTracker(5000,CS_ALLOC_FLAG_ALL);
+    int32_t allocSystemError = CS_allocSystemTracker(5000,CS_ALLOC_FLAG_ALL);
     if( allocSystemError != 0 ) CS_LOG_LOUD("Alloc tracking system not working.");
     CS_tempAllocateGlobal(5*1024*1024);
     CS_LOG_LOUD("Test random seed is %d, call CS_testSetRandomSeed() to set it explicitly or use --seed if you are using the included main.cpp for repeatable tests in the future.", CS_TEST_seed);
@@ -34,7 +36,7 @@ bool CS_testMain(void) {
     return returnValue;
 }
 
-void CS_testSetRandomSeed(int seed) {
+void CS_testSetRandomSeed(int32_t seed) {
     CS_TEST_seed = seed;
 }
 
@@ -42,14 +44,14 @@ void CS_testResetGlobalRandSeed() {
     CS_LCG_rand_init( &testRandState, CS_TEST_seed );
 }
 
-int CS_testRand() {
+int32_t CS_testRand() {
     return CS_LCG_rand(&testRandState);
 }
 
-int CS_testRandMax(int max) {
-    int returnValue = -1;
-    int mask = max + 1;
-    int add = mask >> 1;
+int32_t CS_testRandMax(int32_t max) {
+    int32_t returnValue = -1;
+    int32_t mask = max + 1;
+    int32_t add = mask >> 1;
     while( add > 0 ) {
         mask |= add;
         add = add >> 1;

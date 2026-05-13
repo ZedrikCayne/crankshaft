@@ -9,11 +9,12 @@
 #include <crankshaft/http.h>
 #include <crankshaft/server.h>
 #include <crankshaft/json.h>
+#include <stdint.h>
 
 extern bool test_http(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 static char *testData = "Le Test Data";
 
@@ -168,7 +169,7 @@ bool test_http(void) {
                                 break;
                         }
                     }
-                }for( int i = 0; i < sizeof(headers)/sizeof(headers[0]); ++i ) {
+                }for( int32_t i = 0; i < sizeof(headers)/sizeof(headers[0]); ++i ) {
                     const char *tempPath = CS_tempBuffSnprintf( 64, "headers/|name=%s/value", headers[i].header );
                     const char *tempVal = CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) );
                     CS_FAIL_ON_FALSE( tempVal && strcmp(tempVal,headers[i].values) == 0, CS_tempBuffSnprintf(64, "Looking for %s in %s", headers[i].values, tempPath), "Found %s", tempVal?tempVal:NULL );
@@ -190,7 +191,7 @@ bool test_http(void) {
             struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
                     CS_PP_dataSize( reply->buffer ), 512 );
             if( json ) {
-                for( int i = 0; i < sizeof(formParameters)/sizeof(formParameters[0]); ++i ) {
+                for( int32_t i = 0; i < sizeof(formParameters)/sizeof(formParameters[0]); ++i ) {
                     const char *tempPath = CS_tempBuffSnprintf( 64, "formParameters/|name=%s/value", formParameters[i].name);
                     const char *tempVal = CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) );
                     CS_FAIL_ON_FALSE( tempVal && strcmp(tempVal,formParameters[i].value)==0, tempPath, "No match." );

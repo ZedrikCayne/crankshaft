@@ -8,11 +8,12 @@
 #include <crankshaft/test.h>
 
 #include <crankshaft/stringbuilder.h>
+#include <stdint.h>
 
 extern bool test_stringbuilder(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 const char *tenChar = "1234567890";
 const char *twentyTwoChar = "1234567890123456789012";

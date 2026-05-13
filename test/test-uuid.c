@@ -8,16 +8,17 @@
 #include <crankshaft/test.h>
 
 #include <crankshaft/uuid.h>
+#include <stdint.h>
 
 extern bool test_uuid(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 bool test_uuid(void) {
     //Tests go here:
     CS_uuidInit();
-    int uuidRandTest = CS_testRand();
+    int32_t uuidRandTest = CS_testRand();
     CS_uuidSetSeed(uuidRandTest);
 
     const struct CS_UUID *uuid = CS_uuid4();
@@ -26,7 +27,7 @@ bool test_uuid(void) {
 
     const struct CS_UUID *uuid2 = CS_uuid4();
 
-    for( int i = 0; i < UUID_BYTES_IN_UUID; ++i ) {
+    for( int32_t i = 0; i < UUID_BYTES_IN_UUID; ++i ) {
         CS_FAIL_ON_FALSE( uuid->uuid[i] == uuid2->uuid[ i ], "Checking uuids match on same seed.", "No match!");
     }
 

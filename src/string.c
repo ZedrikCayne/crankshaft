@@ -8,10 +8,11 @@
 #include <crankshaft/logger.h>
 
 #include <crankshaft/string.h>
+#include <stdint.h>
 
 char *CS_cstringCopy( const char *in ) {
     if( !in ) return NULL;
-    int nLen = strlen( in );
+    int32_t nLen = strlen( in );
     char *returnValue = CS_alloc( nLen + 1 );
     strncpy( returnValue, in, nLen + 1 );
     return returnValue;
@@ -83,15 +84,15 @@ void CS_stringFree( const struct CS_String *toFree ) {
     }
 }
 
-int CS_stringStrncmp( const struct CS_String *left, const struct CS_String *right, int32_t maxLength ) {
-    int diffcmp = 0;
+int32_t CS_stringStrncmp( const struct CS_String *left, const struct CS_String *right, int32_t maxLength ) {
+    int32_t diffcmp = 0;
     const char *lC, *rC;
-    int maxLen = maxLength;
+    int32_t maxLen = maxLength;
     if( maxLen < 0 ) maxLen = 0x7FFFFFF;
     if( maxLen > left->length ) maxLen = left->length;
     if( maxLen > right->length ) maxLen = right->length;
     lC = left->data; rC = right->data;
-    for( int i = 0; i < maxLen; ++i ) {
+    for( int32_t i = 0; i < maxLen; ++i ) {
         diffcmp = *lC++ - *rC++;
         if( diffcmp != 0 ) return diffcmp;
     }
@@ -104,7 +105,7 @@ int CS_stringStrncmp( const struct CS_String *left, const struct CS_String *righ
     return 0;
 }
 
-int CS_stringCstrncmp( const struct CS_String *left, const char *right, int32_t maxLength ) {
+int32_t CS_stringCstrncmp( const struct CS_String *left, const char *right, int32_t maxLength ) {
     struct CS_String tempCString;
     CS_stringInitReferenceCstring( &tempCString, right, -1 );
     return CS_stringStrncmp( left, &tempCString, maxLength );
@@ -117,12 +118,12 @@ const char *CS_stringStrstr( const struct CS_String *haystack, const struct CS_S
         return NULL;
     }
     if( needle->length > haystack->length )  return NULL;
-    int needleLength = needle->length;
+    int32_t needleLength = needle->length;
     const char *hayHead = haystack->data;
     const char *needleHead = needle->data;
-    int tries = haystack->length - needleLength + 1;
-    for( int i = 0; i < tries; ++i ) {
-        int j;
+    int32_t tries = haystack->length - needleLength + 1;
+    for( int32_t i = 0; i < tries; ++i ) {
+        int32_t j;
         hayHead = haystack->data + i;
         for( j = 0; j < needleLength; ++j ) {
             if( hayHead[j] != needleHead[j] ) break;

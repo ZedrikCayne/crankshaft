@@ -13,10 +13,11 @@ extern "C" {
 #endif
 
 #include <crankshaft/mimeenum.h>
+#include <stdint.h>
 
-int CS_mimeFileExtensionToEnum(const char *extension );
+int32_t CS_mimeFileExtensionToEnum(const char *extension );
 const char *CS_mimeFileExtensionToString(const char *extension);
-const char *CS_mimeEnumToString(int mimeEnum);
+const char *CS_mimeEnumToString(int32_t mimeEnum);
  
 #ifdef __cplusplus
 }

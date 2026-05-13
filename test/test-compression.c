@@ -6,6 +6,7 @@
 #include <crankshaft/mime.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 
 static bool compressed_route( struct CS_ClientInfo *info ) {
     char *bigData = (char *)CS_alloc( 1024 );
@@ -20,8 +21,8 @@ static struct CS_Route routes[] = {
     { CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_EXACT, 0, "/compressed", compressed_route }
 };
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 bool test_compression() {
     struct CS_WebServer *server = CS_serverStart( 0, NULL, NULL, NULL, NULL, NULL, 0, routes, 1 );
@@ -49,7 +50,7 @@ bool test_compression() {
 
     if( CS_PP_dataSize( reply->buffer ) == 1024 ) {
         char *data = CS_PP_startOfData( reply->buffer );
-        for( int i = 0; i < 1024; i++ ) {
+        for( int32_t i = 0; i < 1024; i++ ) {
             CS_FAIL_ON_TRUE( data[i] != 'A', "Data expected to be A", "Data mismatch at %d", i );
         }
     }

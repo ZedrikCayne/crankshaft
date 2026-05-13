@@ -3,14 +3,16 @@
 #include <stdbool.h>
 
 #include <crankshaft/alloc.h>
+#include <stdint.h>
 #include <crankshaft/logger.h>
 #include <crankshaft/test.h>
 #include <crankshaft/alloc.h>
+#include <stdint.h>
 
 extern bool test_alloc(void);
 
-static int testCount = 0;
-static int testSucceeded = 0;
+static int32_t testCount = 0;
+static int32_t testSucceeded = 0;
 
 bool test_alloc(void) {
     //Tests go here:

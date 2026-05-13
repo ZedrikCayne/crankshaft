@@ -2,6 +2,7 @@
 #define __crankshaftstringbuilderdoth__
 #include <stdbool.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 /********************************************************************
  *
@@ -16,9 +17,9 @@ extern "C" {
 #endif
 
 struct CS_StringBuilder {
-    int originalSize;
-    int currentSize;
-    int currentHead;
+    int32_t originalSize;
+    int32_t currentSize;
+    int32_t currentHead;
     char *buffer;
 };
 
@@ -30,12 +31,12 @@ struct CS_StringBuilder {
 #define CS_SB_getPushPullBuffer(_SB) CS_PP_onStaticBuffer((_SB)->currentHead,(_SB)->buffer)
 #define CS_SB_buffer(_SB) (_SB->buffer)
 
-struct CS_StringBuilder *CS_SB_create( int initialSize );
+struct CS_StringBuilder *CS_SB_create( int32_t initialSize );
 struct CS_StringBuilder *CS_SB_append( struct CS_StringBuilder *buffer, const char *string );
 struct CS_StringBuilder *CS_SB_appendChar( struct CS_StringBuilder *buffer, const char ch );
-struct CS_StringBuilder *CS_SB_vsnprintf( struct CS_StringBuilder *buffer, int maxAppend, const char *fmt, va_list ap );
-struct CS_StringBuilder *CS_SB_snprintf( struct CS_StringBuilder *buffer, int maxAppend, const char *fmt, ... );
-bool CS_SB_expandBy( struct CS_StringBuilder *buffer, int minimumNewCapacity );
+struct CS_StringBuilder *CS_SB_vsnprintf( struct CS_StringBuilder *buffer, int32_t maxAppend, const char *fmt, va_list ap );
+struct CS_StringBuilder *CS_SB_snprintf( struct CS_StringBuilder *buffer, int32_t maxAppend, const char *fmt, ... );
+bool CS_SB_expandBy( struct CS_StringBuilder *buffer, int32_t minimumNewCapacity );
 void CS_SB_free( struct CS_StringBuilder *buffer );
 const char *CS_SB_freeButReturnBuffer( struct CS_StringBuilder *buffer );
 const char *CS_SB_desc( struct CS_StringBuilder *buffer );
