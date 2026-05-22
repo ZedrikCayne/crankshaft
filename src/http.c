@@ -101,6 +101,8 @@ enum {
     REPLY_HEADER_DONE
 };
 
+#define SET_STRING(_WHICH) CS_stringInitReferenceCstring(&(_WHICH),startOfToken,currentPoint-startOfToken)
+
 static int32_t privateParseReply( struct CS_RequestReply *replyToParse ) {
     int32_t sizeOfReply = CS_PP_dataSize( replyToParse->buffer );
     char *startOfBuffer = CS_PP_startOfData( replyToParse->buffer );
@@ -138,9 +140,8 @@ static int32_t privateParseReply( struct CS_RequestReply *replyToParse ) {
                 if( *currentPoint == COLON ) {
                     if( replyToParse->numReplyHeaders > MAX_REPLY_HEADERS )
                         return -1;
-                    *currentPoint = 0;
                     currentState = REPLY_HEADER_SEPARATOR;
-                    replyToParse->replyHeaders[ replyToParse->numReplyHeaders ].header = startOfToken;
+                    SET_STRING( replyToParse->replyHeaders[replyToParse->numReplyHeaders ].header);
                     startOfToken = NULL;
                     break;
                 }
@@ -153,11 +154,10 @@ static int32_t privateParseReply( struct CS_RequestReply *replyToParse ) {
                 currentState = REPLY_HEADER_VALUE;
             case REPLY_HEADER_VALUE:
                 if( *currentPoint == CR ) {
-                    *currentPoint = 0;
+                    SET_STRING(replyToParse->replyHeaders[ replyToParse->numReplyHeaders ].values);
                     ++currentPoint;
                     REQUIRE_CHAR_NO_EAT(LF);
                     currentState = REPLY_HEADER_NAME;
-                    replyToParse->replyHeaders[ replyToParse->numReplyHeaders ].values = startOfToken;
                     replyToParse->numReplyHeaders++;
                     startOfToken = NULL;
                 }
@@ -254,8 +254,8 @@ static const char *methodEnumToName[] = {
     "PRE",
 };
 
-int32_t CS_httpStringToMethodEnum( const char *methodString ) {
-    int32_t command = *(int32_t*)methodString;
+int32_t CS_httpStringToMethodEnum( const struct CS_String *methodString ) {
+    int32_t command = *(int32_t*)methodString->data;
     switch(command) {
         case _CONNECT:
             return CS_HTTP_METHOD_CONNECT;
@@ -416,17 +416,16 @@ static int32_t privateDecode( const char *toDecode, int32_t decodeBufferLength, 
 }
 
 static int32_t privateDecodeInPlace( char *toDecode, int32_t decodeBufferLength ) {
-    return privateDecode( (const char *)toDecode, 0, toDecode, 0 );
+    return privateDecode( (const char *)toDecode, decodeBufferLength, toDecode, decodeBufferLength );
 }
 
-bool CS_httpUrlDecodeInPlace( char *toDecode ) {
-    int32_t length = privateDecodeInPlace( toDecode, 0 );
+bool CS_httpUrlDecodeInPlace( struct CS_String *toDecode ) {
+    int32_t length = privateDecodeInPlace( (char*)toDecode->data, toDecode->length );
     return length == DECODE_INVALID_LENGTH;
 }
 
-
-char *CS_httpUrlDecodeTemp( const char *doDecode ) {
-    char *returnValue = CS_tempStringCopy( doDecode );
+struct CS_String *CS_httpUrlDecodeTemp( const struct CS_String *doDecode ) {
+    struct CS_String *returnValue = CS_stringTempCopy( doDecode );
     if( returnValue != NULL ) {
         return CS_httpUrlDecodeInPlace( returnValue )?NULL:returnValue;
     } else {
@@ -435,20 +434,21 @@ char *CS_httpUrlDecodeTemp( const char *doDecode ) {
     return NULL;
 }
 
-char *CS_httpUrlEncodeTemp( const char *toEncode ) {
-    int32_t nLen = strlen(toEncode);
-    char *returnValue = CS_tempBuff( nLen * 3 );
+struct CS_String *CS_httpUrlEncodeTemp( const struct CS_String *toEncode ) {
+    int32_t nLen = toEncode->length;
+    struct CS_String *returnValue = CS_stringReserveTemp( nLen * 3 );
     if( returnValue != NULL ) {
-        int32_t nLength = privateEncode( toEncode, nLen, returnValue, nLen * 3 );
+        int32_t nLength = privateEncode( toEncode->data, nLen, (char*)returnValue->data, nLen * 3 );
         if( nLength == ENCODE_INVALID_LENGTH ) return NULL;
+        returnValue->length = nLength;
     } else {
         CS_LOG_ERROR("CS_httpUrlEncodeTemp: String to encode too long.");
     }
     return returnValue;
 }
 
-struct CS_StringBuilder *CS_httpUrlDecode( const char *toDecode ) {
-    int32_t nLen = strlen(toDecode);
+struct CS_StringBuilder *CS_httpUrlDecode( const struct CS_String *toDecode ) {
+    int32_t nLen = toDecode->length;
     struct CS_StringBuilder *appendTo = CS_SB_create( nLen + 5 );
     struct CS_StringBuilder *returnValue = CS_httpUrlDecodeAppend( toDecode, appendTo );
     if( returnValue == NULL ) {
@@ -457,32 +457,33 @@ struct CS_StringBuilder *CS_httpUrlDecode( const char *toDecode ) {
     return appendTo;
 }
 
-struct CS_StringBuilder *CS_httpUrlEncode( const char *toEncode ) {
-    int32_t nLen = privateEncode( toEncode, 0, NULL, 0 );
+struct CS_StringBuilder *CS_httpUrlEncode( const struct CS_String *toEncode ) {
+    int32_t nLen = privateEncode( toEncode->data, toEncode->length, NULL, 0 );
     struct CS_StringBuilder *appendTo = CS_SB_create( nLen + 5 );
     struct CS_StringBuilder *returnValue = CS_httpUrlEncodeAppend( toEncode, appendTo );
     if( returnValue == NULL ) {
+        CS_SB_free(appendTo);
     }
     return NULL;
 }
 
-struct CS_StringBuilder *CS_httpUrlDecodeAppend( const char *toDecode, struct CS_StringBuilder *appendTo ) {
+struct CS_StringBuilder *CS_httpUrlDecodeAppend( const struct CS_String *toDecode, struct CS_StringBuilder *appendTo ) {
     int32_t remains = CS_SB_remain( appendTo );
-    int32_t needed = privateDecode( toDecode, 0, CS_SB_writePosition( appendTo ), remains );
+    int32_t needed = privateDecode( toDecode->data, toDecode->length, CS_SB_writePosition( appendTo ), remains );
     if( needed >= remains ) {
         if( CS_SB_expandBy( appendTo, needed ) ) return NULL;
-        needed = privateDecode( toDecode, 0, CS_SB_writePosition( appendTo ), remains );
+        needed = privateDecode( toDecode->data, toDecode->length, CS_SB_writePosition( appendTo ), remains );
     }
     CS_SB_fakeAppend(appendTo, needed);
     return appendTo;
 }
 
-struct CS_StringBuilder *CS_httpUrlEncodeAppend( const char *toEncode, struct CS_StringBuilder *appendTo ) {
+struct CS_StringBuilder *CS_httpUrlEncodeAppend( const struct CS_String *toEncode, struct CS_StringBuilder *appendTo ) {
     int32_t remains = CS_SB_remain( appendTo );
-    int32_t needed = privateEncode( toEncode, 0, CS_SB_writePosition( appendTo ), remains );
+    int32_t needed = privateEncode( toEncode->data, toEncode->length, CS_SB_writePosition( appendTo ), remains );
     if( needed >= remains ) {
         if( CS_SB_expandBy( appendTo, needed ) ) return NULL;
-        needed = privateEncode( toEncode, 0, CS_SB_writePosition( appendTo ), CS_SB_remain( appendTo ) );
+        needed = privateEncode( toEncode->data, toEncode->length, CS_SB_writePosition( appendTo ), CS_SB_remain( appendTo ) );
     }
     CS_SB_fakeAppend(appendTo, needed);
     return appendTo;
@@ -503,60 +504,56 @@ enum WhatKindOfUri {
 };
 
 struct UriPrefixToKind {
-    const char *prefix;
+    const struct CS_String prefix;
     int32_t prefixLength;
     int32_t whatKindOfUri;
 };
 
 static struct UriPrefixToKind uriPrefixToKind[] = {
-    { "http", 4, URI_HTTP },
-    { "telnet", 6, URI_TELNET },
-    { "ssl", 3, URI_SSL },
+    { CS_STRING("http"), 4, URI_HTTP },
+    { CS_STRING("telnet"), 6, URI_TELNET },
+    { CS_STRING("ssl"), 3, URI_SSL },
 };
 
-static int32_t matchUriToType( const char *uri ) {
+static int32_t matchUriToType( const struct CS_String *uri ) {
     for( int32_t i = 0; i < CS_ARRAY_SIZE(uriPrefixToKind); ++i ) {
-        if( strncmp( uri, uriPrefixToKind[i].prefix, uriPrefixToKind[i].prefixLength ) == 0 ) {
+        if( CS_stringStrncmp( uri, &uriPrefixToKind[i].prefix, uriPrefixToKind[i].prefixLength ) == 0 ) {
             return uriPrefixToKind[i].whatKindOfUri;
         }
     }
     return URI_UNKNOWN;
 }
 
-static int32_t privateParseAddressAndPort( const char *uri, char *baseUri, char *currentPoint, char *endOfData, char **address, int32_t *port, bool *ssl, const char **rest, bool wantSSL, int32_t defaultSSLPort, int32_t defaultNonSSLPort ) {
-    char *portChar = NULL;
-    *address = currentPoint;
+static int32_t privateParseAddressAndPort( const char *currentPoint, const char *endOfData, struct CS_String *address, int32_t *port, bool *ssl, struct CS_String *rest, bool wantSSL, int32_t defaultSSLPort, int32_t defaultNonSSLPort ) {
+    const struct CS_String *portChar = NULL;
+    const char *start = currentPoint;
     while( currentPoint < endOfData && !(*currentPoint == ':' || *currentPoint == '/') ) ++currentPoint;
+    CS_stringInitReferenceCstring(address, start, currentPoint - start);
     if( *currentPoint == ':' ) {
-        *currentPoint = 0;
         ++currentPoint;
-        portChar = currentPoint;
+        const char *portCharStart = currentPoint;
         while( currentPoint < endOfData && (*currentPoint != '/') ) ++currentPoint;
-        *currentPoint = 0;
-    } else if ( *currentPoint == '/' ) {
-        *currentPoint = 0;
+        portChar = CS_stringTempReferenceCstring( portCharStart, currentPoint - portCharStart );
     }
     if( portChar != NULL ) {
-        *port = atoi( portChar ); 
+        *port = CS_stringAtoi( portChar ); 
     } else {
         *port = wantSSL?defaultSSLPort:defaultNonSSLPort;
     }
     *ssl = wantSSL;
 
     if( currentPoint >= endOfData ) {
-        *rest = NULL;
+        CS_stringInitReferenceCstring(rest,NULL,0);
     } else {
-        *rest = uri + (currentPoint - baseUri);
+        CS_stringInitReferenceCstring(rest,currentPoint,endOfData - currentPoint);
     }
 
     return 0;
 }
 
-static int32_t privateParseHttpUri( const char *uri, char **address, int32_t *port, bool *ssl, const char **rest ) {
-    int32_t len = strlen(uri);
-    char *tempUri = CS_tempStringCopy( uri );
-    char *currentPoint = tempUri;
-    char *endOfData = tempUri + len;
+static int32_t privateParseHttpUri( const struct CS_String *uri, struct CS_String *address, int32_t *port, bool *ssl, struct CS_String *rest ) {
+    const char *currentPoint = uri->data;
+    const char *endOfData = uri->data + uri->length;
     bool wantSSL = false;
 
     if( uri == NULL ) return -1;
@@ -572,16 +569,14 @@ static int32_t privateParseHttpUri( const char *uri, char **address, int32_t *po
     REQUIRE_CHAR(':');
     REQUIRE_CHAR('/');
     REQUIRE_CHAR('/');
-    return privateParseAddressAndPort( uri, tempUri, currentPoint, endOfData, address, port, ssl, rest, wantSSL, 443, 80 );
+    return privateParseAddressAndPort( currentPoint, endOfData, address, port, ssl, rest, wantSSL, 443, 80 );
 }
 
-static int32_t privateParseTelnetUri( const char *uri, char **address, int32_t *port, bool *ssl, const char **rest ) {
+static int32_t privateParseTelnetUri( const struct CS_String *uri, struct CS_String *address, int32_t *port, bool *ssl, struct CS_String *rest ) {
     if( uri == NULL ) return -1;
 
-    int32_t len = strlen(uri);
-    char *tempUri = CS_tempStringCopy( uri );
-    char *currentPoint = tempUri;
-    char *endOfData = tempUri + len;
+    const char *currentPoint = uri->data;
+    const char *endOfData = uri->data + uri->length;
 
     REQUIRE_CHAR('t');
     REQUIRE_CHAR('e');
@@ -592,16 +587,14 @@ static int32_t privateParseTelnetUri( const char *uri, char **address, int32_t *
     REQUIRE_CHAR(':');
     REQUIRE_CHAR('/');
     REQUIRE_CHAR('/');
-    return privateParseAddressAndPort( uri, tempUri, currentPoint, endOfData, address, port, ssl, rest, false, 22, 23 );
+    return privateParseAddressAndPort( currentPoint, endOfData, address, port, ssl, rest, false, 22, 23 );
 }
 
-static int32_t privateParseSslUri( const char *uri, char **address, int32_t *port, bool *ssl, const char **rest ) {
+static int32_t privateParseSslUri( const struct CS_String *uri, struct CS_String *address, int32_t *port, bool *ssl, struct CS_String *rest ) {
     if( uri == NULL ) return -1;
 
-    int32_t len = strlen(uri);
-    char *tempUri = CS_tempStringCopy( uri );
-    char *currentPoint = tempUri;
-    char *endOfData = tempUri + len;
+    const char *currentPoint = uri->data;
+    const char *endOfData = uri->data + uri->length;
 
     REQUIRE_CHAR('s');
     REQUIRE_CHAR('s');
@@ -609,10 +602,10 @@ static int32_t privateParseSslUri( const char *uri, char **address, int32_t *por
     REQUIRE_CHAR(':');
     REQUIRE_CHAR('/');
     REQUIRE_CHAR('/');
-    return privateParseAddressAndPort( uri, tempUri, currentPoint, endOfData, address, port, ssl, rest, true, 22, 23 );
+    return privateParseAddressAndPort( currentPoint, endOfData, address, port, ssl, rest, true, 22, 23 );
 }
 
-static int32_t privateParseUri( const char *uri, char **address, int32_t *port, bool *ssl, const char **rest ) {
+static int32_t privateParseUri( const struct CS_String *uri, struct CS_String *address, int32_t *port, bool *ssl, struct CS_String *rest ) {
     int32_t uriType = matchUriToType( uri );
     switch( uriType ) {
         case URI_HTTP:
@@ -628,66 +621,63 @@ static int32_t privateParseUri( const char *uri, char **address, int32_t *port, 
     return -1;
 }
 
-static const char *headerHas( struct CS_RequestHeader *headers, int32_t numHeaders, const char *which ) {
+static const struct CS_String *headerHas( struct CS_RequestHeader *headers, int32_t numHeaders, const struct CS_String *which ) {
     for( int32_t i = 0; i < numHeaders; ++i ) {
-        if( strcmp( headers[ i ].header, which ) == 0 ) {
-            return headers[ i ].values;
+        if( CS_stringStrcmp( &headers[ i ].header, which ) == 0 ) {
+            return &headers[ i ].values;
         }
     }
     return NULL;
 }
 
-static const bool alreadySent( const char **alreadySent, int32_t numAlreadySent, const char *which ) {
+static const bool alreadySent( const struct CS_String **alreadySent, int32_t numAlreadySent, const struct CS_String *which ) {
     for( int32_t i = 0; i < numAlreadySent; ++i ) {
-        if( strcmp( alreadySent[ i ], which ) == 0 ) return true;
+        if( CS_stringStrcmp( alreadySent[ i ], which ) == 0 ) return true;
     }
     return false;
 }
 
 static void privateForceAppendHeader( struct CS_StringBuilder *appendTo, 
-                               const char *header,
-                               const char *value ) {
-    CS_SB_printf(appendTo, "%s: %s%c%c", header, value, CR, LF);
+                               const struct CS_String *header,
+                               const struct CS_String *value ) {
+    CS_SB_printf(appendTo, "%.*s: %.*s%c%c", header->length, header->data, value->length, value->data, CR, LF);
 }
 
 static void privateAppendHeader( struct CS_StringBuilder *appendTo, 
                           struct CS_RequestHeader *headers,
                           int32_t numHeaders,
-                          const char *header, 
-                          const char *defaultValue ) {
-    const char *userHeaderValue = headerHas( headers, numHeaders, header );
-    const char *headerValue = userHeaderValue?userHeaderValue:defaultValue;
+                          const struct CS_String *header, 
+                          const struct CS_String *defaultValue ) {
+    const struct CS_String *userHeaderValue = headerHas( headers, numHeaders, header );
+    const struct CS_String *headerValue = userHeaderValue?userHeaderValue:defaultValue;
     privateForceAppendHeader( appendTo, header, headerValue );
 }
 
 static void privateAppendOthers( struct CS_StringBuilder *appendTo,
                          struct CS_RequestHeader *headers,
                          int32_t numHeaders,
-                         const char **headersIHaveAlreadySent,
+                         const struct CS_String **headersIHaveAlreadySent,
                          int32_t numHeadersAlreadySent ) {
     for( int32_t i = 0; i < numHeaders; ++i ) {
-        if( !alreadySent( headersIHaveAlreadySent, numHeadersAlreadySent, headers[ i ].header ) ) {
-            privateForceAppendHeader( appendTo, headers[ i ].header, headers[ i ].values );
+        if( !alreadySent( headersIHaveAlreadySent, numHeadersAlreadySent, &headers[ i ].header ) ) {
+            privateForceAppendHeader( appendTo, &headers[ i ].header, &headers[ i ].values );
         }
     }
 }
 
-static const char *defaultHeaders[] = {
-    "User-Agent",
-    "Connection",
-    "Accept",
-    "Accept-Encoding",
-    "Host"
+static const struct CS_String *defaultHeaders[] = {
+    &CS_STRING("User-Agent"),
+    &CS_STRING("Connection"),
+    &CS_STRING("Accept"),
+    &CS_STRING("Accept-Encoding"),
 };
 
-static const char *defaultHeadersValue[] = {
-    "Crankshaft",
-    "close",
-    "*/*",
-    "gzip, deflate",
-    NULL
+static const struct CS_String *defaultHeadersValue[] = {
+    &CS_STRING("Crankshaft"),
+    &CS_STRING("close"),
+    &CS_STRING("*/*"),
+    &CS_STRING("gzip, deflate"),
 };
-#define HOST_INDEX 4
 
 #define CONTINUE_CHUNK_ERROR -1
 #define CONTINUE_CHUNK_DONE   0
@@ -767,7 +757,7 @@ static int32_t privateContinueChunked( struct CS_RequestReply *reply ) {
 #define INITIAL_STRING_BUILDER_SIZE 4096
 #define PP_BUFFER_SIZE_FOR_RETURN 16384
 struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
-                                            const char *uri,
+                                            const struct CS_String *uri,
                                             struct CS_RequestHeader *headers,
                                             int32_t numHeaders,
                                             struct CS_QueryParameter *queryParameters,
@@ -777,16 +767,16 @@ struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
                                             void *data,
                                             int32_t dataLength,
                                             struct CS_RequestReply *reuse ) {
-    char address[ 128 ];
-    const char *rest;
+    const char *address;
     int32_t portNum;
-    char *tempAddress;
+    struct CS_String tempAddress;
+    struct CS_String rest;
     bool wantSSL;
     const char *method = CS_httpMethodEnumToString( methodEnum );
     struct CS_StringBuilder *formString = NULL;
     struct CS_PushPullBuffer *pp = NULL;
 
-    if( headerHas( headers, numHeaders, "Content-Length" ) ) {
+    if( headerHas( headers, numHeaders, &CS_STRING("Content-Length") ) ) {
         CS_LOG_ERROR("User has also set a Content-Length.");
         return NULL;
     }
@@ -799,14 +789,14 @@ struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
         return NULL;
     }
     if( formParameters && numFormParameters > 0 ) {
-        const char *currentlySet = headerHas( headers, numHeaders, "Content-Type" );
-        if( currentlySet != NULL && strcmp(currentlySet, "application/x-www-form-urlencoded" ) != 0 ) {
+        const struct CS_String *currentlySet = headerHas( headers, numHeaders, &CS_STRING("Content-Type") );
+        if( currentlySet != NULL && CS_stringStrcmp(currentlySet, &CS_STRING("application/x-www-form-urlencoded") ) != 0 ) {
             CS_LOG_ERROR("Form parameters set but user has set a content type other than form-urlencoded.");
             return NULL;
         }
     }
     if( privateParseUri(uri, &tempAddress, &portNum, &wantSSL, &rest) < 0 ) {
-        CS_LOG_ERROR("CS_httpMakeRequest() Badly formatted URI %s", uri?uri:"NULL");
+        CS_LOG_ERROR("CS_httpMakeRequest() Badly formatted URI %s", uri?CS_stringTempCstring(uri):"NULL");
         return NULL;
     }
 
@@ -820,7 +810,7 @@ struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
         CS_LOG_ERROR("CS_httpMakeRequest() OOM getting a reply" );
         return NULL;
     }
-    strncpy( address, tempAddress, 127 );
+    address = CS_stringTempCstring(&tempAddress);
     struct addrinfo *addrInfos = CS_networkLookupAddress( address, portNum );
     //Lookup already has a log with it.
     if( addrInfos == NULL ) return NULL;
@@ -833,27 +823,27 @@ struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
 
     char prefix = '?';
     //In case we've put query parameters on the uri already.
-    if( rest != NULL && strstr(rest, "?") ) prefix = '&';
+    if( rest.length != 0 && CS_stringStrstr(&rest, &CS_STRING("?")) ) prefix = '&';
             
-    if( rest == NULL || rest[0] == 0 ) rest = "/";
+    if( rest.length == 0 ) rest = CS_STRING("/");
 
-    CS_SB_printf(sb, "%s %s", method, rest );
+    CS_SB_printf(sb, "%s %s", method, CS_stringTempCstring(&rest) );
     if( queryParameters != NULL ) {
         for( int32_t i = 0; i < numQueryParameters; ++i ) {
             CS_SB_printf(sb, "%c%s=%s",
                     prefix,
-                    CS_httpUrlEncodeTemp(queryParameters[i].name),
-                    CS_httpUrlEncodeTemp(queryParameters[i].value) );
+                    CS_stringTempCstring(CS_httpUrlEncodeTemp(&queryParameters[i].name)),
+                    CS_stringTempCstring(CS_httpUrlEncodeTemp(&queryParameters[i].value)) );
             prefix = '&';
         }
     }
     CS_SB_printf(sb, " %s%c%c", "HTTP/1.1", CR, LF);
 
-    defaultHeadersValue[HOST_INDEX] = address;
     for( int32_t i = 0; i < (CS_ARRAY_SIZE(defaultHeaders)); ++i ) {
         privateAppendHeader( sb, headers, numHeaders, defaultHeaders[ i ], defaultHeadersValue[ i ] );
     }
-    privateAppendOthers( sb, headers, numHeaders, defaultHeaders, CS_ARRAY_SIZE(defaultHeaders) );
+    privateAppendHeader(sb, headers, numHeaders, &CS_STRING("Host"), &tempAddress );
+    privateAppendOthers(sb, headers, numHeaders, defaultHeaders, CS_ARRAY_SIZE(defaultHeaders) );
 
     if( formParameters != NULL && numFormParameters > 0 ) {
         char *empty = "";
@@ -862,18 +852,18 @@ struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
         formString = CS_SB_create( INITIAL_STRING_BUILDER_SIZE );
         for( int32_t i = 0; i < numFormParameters; ++i ) {
             CS_SB_printf( formString, "%s%s=%s", currentSeparator, 
-                    formParameters[ i ].name,
-                    CS_httpUrlEncodeTemp( formParameters[i].value ) );
+                    CS_stringTempCstring(&formParameters[ i ].name),
+                    CS_stringTempCstring(CS_httpUrlEncodeTemp( &formParameters[i].value ) ) );
             currentSeparator = ampersand;
         }
-        privateAppendHeader( sb, headers, numHeaders, "Content-Type", "application/x-www-form-urlencoded" );
-        privateForceAppendHeader( sb, "Content-Length", CS_tempBuffSnprintf(64,"%d", CS_SB_size( formString ) ) );
+        privateAppendHeader( sb, headers, numHeaders, &CS_STRING("Content-Type"), &CS_STRING("application/x-www-form-urlencoded") );
+        privateForceAppendHeader( sb, &CS_STRING("Content-Length"), CS_stringTempSnprintf(64,"%d", CS_SB_size( formString ) ) );
         
     }
 
     if( dataLength > 0 && data != NULL ) {
-        privateAppendHeader( sb, headers, numHeaders, "Content-Type", "application/octet-stream" );
-        privateForceAppendHeader( sb, "Content-Length", CS_tempBuffSnprintf(64,"%d", dataLength) );
+        privateAppendHeader( sb, headers, numHeaders, &CS_STRING("Content-Type"), &CS_STRING("application/octet-stream") );
+        privateForceAppendHeader( sb, &CS_STRING("Content-Length"), CS_stringTempSnprintf(64,"%d", dataLength) );
     }
 
     CS_SB_printf(sb,"%c%c",CR,LF);
@@ -971,11 +961,11 @@ int32_t CS_httpPushBytesToRemote( struct CS_RequestReply *requestReply, void *da
 
 #define MINIMUM_DECOMPRESSION_BUFFER 16384
 static int32_t privateDecompressReply( struct CS_RequestReply *reply ) {
-    const char *contentEncoding = CS_httpReplyHeader( reply, "Content-Encoding" );
+    const struct CS_String *contentEncoding = CS_httpReplyHeader( reply, &CS_STRING("Content-Encoding") );
     if( contentEncoding == NULL ) return 0;
     
-    bool isGzip = strstr( contentEncoding, "gzip" ) != NULL;
-    bool isDeflate = strstr( contentEncoding, "deflate" ) != NULL;
+    bool isGzip = CS_stringStrstr( contentEncoding, &CS_STRING("gzip") ) != NULL;
+    bool isDeflate = CS_stringStrstr( contentEncoding, &CS_STRING("deflate") ) != NULL;
     
     if( !isGzip && !isDeflate ) return 0;
     
@@ -1032,7 +1022,7 @@ static int32_t privateDecompressReply( struct CS_RequestReply *reply ) {
 #define INITIAL_STRING_BUILDER_SIZE 4096
 #define PP_BUFFER_SIZE_FOR_RETURN 16384
 struct CS_RequestReply *CS_httpMakeRequest( int32_t methodEnum,
-                                            const char *uri,
+                                            const struct CS_String *uri,
                                             struct CS_RequestHeader *headers,
                                             int32_t numHeaders,
                                             struct CS_QueryParameter *queryParameters,
@@ -1080,10 +1070,10 @@ struct CS_RequestReply *CS_httpMakeRequest( int32_t methodEnum,
 
     CS_PP_write( returnValue->buffer, numBytesParsed );
 
-    const char *contentLength = CS_httpReplyHeader( returnValue, "Content-Length" );
+    const struct CS_String *contentLength = CS_httpReplyHeader( returnValue, &CS_STRING("Content-Length") );
     //If we have any content at all...there's likely to be something out there for us.
     if( contentLength != NULL ) {
-        int32_t howMuch = atol(contentLength);
+        int64_t howMuch = CS_stringAtol(contentLength);
         if( howMuch > CS_PP_dataSize( returnValue->buffer ) ) {
             int32_t readMore = CS_httpFillReplyFromRemote( returnValue );
             if( readMore < 0 ) goto CLEANUP;
@@ -1093,8 +1083,8 @@ struct CS_RequestReply *CS_httpMakeRequest( int32_t methodEnum,
     //At this point, we're at the front of 'data' if we are 'transfer encoded' at all...
     //we're going to probably need more and to 'fix' our data so everything in the buffer
     //is actual data.
-    const char *encodingHeader = CS_httpReplyHeader( returnValue, "Transfer-Encoding" );
-    if( encodingHeader && strstr( "chunked", encodingHeader ) ) {
+    const struct CS_String *encodingHeader = CS_httpReplyHeader( returnValue, &CS_STRING("Transfer-Encoding") );
+    if( encodingHeader && CS_stringStrstr( encodingHeader, &CS_STRING("chunked") ) ) {
         returnValue->chunked = true;
         returnValue->chunkCRLFStillPresent = false;
         returnValue->chunkedBytesOffset = -CS_PP_dataSize( returnValue->buffer );
@@ -1145,10 +1135,10 @@ void CS_httpCloseRequest( struct CS_RequestReply *toReturn ) {
     privateReturnReply(toReturn);
 }
 
-const char *CS_httpReplyHeader( struct CS_RequestReply *reply, const char *header ) {
+const struct CS_String *CS_httpReplyHeader( struct CS_RequestReply *reply, const struct CS_String *header ) {
     for( int32_t i = 0; i < reply->numReplyHeaders; ++i ) {
-        if( strstr( header, reply->replyHeaders[ i ].header) )
-            return reply->replyHeaders[ i ].values;
+        if( CS_stringStrstr( header, &reply->replyHeaders[ i ].header) )
+            return &reply->replyHeaders[ i ].values;
     }
     return NULL;
 }

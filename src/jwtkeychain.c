@@ -19,6 +19,7 @@
 #include <crankshaft/hashtable.h>
 #include <crankshaft/base64.h>
 #include <crankshaft/list.h>
+#include <crankshaft/string.h>
 
 #include <crankshaft/jwtkeychain.h>
 #include <stdint.h>
@@ -29,9 +30,10 @@ const struct CS_Cache *webCache = NULL;
 struct CS_HashTable *keyIdToEVP_PKEY = NULL;
 
 static struct CS_StorageItem *privateWebCache( const struct CS_Cache *cache, const char *key ) {
+    struct CS_String *tempUri = CS_stringTempCopyCstring(key,CS_STRING_USE_STRLEN);
     struct CS_RequestReply *reply = 
         CS_httpMakeRequest( CS_HTTP_METHOD_GET,
-                            key,
+                            tempUri,
                             NULL, 0,
                             NULL, 0,
                             NULL, 0,
@@ -42,18 +44,17 @@ static struct CS_StorageItem *privateWebCache( const struct CS_Cache *cache, con
 
     time_t expireTime = 0;
 
-    const char *cacheControlHeader = CS_httpReplyHeader( reply, "cache-control" );
+    const struct CS_String *cacheControlHeader = CS_httpReplyHeader( reply, &CS_STRING("cache-control") );
     if( cacheControlHeader != NULL ) {
-        char *maxAge = strstr( cacheControlHeader, "max-age" );
+        const struct CS_String *maxAge = CS_stringStrstr( cacheControlHeader, &CS_STRING("max-age") );
         if( maxAge != NULL ) {
-            char *equals = strstr( maxAge, "=" );
+            const char *savePtr;
+            const struct CS_String *equals = CS_stringTempStrtok( maxAge, &CS_STRING("="), &savePtr );
             if( equals != NULL ) {
-                char *restOfString = CS_tempStringCopy( equals + 1 );
-                char *commaOrEnd = strstr( equals, "," );
-                if( commaOrEnd != NULL ) {
-                    commaOrEnd = 0;
+                const struct CS_String *restOfString = CS_stringTempStrtok( NULL, &CS_STRING(","), &savePtr );
+                if( restOfString != NULL ) {
+                    expireTime = time(NULL) + CS_stringAtoi(restOfString);
                 }
-                expireTime = time(NULL) + atoi(restOfString);
             }
         }
     }

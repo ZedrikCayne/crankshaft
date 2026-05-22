@@ -33,27 +33,30 @@ static bool grundle2( struct CS_ClientInfo *info ) {
     return false;
 }
 
+static struct CS_String czech = CS_STRING("czech");
+static struct CS_String czech2 = CS_STRING("czech2");
+static struct CS_String test = CS_STRING("/test");
 static struct CS_Route testRoutes[] = {
-    { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, 0, "czech", grundle },
-    { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, 0, "czech2", grundle2 },
-    { CS_HTTP_METHOD_CONNECT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_DELETE,   CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_HEAD,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_POST,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_PUT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_TRACE,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 }
+    { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, &czech, grundle },
+    { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, &czech2, grundle2 },
+    { CS_HTTP_METHOD_CONNECT,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_DELETE,   CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_HEAD,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_POST,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_PUT,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_TRACE,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 }
 };
 
 static struct CS_Route failRoute[] = {
-    { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, 0, "czech", grundle2 },
-    { CS_HTTP_METHOD_CONNECT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_DELETE,   CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_HEAD,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_POST,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_PUT,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_TRACE,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 },
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 }
+    { CS_HTTP_METHOD_ANY, CS_ROUTE_TYPE_FILTER, &czech, grundle2 },
+    { CS_HTTP_METHOD_CONNECT,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_DELETE,   CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_HEAD,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_POST,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_PUT,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_TRACE,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, &test, CS_serverDiagnostic200 }
 };
 
 bool test_http(void) {
@@ -64,7 +67,7 @@ bool test_http(void) {
     snprintf( base, 128, "http://localhost:%d/test", testServer->serverPort );
 
     if( testServer ) {
-        struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, base, NULL, 0, NULL, 0, NULL, 0, NULL, 0, true, NULL );
+        struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, CS_stringTempCopyCstring(base,-1), NULL, 0, NULL, 0, NULL, 0, NULL, 0, true, NULL );
         CS_FAIL_ON_NOT_NULL( reply, "Request should come back null.", "Oops." );
         CS_serverKill( testServer );
     }
@@ -73,7 +76,7 @@ bool test_http(void) {
     CS_FAIL_ON_NULL( testServer, "Start web server.", "Failed." );
     snprintf( base, 128, "https://localhost:%d/test", testServer->serverPort );
     if( testServer ) {
-        struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, base, NULL, 0, NULL, 0, NULL, 0, NULL, 0, true, NULL );
+        struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, CS_stringTempCopyCstring(base, -1), NULL, 0, NULL, 0, NULL, 0, NULL, 0, true, NULL );
         CS_FAIL_ON_NULL( reply, "GET request to /test", "Failed" );
         if( reply ) {
             struct CS_JsonNode *json = CS_jsonParse( CS_PP_startOfData( reply->buffer ),
@@ -92,7 +95,7 @@ bool test_http(void) {
 
         snprintf(base, 128, "https://localhost:%d/test?a=b&c=fah&d=groovy",testServer->serverPort);
 
-        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, NULL, 0, NULL, 0, NULL, 0, NULL, 0, true, NULL );
+        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, CS_stringTempCopyCstring(base,-1), NULL, 0, NULL, 0, NULL, 0, NULL, 0, true, NULL );
         CS_FAIL_ON_NULL( reply, "Make POST with uri parameters.", "Failed on %s", base );
         if( reply ) {
             struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
@@ -126,24 +129,26 @@ bool test_http(void) {
         }
 
         struct CS_QueryParameter queryParameters[] = {
-            {"a", "b"},
-            {"c", "fah"},
-            {"d", "groovy"}
+            {CS_STRING("a"), CS_STRING("b")},
+            {CS_STRING("c"), CS_STRING("fah")},
+            {CS_STRING("d"), CS_STRING("groovy")}
         };
 
         snprintf(base, 128, "https://localhost:%d/test",testServer->serverPort);
         struct CS_RequestHeader headers[] = {
-            {"Header1","Value1"},
-            {"Header2","Value2"},
-            {"Header3","Value3"},
-            {"Header4","Value4"},
+            {CS_STRING("Header1"),CS_STRING("Value1")},
+            {CS_STRING("Header2"),CS_STRING("Value2")},
+            {CS_STRING("Header3"),CS_STRING("Value3")},
+            {CS_STRING("Header4"),CS_STRING("Value4")},
         };
-        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, headers, 4, queryParameters, 3, NULL, 0, NULL, 0, true, NULL );
+        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, CS_stringTempCopyCstring(base,-1), headers, 4, queryParameters, 3, NULL, 0, NULL, 0, true, NULL );
         CS_FAIL_ON_NULL( reply, "Make POST with uri parameters and form parameters.", "Failed on %s", base );
         if( reply ) {
-            const char *ctype = CS_httpReplyHeader(reply,"Content-Type");
+            const struct CS_String ContentType = CS_STRING("Content-Type");
+            const struct CS_String appjson = CS_STRING("application/json");
+            const struct CS_String *ctype = CS_httpReplyHeader(reply,&ContentType);
             CS_FAIL_ON_NULL( ctype, "Content type header.", "Got a null." );
-            CS_FAIL_ON_FALSE( ctype && strcmp(ctype,"application/json") == 0, "Should have gotten json back.", "Got %s instead", ctype?ctype:"NULL" );
+            CS_FAIL_ON_FALSE( ctype && CS_stringStrcmp(ctype,&appjson) == 0, "Should have gotten json back.", "Got %s instead", CS_stringTempCstringOrNULL(ctype) );
             struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
                     CS_PP_dataSize( reply->buffer ), 512 );
             CS_FAIL_ON_NULL( json, "Json parsing reply", "Json failed." );
@@ -169,10 +174,12 @@ bool test_http(void) {
                                 break;
                         }
                     }
-                }for( int32_t i = 0; i < sizeof(headers)/sizeof(headers[0]); ++i ) {
-                    const char *tempPath = CS_tempBuffSnprintf( 64, "headers/|name=%s/value", headers[i].header );
-                    const char *tempVal = CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) );
-                    CS_FAIL_ON_FALSE( tempVal && strcmp(tempVal,headers[i].values) == 0, CS_tempBuffSnprintf(64, "Looking for %s in %s", headers[i].values, tempPath), "Found %s", tempVal?tempVal:NULL );
+                }
+
+                for( int32_t i = 0; i < sizeof(headers)/sizeof(headers[0]); ++i ) {
+                    const char *tempPath = CS_tempBuffSnprintf( 64, "headers/|name=%s/value", CS_stringTempCstring(&headers[i].header) );
+                    const struct CS_String *tempVal = CS_stringTempCopyCstring(CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) ), -1);
+                    CS_FAIL_ON_FALSE( tempVal && CS_stringStrcmp(tempVal,&headers[i].values) == 0, CS_tempBuffSnprintf(64, "Looking for %s in %s", CS_stringTempCstringOrNULL(&headers[i].values), tempPath), "Found %s", CS_stringTempCstringOrNULL(tempVal) );
                 }
                 CS_jsonFree( json );
             }
@@ -180,21 +187,21 @@ bool test_http(void) {
         }
 
         struct CS_FormParameters formParameters[] = {
-            {"form1","Form1 Data"},
-            {"form2","Form2 Data"},
-            {"form3","Form3 Data"}
+            {CS_STRING("form1"),CS_STRING("Form1 Data")},
+            {CS_STRING("form2"),CS_STRING("Form2 Data")},
+            {CS_STRING("form3"),CS_STRING("Form3 Data")}
         };
 
-        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, base, headers, 4, NULL, 0, formParameters, 3, NULL, 0, true, NULL );
+        reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, CS_stringTempCopyCstring(base, -1), headers, 4, NULL, 0, formParameters, 3, NULL, 0, true, NULL );
         CS_FAIL_ON_NULL( reply, "Request with params, form params, uri paramaters.", "Failed." );
         if( reply ) {
             struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
                     CS_PP_dataSize( reply->buffer ), 512 );
             if( json ) {
                 for( int32_t i = 0; i < sizeof(formParameters)/sizeof(formParameters[0]); ++i ) {
-                    const char *tempPath = CS_tempBuffSnprintf( 64, "formParameters/|name=%s/value", formParameters[i].name);
-                    const char *tempVal = CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) );
-                    CS_FAIL_ON_FALSE( tempVal && strcmp(tempVal,formParameters[i].value)==0, tempPath, "No match." );
+                    const char *tempPath = CS_tempBuffSnprintf( 64, "formParameters/|name=%s/value", CS_stringTempCstring(&formParameters[i].name));
+                    const struct CS_String *tempVal = CS_stringTempCopyCstring(CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) ), -1);
+                    CS_FAIL_ON_FALSE( tempVal && CS_stringStrcmp(tempVal,&formParameters[i].value)==0, tempPath, "No match." );
 
                 }
                 CS_jsonFree( json );

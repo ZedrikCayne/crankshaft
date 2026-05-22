@@ -48,9 +48,10 @@ struct CS_WebServer {
 #define HEADER_MAX 64
 #define HEADER_VALUE_MAX 256
 struct CS_ReplyHeader {
-    char header[ HEADER_MAX ];
-    char value[ HEADER_VALUE_MAX ];
+    union { struct CS_String64 name64; struct CS_String name; } name;
+    union { struct CS_String256 value256; struct CS_String value; } value;
 };
+
 #define COOKIE_MAX 64
 #define COOKIE_VALUE_MAX 256
 
@@ -63,8 +64,8 @@ enum {
 struct CS_ReplyCookie {
     bool httpOnly;
     int32_t sameSiteEnum;
-    char cookie[ COOKIE_MAX ];
-    char value[ COOKIE_VALUE_MAX ];
+    union { struct CS_String64 cookie64; struct CS_String cookie; } cookie;
+    union { struct CS_String256 value256; struct CS_String value; } value;
 };
 
 
@@ -78,9 +79,9 @@ struct CS_RequestInfo {
     int32_t numHeaders;
     int32_t numParameters;
     int32_t numFormParameters;
-    const char *uri;
-    const char *method;
-    const char *httpVersion;
+    struct CS_String uri;
+    struct CS_String method;
+    struct CS_String httpVersion;
     int32_t requestMethodEnum;
     struct CS_RequestHeader headers[ MAX_REQUEST_HEADERS ];
     struct CS_QueryParameter parameters[ MAX_QUERY_PARAMETERS ];
@@ -114,8 +115,7 @@ enum {
 struct CS_Route {
     int32_t method;
     int32_t routeType;
-    int32_t routeLength;
-    const char *route;
+    const struct CS_String *route;
     bool (*handler)(struct CS_ClientInfo *);
 };
 
@@ -139,6 +139,7 @@ struct CS_WebServer *CS_serverStart(int32_t portNum,
                                     int32_t fileCacheControlTimeInSeconds,
                                     struct CS_Route *routes,
                                     int32_t nRoutes);
+
 bool CS_serverKill(struct CS_WebServer *server);
 
 bool CS_serverDiagnostic200( struct CS_ClientInfo *info );
@@ -146,18 +147,18 @@ bool CS_serverReplyError( struct CS_ClientInfo *info, int32_t responseEnum, cons
 bool CS_serverFileServer( struct CS_ClientInfo *info );
 bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int32_t cacheSeconds, struct CS_Reply *useMe );
 
-void CS_serverRemoveRequestHeader( struct CS_ClientInfo *info, const char *header );
-const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const char *name );
-const char *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const char *header );
-const char *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const char *name );
-const char *CS_serverGetRequestCookie( struct CS_ClientInfo *info, const char *cookie );
-const char *CS_serverGetReplyHeader( struct CS_Reply *reply, const char *header );
-const char *CS_serverGetRequestTempIdAddress( struct CS_ClientInfo *info );
-bool CS_serverSetReplyHeader( struct CS_Reply *reply, const char *header, const char *value );
-bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int32_t value );
-bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value );
-bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int32_t value );
-bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly, int32_t sameSiteEnum );
+void CS_serverRemoveRequestHeader( struct CS_ClientInfo *info, const struct CS_String *header );
+const struct CS_String *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const struct CS_String *name );
+const struct CS_String *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const struct CS_String *header );
+const struct CS_String *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const struct CS_String *name );
+const struct CS_String *CS_serverGetRequestCookie( struct CS_ClientInfo *info, const struct CS_String *cookie );
+const struct CS_String *CS_serverGetReplyHeader( struct CS_Reply *reply, const struct CS_String *header );
+const struct CS_String *CS_serverGetRequestTempIdAddress( struct CS_ClientInfo *info );
+bool CS_serverSetReplyHeader( struct CS_Reply *reply, const struct CS_String *header, const struct CS_String *value );
+bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const struct CS_String *header, int32_t value );
+bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const struct CS_String *header, const struct CS_String *value );
+bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const struct CS_String *header, int32_t value );
+bool CS_serverSetReplyCookie( struct CS_Reply *reply, const struct CS_String *cookie, const struct CS_String *value, bool httpOnly, int32_t sameSiteEnum );
 
 struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int32_t responseEnum, int32_t mimeEnum, void *replyBuffer, int32_t replyLength );
 void CS_serverReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );

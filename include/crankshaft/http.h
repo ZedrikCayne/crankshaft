@@ -5,6 +5,7 @@
 
 #include <crankshaft/pushpull.h>
 #include <crankshaft/stringbuilder.h>
+#include <crankshaft/string.h>
 #include <stdint.h>
 
 /********************************************************************
@@ -99,18 +100,18 @@ enum CS_HTTPResponseCodes {
 };
 
 struct CS_RequestHeader {
-    const char *header;
-    const char *values;
+    struct CS_String header;
+    struct CS_String values;
 };
 
 struct CS_FormParameters {
-    const char *name;
-    const char *value;
+    struct CS_String name;
+    struct CS_String value;
 };
 
 struct CS_QueryParameter {
-    const char *name;
-    const char *value;
+    struct CS_String name;
+    struct CS_String value;
 };
 
 #define MAX_REPLY_HEADERS 64
@@ -132,24 +133,24 @@ struct CS_RequestReply {
 
 #define CS_MAX_REQUEST_LENGTH 4096
 
-int32_t CS_httpStringToMethodEnum( const char *methodString );
+int32_t CS_httpStringToMethodEnum( const struct CS_String *methodString );
 const char *CS_httpMethodEnumToString( int32_t methodEnum );
 const char *CS_httpResponseEnumToString( int32_t responseEnum );
 int32_t CS_httpResponseEnumToCode( int32_t responseEnum );
-bool CS_httpUrlDecodeInPlace( char *toDecode );
-char *CS_httpUrlDecodeTemp( const char *doDecode ); 
-char *CS_httpUrlEncodeTemp( const char *toEncode );
-struct CS_StringBuilder *CS_httpUrlDecode( const char *toDecode );
-struct CS_StringBuilder *CS_httpUrlEncode( const char *toEncode );
-struct CS_StringBuilder *CS_httpUrlDecodeAppend( const char *toDecode, struct CS_StringBuilder *appendTo );
-struct CS_StringBuilder *CS_httpUrlEncodeAppend( const char *toEncode, struct CS_StringBuilder *appendTo );
+bool CS_httpUrlDecodeInPlace( struct CS_String *toDecode );
+struct CS_String *CS_httpUrlDecodeTemp( const struct CS_String *doDecode ); 
+struct CS_String *CS_httpUrlEncodeTemp( const struct CS_String *toEncode );
+struct CS_StringBuilder *CS_httpUrlDecode( const struct CS_String *toDecode );
+struct CS_StringBuilder *CS_httpUrlEncode( const struct CS_String *toEncode );
+struct CS_StringBuilder *CS_httpUrlDecodeAppend( const struct CS_String *toDecode, struct CS_StringBuilder *appendTo );
+struct CS_StringBuilder *CS_httpUrlEncodeAppend( const struct CS_String *toEncode, struct CS_StringBuilder *appendTo );
 int32_t CS_httpUrlDecodeBinary( const void *toDecode, int32_t decodeBufferLength, void *output, int32_t outputBufferLength );
 int32_t CS_httpUrlEncodeBinary( const void *toEncode, int32_t encodeBufferLength, void *output, int32_t outputBufferLength );
 
-const char *CS_httpReplyHeader( struct CS_RequestReply *reply, const char *header );
+const struct CS_String *CS_httpReplyHeader( struct CS_RequestReply *reply, const struct CS_String *header );
 
 struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
-                                            const char *uri,
+                                            const struct CS_String *uri,
                                             struct CS_RequestHeader *headers,
                                             int32_t numHeaders,
                                             struct CS_QueryParameter *queryParameters,
@@ -161,7 +162,7 @@ struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
                                             struct CS_RequestReply *reuse );
 
 struct CS_RequestReply *CS_httpMakeRequest( int32_t methodEnum,
-                                            const char *uri,
+                                            const struct CS_String *uri,
                                             struct CS_RequestHeader *headers,
                                             int32_t numHeaders,
                                             struct CS_QueryParameter *queryParameters,

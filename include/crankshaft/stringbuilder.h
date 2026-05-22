@@ -34,8 +34,8 @@ struct CS_StringBuilder {
 struct CS_StringBuilder *CS_SB_create( int32_t initialSize );
 struct CS_StringBuilder *CS_SB_append( struct CS_StringBuilder *buffer, const char *string );
 struct CS_StringBuilder *CS_SB_appendChar( struct CS_StringBuilder *buffer, const char ch );
-struct CS_StringBuilder *CS_SB_vsnprintf( struct CS_StringBuilder *buffer, int32_t maxAppend, const char *fmt, va_list ap );
-struct CS_StringBuilder *CS_SB_snprintf( struct CS_StringBuilder *buffer, int32_t maxAppend, const char *fmt, ... );
+struct CS_StringBuilder *CS_SB_vsnprintf( struct CS_StringBuilder *buffer, int32_t maxAppend, const char *fmt, va_list ap ) __attribute__((format(printf, 3, 0)));
+struct CS_StringBuilder *CS_SB_snprintf( struct CS_StringBuilder *buffer, int32_t maxAppend, const char *fmt, ... ) __attribute__((format(printf, 3, 4)));
 bool CS_SB_expandBy( struct CS_StringBuilder *buffer, int32_t minimumNewCapacity );
 void CS_SB_free( struct CS_StringBuilder *buffer );
 const char *CS_SB_freeButReturnBuffer( struct CS_StringBuilder *buffer );

@@ -34,12 +34,14 @@ static char testArray[257] = {
     0x00, 0x00
 };
 
+static struct CS_String testString = CS_STRING(testArray);
+
 bool test_urlencode(void) {
     //Tests go here:
-    char *tempUrlEncoded = CS_httpUrlEncodeTemp( testArray );
-    char *tempUrlDecoded = CS_httpUrlDecodeTemp( tempUrlEncoded );
+    struct CS_String *tempUrlEncoded = CS_httpUrlEncodeTemp( &testString );
+    struct CS_String *tempUrlDecoded = CS_httpUrlDecodeTemp( tempUrlEncoded );
     
-    CS_FAIL_ON_FALSE( memcmp( tempUrlDecoded, testArray, 256 ) == 0, "Encode/Decode should end up where we started.", "Not!" );
+    CS_FAIL_ON_FALSE( memcmp( tempUrlDecoded->data, testArray, 257 ) == 0, "Encode/Decode should end up where we started.", "Not!" );
 
     return testCount !=
            testSucceeded;

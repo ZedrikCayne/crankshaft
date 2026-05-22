@@ -16,6 +16,8 @@ static int32_t testCount = 0;
 static int32_t testSucceeded = 0;
 
 static char *cStrings[] = {
+    "",
+    "",
     "abcdefgh",
     "abcdefgh",
     "bbcdefgh",
@@ -23,17 +25,16 @@ static char *cStrings[] = {
     "abcdefghi"
 };
 
-static char counting[] = "0........10........20........30........40........50........60........70.......80........90........00........10........20........30........40........";
-
-
 const struct CS_String *newStrings[] = {
     NULL,
     NULL,
     NULL,
     NULL,
-    NULL
+    NULL,
+    NULL,
+    NULL,
+    NULL,
 };
-
 
 static bool sameSign( int32_t a, int32_t b ) {
     if( a == b ) return true;
@@ -94,16 +95,21 @@ bool test_string(void) {
     for( int32_t i = 0; i < nStrings; ++i ) {
         for( int32_t j = 0; j < nStrings; ++j ) {
             if( i == j ) continue;
+            int32_t limit = CS_testRandMax(20) + 10;
             int32_t cResult = strcmp(randCStrings[i],randCStrings[j]);
+            int32_t c2Result = strncmp(randCStrings[i],randCStrings[j],limit);
             int32_t sResult = CS_stringStrncmp(randStrings[i], randStrings[j], -1);
+            int32_t s2Result = CS_stringStrncmp(randStrings[i], randStrings[j],limit);
             CS_FAIL_ON_FALSE( sameSign(cResult,sResult), "CS_stringStrncmp(-1)", "Failed on %d %d with %d, %d", i, j, cResult, sResult );
+            CS_FAIL_ON_FALSE( sameSign(cResult,sResult), "CS_stringStrncmp(n)", "Failed on %d %d %d with %d, %d", i, j, limit, c2Result, s2Result );
 
         }
         for( int32_t j = 0; j < nLen; ++j ) {
             char * result = strstr( randCStrings[i], cStrings[j] );
-            const char * reResult = CS_stringStrstr( randStrings[i], newStrings[j] );
+            const struct CS_String* reResult = CS_stringStrstr( randStrings[i], newStrings[j] );
             int32_t out1, out2;
-            CS_FAIL_ON_FALSE( sameOffset(randCStrings[i], result, randStrings[i]->data, reResult, &out1, &out2 ), "CS_stringStrstr()", "Failed on %d %d with %d %d", i, j, out1, out2 );
+            CS_FAIL_ON_FALSE( sameOffset(randCStrings[i], result, randStrings[i]->data, reResult?reResult->data:NULL, &out1, &out2 ), "CS_stringStrstr()", "Failed on %d %d with %d %d", i, j, out1, out2 );
+            CS_stringFree(reResult);
         }
     }
 

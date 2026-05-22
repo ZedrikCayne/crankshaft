@@ -52,11 +52,11 @@ void *CS_WS_getApplicationData( struct CS_WebSocket *ws ) {
 }
 
 static bool privateIsWSUpgradeRequest( struct CS_ClientInfo *clientInfo ) {
-    const char *connection = CS_serverGetRequestHeader( clientInfo, "Connection" );
-    const char *upgrade = CS_serverGetRequestHeader( clientInfo, "Upgrade" );
+    const struct CS_String *connection = CS_serverGetRequestHeader( clientInfo, &CS_STRING("Connection") );
+    const struct CS_String *upgrade = CS_serverGetRequestHeader( clientInfo, &CS_STRING("Upgrade") );
     //The source buffers on this are at least a few hundred bytes long..
-    return ( connection && strstr( connection, "Upgrade" ) != NULL &&
-             upgrade && strncmp( "websocket", upgrade, 32 ) == 0 );
+    return ( connection && CS_stringStrstr( connection, &CS_STRING("Upgrade") ) != NULL &&
+             upgrade && CS_stringStrncmp( &CS_STRING("websocket"), upgrade, 9 ) == 0 );
 }
 //Peek into the request info
 bool CS_WS_requestWantsWebsocket( struct CS_ClientInfo *clientInfo ) {
@@ -84,16 +84,16 @@ struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *appli
 
     struct CS_Reply *reply = CS_serverCreateReply( clientInfo, CS_RESPONSE_101, CS_MIME_DO_NOT_SET, NULL, 0 );
     if( reply ) {
-        const char *incomingKey = CS_serverGetRequestHeader( clientInfo, "Sec-WebSocket-Key" );
-        CS_serverSetReplyHeader( reply, "Upgrade", "websocket" );
-        CS_serverSetReplyHeader( reply, "Connection", "Upgrade" );
+        const struct CS_String *incomingKey = CS_serverGetRequestHeader( clientInfo, &CS_STRING("Sec-WebSocket-Key") );
+        CS_serverSetReplyHeader( reply, &CS_STRING("Upgrade"), &CS_STRING("websocket") );
+        CS_serverSetReplyHeader( reply, &CS_STRING("Connection"), &CS_STRING("Upgrade") );
         if( incomingKey ) {
             unsigned char outgoingHash[ SHA_DIGEST_LENGTH ];
-            const char *combined = CS_tempBuffSnprintf( 128, "%s%s", incomingKey, wsAcceptConcat );
+            const char *combined = CS_tempBuffSnprintf( 128, "%s%s", CS_stringTempCstring(incomingKey), wsAcceptConcat );
             int32_t length = strlen( combined );
             SHA1( (const unsigned char*)combined, length, outgoingHash );
             const char *encoded = CS_base64EncodeTemp( outgoingHash, SHA_DIGEST_LENGTH, NULL );
-            CS_serverSetReplyHeader( reply, "Sec-WebSocket-Accept",  encoded );
+            CS_serverSetReplyHeader( reply, &CS_STRING("Sec-WebSocket-Accept"),  CS_stringTempCopyCstring(encoded,-1) );
         }
         CS_serverDoReply( clientInfo, reply );
     } else {
@@ -183,7 +183,6 @@ bool CS_WS_returnFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame
  * +---------------------------------------------------------------+
  *********************************************************************/
 //Parse incoming frame off of the open websocket.
-#define READ_WS(__WS) ((__WS)->clientInfo->ssl?CS_PP_readFromSSL((__WS)
 struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
     int32_t bytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
 

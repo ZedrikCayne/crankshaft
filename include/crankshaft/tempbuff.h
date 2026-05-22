@@ -53,7 +53,7 @@ char *CS_tempStringCopyWithPad(const char *copyme, int32_t size, char pad, int32
 void *CS_tempMemCopy(const void *from, int32_t size);
 bool CS_tempAllocateGlobal(int32_t globalSize);
 bool CS_tempFreeGlobal();
-char *CS_tempBuffSnprintf(int32_t max, const char *fmt, ...);
+char *CS_tempBuffSnprintf(int32_t max, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
 #define CS_MAX_TEMP_BUFF_TEMP_NAME 64
 

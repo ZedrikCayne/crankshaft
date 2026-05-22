@@ -1680,7 +1680,7 @@ const char *CS_jsonNodeValueAsTempString( struct CS_JsonNode *mine ) {
         case CS_JSON_FLOAT_AS_STRING:
             return mine->stringValue;
         case CS_JSON_INTEGER:
-            return CS_tempBuffSnprintf(32, "%d", mine->intValue);
+            return CS_tempBuffSnprintf(32, "%lld", mine->intValue);
         case CS_JSON_FLOAT:
             return CS_tempBuffSnprintf(32, "%f", mine->floatValue);
         case CS_JSON_true:

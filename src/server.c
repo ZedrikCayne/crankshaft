@@ -99,7 +99,7 @@ static void pipeHandler(int32_t sig) {
 static struct CS_ClientInfo *createClientInfoWithThread( int32_t socket,
                                                       struct CS_WebServer *server,
                                                       struct sockaddr *clientSocketAddress ) {
-    struct CS_ClientInfo *ci = CS_alloc(sizeof(struct CS_ClientInfo));
+    struct CS_ClientInfo *ci = CS_allocZero(sizeof(struct CS_ClientInfo));
     if( ci == NULL ) {
         CS_LOG_ERROR( "Out of memory allocating a new client info." );
         goto CLIENT_ERR_OOM;
@@ -219,7 +219,7 @@ static void *serverThreadProc(void *var) {
         if( pollVal < 0 ) break;
         if( pollVal == 1 && pollMe.revents == POLLIN ) {
             struct sockaddr *clientSocketAddress = CS_tempBuff( 128 );
-            socklen_t addrSize = sizeof(clientSocketAddress);
+            socklen_t addrSize = sizeof(struct sockaddr);
             int32_t newSock = accept(server->listenSocket, (struct sockaddr *)clientSocketAddress, &addrSize);
             if( newSock < 0 ) {
                 CS_LOG_ERROR("Socket closed, error %s", strerror(errno));
@@ -255,8 +255,8 @@ struct CS_WebServer *CS_serverStart(int32_t portNum,
         return NULL;
     }
 
-    returnValue->defaultFileServingPath = fileServingPath;
-    returnValue->defaultFileServingFile = fileServingFile;
+    returnValue->defaultFileServingPath = CS_cstringCopy(fileServingPath);
+    returnValue->defaultFileServingFile = CS_cstringCopy(fileServingFile);
     returnValue->killMe = false;
     returnValue->threadRunning = false;
     returnValue->logAccess = NULL;
@@ -276,8 +276,6 @@ struct CS_WebServer *CS_serverStart(int32_t portNum,
             CS_LOG_ERROR("Method defined in routes for web server is outside of allowed range.");
             goto ERR_ALLOC;
         }
-        int32_t routeLength = strlen(routes[ i ].route);
-        routes[ i ].routeLength = routeLength;
         if( currentIndex == CS_HTTP_METHOD_ANY ) {
             for( j = 0; j < CS_MAX_HTTP_METHODS; ++j ) returnValue->routeNumbers[ j ]++;
         } else {
@@ -399,38 +397,41 @@ static void ERR(struct CS_ClientInfo *info, int32_t errorEnum, const char *detai
 }
 
 #define TEMP_OUTPUT_BUFF_SIZE 8192 
-static bool BASIC_OK(struct CS_ClientInfo *info, const char *what) {
+static bool BASIC_OK(struct CS_ClientInfo *info, const struct CS_String *what) {
     struct CS_PushPullBuffer tempToWriteBase;
     struct CS_PushPullBuffer *tempToWrite = &tempToWriteBase;
     CS_PP_init(tempToWrite,TEMP_OUTPUT_BUFF_SIZE,CS_tempBuff(TEMP_OUTPUT_BUFF_SIZE));
     struct CS_StringBuilder *scratch = CS_SB_create( TEMP_OUTPUT_BUFF_SIZE );
     if( tempToWrite == NULL )
         return true;
-    CS_PP_printf( tempToWrite, "{\"what\":\"%s\",\"status\":%d,\"headers\":[",what,200);
+    CS_PP_printf( tempToWrite, "{\"what\":\"%.*s\",\"status\":%d,\"headers\":[",what->length,what->data,200);
     for( int32_t i = 0; i < info->requestInfo.numHeaders; ++i ) { 
         if( i != 0 ) CS_PP_printf( tempToWrite, "," );
         CS_SB_reset( scratch );
-        CS_jsonQuoteStringToStringBuilder(info->requestInfo.headers[i].values,1024,scratch);
-        CS_PP_printf( tempToWrite, "{\"name\":\"%s\",\"value\":\"%s\"}", 
-                info->requestInfo.headers[i].header, scratch->buffer );
+        CS_jsonQuoteStringToStringBuilder(info->requestInfo.headers[i].values.data,info->requestInfo.headers[i].values.length,scratch);
+        CS_PP_printf( tempToWrite, "{\"name\":\"%.*s\",\"value\":\"%s\"}",
+                info->requestInfo.headers[i].header.length,
+                info->requestInfo.headers[i].header.data, scratch->buffer );
     }
     CS_PP_printf( tempToWrite, "],\"queryParameters\":[" );
     for( int32_t i = 0; i < info->requestInfo.numParameters; ++i ) {
         if( i != 0 ) CS_PP_printf( tempToWrite, "," );
         CS_SB_reset( scratch );
-        CS_jsonQuoteStringToStringBuilder(info->requestInfo.parameters[i].value,1024,scratch);
-        CS_PP_printf( tempToWrite, "{\"name\":\"%s\",\"value\":\"%s\"}",
-                info->requestInfo.parameters[i].name, scratch->buffer );
+        CS_jsonQuoteStringToStringBuilder(info->requestInfo.parameters[i].value.data,info->requestInfo.parameters[i].value.length,scratch);
+        CS_PP_printf( tempToWrite, "{\"name\":\"%.*s\",\"value\":\"%s\"}",
+                info->requestInfo.parameters[i].name.length,
+                info->requestInfo.parameters[i].name.data, scratch->buffer );
     }
     CS_SB_reset( scratch );
-    CS_jsonQuoteStringToStringBuilder(info->requestInfo.uri,1024,scratch);
+    CS_jsonQuoteStringToStringBuilder(info->requestInfo.uri.data,info->requestInfo.uri.length,scratch);
     CS_PP_printf( tempToWrite, "],\"dataLeftInBuffer\":%d,\"uri\":\"%s\",\"formParameters\":[", CS_PP_dataSize( info->buffer ), scratch->buffer );
     for( int32_t i = 0; i < info->requestInfo.numFormParameters; ++i ) {
         if( i != 0 ) CS_PP_printf( tempToWrite, "," );
         CS_SB_reset( scratch );
-        CS_jsonQuoteStringToStringBuilder(info->requestInfo.formParameters[i].value,1024,scratch);
-        CS_PP_printf( tempToWrite, "{\"name\":\"%s\",\"value\":\"%s\"}",
-                info->requestInfo.formParameters[i].name, scratch->buffer );
+        CS_jsonQuoteStringToStringBuilder(info->requestInfo.formParameters[i].value.data,info->requestInfo.formParameters[i].value.length,scratch);
+        CS_PP_printf( tempToWrite, "{\"name\":\"%.*s\",\"value\":\"%s\"}",
+                info->requestInfo.formParameters[i].name.length,
+                info->requestInfo.formParameters[i].name.data, scratch->buffer );
     }
     CS_PP_printf( tempToWrite, "]}" );
     CS_SB_free( scratch );
@@ -470,11 +471,23 @@ enum HeaderState {
 #define REQUIRE_CHAR(X) if( currentPoint<endOfData && *currentPoint==X)++currentPoint;else return -1;
 #define REQUIRE_CHAR_NO_EAT(X) if( currentPoint<endOfData && *currentPoint!=X)return -1;
 #define REQUIRE_CRLF() REQUIRE_CHAR(CR);REQUIRE_CHAR_NO_EAT(LF)
+#define SET_STRING(_WHAT) CS_stringInitReferenceCstring(&(_WHAT),startOfToken,currentPoint - startOfToken);
+#define SET_STRING_COPY(_WHAT) CS_stringInitCopyCstring(&(_WHAT),startOfToken,currentPoint - startOfToken);
 
-#define CS_ClearRequestInfo(X) memset(&((X)->requestInfo),0,sizeof(struct CS_RequestInfo))
+static void clearRequestInfo(struct CS_ClientInfo *info) {
+    //We used _COPY on these, so we need to actually free them.
+    CS_stringFree(&info->requestInfo.uri);
+    for( int32_t i = 0; i < info->requestInfo.numHeaders; ++i ) {
+        CS_stringFree(&info->requestInfo.headers[i].values);
+    }
+    for( int32_t i = 0; i < info->requestInfo.numFormParameters; ++i ) {
+        CS_stringFree(&info->requestInfo.formParameters[i].value);
+    }
+    memset(&(info->requestInfo),0,sizeof(struct CS_RequestInfo));
+}
 
 static int32_t parseRequest(struct CS_ClientInfo *info) {
-    CS_ClearRequestInfo(info);
+    clearRequestInfo(info);
     char *startOfData = CS_PP_startOfData(info->buffer);
 
     char *currentPoint = startOfData;
@@ -484,8 +497,8 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
     int32_t currentHeaderIndex = 0;
     int32_t currentParameterIndex = 0;
     int32_t currentFormParameterIndex = 0;
-    const char *contentType = NULL;
-    const char *contentLength = NULL;
+    const struct CS_String *contentType = NULL;
+    const struct CS_String *contentLength = NULL;
     const char *endOfContent = NULL;
     int32_t length = 0;
 
@@ -497,15 +510,14 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                 startOfToken = currentPoint;
                 EAT_CRLF();
                 currentHeaderState = HEADER_STATE_METHOD;
-                info->requestInfo.requestMethodEnum = CS_httpStringToMethodEnum(startOfData);
-                if( info->requestInfo.requestMethodEnum == CS_HTTP_METHOD_UNKNOWN ) {
-                    return -1;
-                }
             case HEADER_STATE_METHOD:
                 //One space separates method and the uri
                 if( *currentPoint == SP )  {
-                    *currentPoint = 0;
-                    info->requestInfo.method = startOfToken;
+                    SET_STRING(info->requestInfo.method);
+                    info->requestInfo.requestMethodEnum = CS_httpStringToMethodEnum(&info->requestInfo.method);
+                    if( info->requestInfo.requestMethodEnum == CS_HTTP_METHOD_UNKNOWN ) {
+                        return -1;
+                    }
                     currentHeaderState = HEADER_STATE_URI;
                     startOfToken = NULL;
                 }
@@ -513,12 +525,11 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
             case HEADER_STATE_URI:
                 if( *currentPoint == SP || *currentPoint == QUESTION )  {
                     currentHeaderState = (*currentPoint==SP)?HEADER_STATE_HTTP:HEADER_STATE_QUERY_PARAM;
-                    info->requestInfo.uri = startOfToken;
-                    if( info->requestInfo.uri[0] != '/' ) {
+                    SET_STRING_COPY(info->requestInfo.uri);
+                    if( info->requestInfo.uri.data[0] != '/' ) {
                         return -1;
                     }
-                    *currentPoint = 0;
-                    if( CS_httpUrlDecodeInPlace( startOfToken ) ) return -1;
+                    if( CS_httpUrlDecodeInPlace( &info->requestInfo.uri ) ) return -1;
                     startOfToken = NULL;
                 }
                 break;
@@ -546,15 +557,14 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                     currentHeaderState = (*currentPoint==AMPERSAND)
                         ?HEADER_STATE_QUERY_PARAM
                         :HEADER_STATE_QUERY_PARAM_VALUE;
-                    *currentPoint = 0;
-                    info->requestInfo.parameters[ currentParameterIndex ].name = startOfToken;
+                    SET_STRING(info->requestInfo.parameters[ currentParameterIndex ].name);
                     startOfToken = NULL;
                     break;
                 }
                 break;
             case HEADER_STATE_QUERY_PARAM_VALUE:
                 if( *currentPoint == AMPERSAND || *currentPoint == POUND || *currentPoint == SP ) {
-                    info->requestInfo.parameters[ currentParameterIndex ].value = startOfToken;
+                    SET_STRING(info->requestInfo.parameters[ currentParameterIndex ].value);
                     ++currentParameterIndex;
                     info->requestInfo.numParameters = currentParameterIndex;
                     startOfToken = NULL;
@@ -563,7 +573,6 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                         :(*currentPoint==POUND)
                             ?HEADER_STATE_FRAGMENT
                             :HEADER_STATE_HTTP;
-                    *currentPoint = 0;
                     break;
                 }
                 break;
@@ -588,17 +597,16 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                     if( info->requestInfo.requestMethodEnum != CS_HTTP_METHOD_POST ) {
                         return currentPoint - startOfData;
                     }
-                    contentType = CS_serverGetRequestHeader( info, "Content-Type" );
-                    if( contentType == NULL || strcmp( contentType, "application/x-www-form-urlencoded" ) != 0 ) {
+                    contentType = CS_serverGetRequestHeader( info, &CS_STRING("Content-Type") );
+                    if( contentType == NULL || CS_stringStrcmp( contentType, &CS_STRING("application/x-www-form-urlencoded") ) != 0 ) {
                         return currentPoint - startOfData;
                     }
-                    contentLength = CS_serverGetRequestHeader( info, "Content-Length" );
+                    contentLength = CS_serverGetRequestHeader( info, &CS_STRING("Content-Length") );
                     if( contentLength == NULL ) {
                         return currentPoint - startOfData;
                     }
-                    char *endOfValue;
-                    length = strtoll( contentLength, &endOfValue, 10 );
-                    if( endOfValue == contentLength ) {
+                    length = CS_stringAtol( contentLength );
+                    if( length == 0 ) {
                         return currentPoint - startOfData;
                     }
                     endOfContent = startOfToken + length;
@@ -620,8 +628,7 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                 currentHeaderState = HEADER_STATE_HEADER_NAME;
             case HEADER_STATE_HEADER_NAME:
                 if( *currentPoint == COLON ) {
-                    *currentPoint = 0;
-                    info->requestInfo.headers[ currentHeaderIndex ].header = startOfToken;
+                    SET_STRING(info->requestInfo.headers[ currentHeaderIndex ].header);
                     startOfToken = NULL;
                     currentHeaderState = HEADER_STATE_HEADER_SEPARATOR;
                 }
@@ -641,8 +648,7 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                                 currentPoint += 2;
                                 continue;
                             } else {
-                                *currentPoint = 0;
-                                info->requestInfo.headers[ currentHeaderIndex ].values = startOfToken;
+                                SET_STRING(info->requestInfo.headers[ currentHeaderIndex ].values);
                                 ++currentHeaderIndex;
                                 info->requestInfo.numHeaders = currentHeaderIndex;
                                 startOfToken = NULL;
@@ -659,26 +665,21 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                 break;
            case HEADER_STATE_FORM_NAME:
                 if( *currentPoint == EQUAL || currentPoint >= endOfContent ) {
-                    *currentPoint = 0;
-                    info->requestInfo.formParameters[ currentFormParameterIndex ].name = startOfToken;
+                    SET_STRING(info->requestInfo.formParameters[ currentFormParameterIndex ].name);
                     currentHeaderState = HEADER_STATE_FORM_VALUE;
                     startOfToken = NULL;
                 }
                 break;
             case HEADER_STATE_FORM_VALUE:
-                if( *currentPoint == AMPERSAND || currentPoint + 1 >= endOfContent ) {
-                    if( currentPoint + 1 >= endOfContent ) {
-                        currentPoint[ 1 ] = 0;
-                    } else {
-                        *currentPoint = 0;
-                    }
-                    info->requestInfo.formParameters[ currentFormParameterIndex ].value = startOfToken;
-                    if( CS_httpUrlDecodeInPlace( startOfToken ) ) return -1;
+                if( *currentPoint == AMPERSAND
+                        || currentPoint >= endOfContent ) {
+                    SET_STRING_COPY(info->requestInfo.formParameters[ currentFormParameterIndex ].value);
+                    if( CS_httpUrlDecodeInPlace( &info->requestInfo.formParameters[ currentFormParameterIndex ].value ) ) return -1;
                     ++currentFormParameterIndex;
                     info->requestInfo.numFormParameters = currentFormParameterIndex;
                     startOfToken = NULL;
-                    if( currentPoint + 1 >= endOfContent ) {
-                        return currentPoint + 1 - startOfData;
+                    if( currentPoint >= endOfContent ) {
+                        return currentPoint - startOfData;
                     } else {
                         currentHeaderState = HEADER_STATE_FORM_NAME;
                     }
@@ -702,14 +703,14 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     if( bytesRequiredForHeaders < 0 ) {
         int32_t outputLength;
         char *malformedEncode = CS_base64EncodeTemp( info->tempLast, info->lastSize, &outputLength );
-        CS_logfilePrintf( info->server->logAccess, "Malformed: %s %d |%s|", CS_networkAddressToTempString( &info->clientSocketAddress ), info->lastSize, malformedEncode);
+        CS_logfilePrintf( info->server->logAccess, "Malformed: %s %d |%s|", CS_stringTempCstring(CS_networkAddressToTempString( &info->clientSocketAddress ) ), info->lastSize, malformedEncode);
         return true;
     }
     //Consume the bytes for the headers. Might cause the incoming buffer to reset
     //But that should be just fine at this point.
     CS_PP_write(info->buffer,bytesRequiredForHeaders);
     if( info->server->logAccess ) {
-        CS_logfilePrintf( info->server->logAccess, "Request: %s %s %s", CS_networkAddressToTempString( &info->clientSocketAddress ), info->requestInfo.method, info->requestInfo.uri);
+        CS_logfilePrintf( info->server->logAccess, "Request: %s %s %s", CS_stringTempCstring(CS_networkAddressToTempString( &info->clientSocketAddress ) ), CS_stringTempCstring(&info->requestInfo.method), CS_stringTempCstring(&info->requestInfo.uri) );
     }
     int32_t requestEnum = info->requestInfo.requestMethodEnum;
     int32_t nRoutes = info->server->routeNumbers[ requestEnum ];
@@ -725,11 +726,11 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
                 return routes[ i ].handler( info );
                 break;
             case CS_ROUTE_TYPE_PREFIX:
-                if( strncmp(info->requestInfo.uri,routes[ i ].route, routes[ i ].routeLength) == 0 )
+                if( CS_stringStrncmp(&info->requestInfo.uri,routes[ i ].route, routes[i].route->length) == 0 )
                     return routes[ i ].handler( info );
                 break;
             case CS_ROUTE_TYPE_EXACT:
-                if( strcmp(info->requestInfo.uri, routes[ i ].route ) == 0 )
+                if( CS_stringStrcmp( &info->requestInfo.uri, routes[ i ].route ) == 0 )
                     return routes[ i ].handler( info );
                 break;
         }
@@ -740,7 +741,7 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
 }
 
 bool CS_serverDiagnostic200( struct CS_ClientInfo *info ) {
-    return BASIC_OK(info, info->requestInfo.method);
+    return BASIC_OK(info, &info->requestInfo.method);
 }
 
 bool CS_serverReplyError( struct CS_ClientInfo *info, int32_t responseEnum, const char *details ) {
@@ -821,13 +822,13 @@ PUSH_FILE_RETRY:
         reply->outputLength = fileSize;
     }
     
-    CS_serverSetReplyHeader(reply, "Last-Modified", timeString( lastModified ) );
-    CS_serverSetReplyHeader(reply, "Content-Type", mimeType);
-    CS_serverSetReplyHeader(reply, "Connection", "close" );
+    CS_serverSetReplyHeader(reply, &CS_STRING("Last-Modified"), &CS_STRING_PTR(timeString( lastModified) ) );
+    CS_serverSetReplyHeader(reply, &CS_STRING("Content-Type"), &CS_STRING_PTR(mimeType) );
+    CS_serverSetReplyHeader(reply, &CS_STRING("Connection"), &CS_STRING("close") );
     if( cacheSeconds != 0 ) {
-        CS_serverSetReplyHeader(reply, "Cache-Control", CS_tempBuffSnprintf(64,"max-age=%d", cacheSeconds ) );
+        CS_serverSetReplyHeader(reply, &CS_STRING("Cache-Control"), CS_stringTempSnprintf(64,"max-age=%d", cacheSeconds ) );
     } else {
-        CS_serverSetReplyHeader(reply, "Cache-Control", "no-cache" );
+        CS_serverSetReplyHeader(reply, &CS_STRING("Cache-Control"), &CS_STRING("no-cache") );
     }
     CS_serverDoReply(info,reply);
 ERR_BUFF_FAILED:
@@ -840,9 +841,8 @@ ERR_SETUP:
 
 bool CS_serverFileServer( struct CS_ClientInfo *info ) {
     struct CS_RequestInfo *request = &info->requestInfo;
-    int32_t lengthOfUri = strlen( request->uri );
-    char *tempBuff = CS_tempBuff( lengthOfUri + 1 );
-    strncpy( tempBuff, request->uri, lengthOfUri + 1 );
+    int32_t lengthOfUri = request->uri.length;
+    char *tempBuff = (char*)CS_stringTempCstring(&request->uri);
     char *path = tempBuff;
     const char *filename = NULL;
     //Check for anyone being sneaky about ..
@@ -865,7 +865,7 @@ bool CS_serverFileServer( struct CS_ClientInfo *info ) {
     char *fileToOpen = CS_tempBuff(MAX_FILE_PATH);
 
     int32_t printed = snprintf( fileToOpen, MAX_FILE_PATH, "%s%s/%s", info->server->defaultFileServingPath, path, filename?filename:info->server->defaultFileServingFile );
-    if( printed == MAX_FILE_PATH ) {
+    if( printed >= MAX_FILE_PATH ) {
         ERR(info, CS_RESPONSE_403,"Requested file path length too long.");
         goto ERR_SETUP;
     }
@@ -876,10 +876,10 @@ ERR_SETUP:
     return true;
 }
 
-void CS_serverRemoveRequestHeader( struct CS_ClientInfo *info, const char *header ) {
+void CS_serverRemoveRequestHeader( struct CS_ClientInfo *info, const struct CS_String *header ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int32_t i = 0; i < request->numHeaders; ++i ) {
-        if( strncmp(header,request->headers[i].header,HEADER_MAX) == 0 ) {
+        if( CS_stringStrncmp(header,&request->headers[i].header,HEADER_MAX) == 0 ) {
             if( i <= request->numHeaders - 1 ) {
                 memcpy(&request->headers[i],&request->headers[i + 1],sizeof(struct CS_RequestHeader) * (request->numHeaders - i));
             }
@@ -888,52 +888,51 @@ void CS_serverRemoveRequestHeader( struct CS_ClientInfo *info, const char *heade
     }
 }
 
-const char *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const char *header ) {
+const struct CS_String *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const struct CS_String *header ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int32_t i = 0; i < request->numHeaders; ++i ) {
-        if( strncmp(header,request->headers[i].header,HEADER_MAX) == 0 ) {
-            return request->headers[i].values;
+        if( CS_stringStrncmp(header,&request->headers[i].header,HEADER_MAX) == 0 ) {
+            return &request->headers[i].values;
         }
     }
     return NULL;
 }
 
-const char *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const char *name ) {
+const struct CS_String *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const struct CS_String *name ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int32_t i = 0; i < request->numHeaders; ++i ) {
-        if( strncmp(name,request->parameters[i].name,HEADER_MAX) == 0 ) {
-            return request->parameters[i].value;
+        if( CS_stringStrncmp(name,&request->parameters[i].name,HEADER_MAX) == 0 ) {
+            return &request->parameters[i].value;
         }
     }
     return NULL;
 }
 
-const char *CS_serverGetRequestCookie( struct CS_ClientInfo *info, const char *cookie ) {
+const struct CS_String *CS_serverGetRequestCookie( struct CS_ClientInfo *info, const struct CS_String *cookie ) {
     if( cookie == NULL ) return NULL;
-    const char *cookieValue = CS_serverGetRequestHeader( info, "Cookie" );
+    const struct CS_String *cookieValue = CS_serverGetRequestHeader( info, &CS_STRING("Cookie") );
     if( cookieValue == NULL ) return NULL;
-    char *cookieCopy = CS_tempStringCopy( cookieValue );
-    char *savePtrOuter;
-    char *savePtrInner;
-    char *current;
-    char *innerCurrent;
-    while( (current = strtok_r( cookieCopy, ";", &savePtrOuter )) ) {
-        cookieCopy = NULL;
-        innerCurrent = strtok_r( current, "=", &savePtrInner );
-        while( *innerCurrent == ' ' ) ++innerCurrent;
-        if( strcmp( cookie, innerCurrent ) == 0 ) {
-            innerCurrent = strtok_r( NULL, "=", &savePtrInner );
-            return innerCurrent;
+    const char *savePtrOuter;
+    const char *savePtrInner;
+    struct CS_String *current = NULL;
+    struct CS_String *innerCurrent = NULL;
+    struct CS_String *innerValue = NULL;
+    while( (current = CS_stringTempStrtok( cookieValue, &CS_STRING(";"), &savePtrOuter )) ) {
+        innerCurrent = CS_stringTempStrtok( current, &CS_STRING("="), &savePtrInner );
+        innerValue = CS_stringTempStrtok( current, &CS_STRING(";"), &savePtrInner );
+        CS_stringLtrim( innerCurrent );
+        if( CS_stringStrcmp( cookie, innerCurrent ) == 0 ) {
+            return innerValue;
         }
     }
     return NULL;
 }
 
-const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const char *name ) {
+const struct CS_String *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const struct CS_String *name ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int32_t i = 0; i < request->numFormParameters; ++i ) {
-        if( strncmp(name,request->formParameters[i].name,HEADER_MAX) == 0 ) {
-            return request->formParameters[i].value;
+        if( CS_stringStrncmp(name,&request->formParameters[i].name,HEADER_MAX) == 0 ) {
+            return &request->formParameters[i].value;
         }
     }
     return NULL;
@@ -941,19 +940,17 @@ const char *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const 
 
 static bool PrivateSetReplyHeader( struct CS_Reply *reply,
                                    bool overwrite,
-                                   const char *header, 
-                                   const char *value ) {
+                                   const struct CS_String *header, 
+                                   const struct CS_String *value ) {
     if( header == NULL || value == NULL ) {
         CS_LOG_ERROR("Trying to set a reply header with a null header or value.");
         return true;
     }
-    int32_t headerLen = strnlen(header, HEADER_MAX);
-    if( headerLen > HEADER_MAX - 1 ) {
+    if( header->length > HEADER_MAX - 1 ) {
         CS_LOG_ERROR("Trying to set a reply header longer than %d", HEADER_MAX-1);
         return true;
     }
-    int32_t valueLen = strnlen(value, HEADER_MAX);
-    if( valueLen > HEADER_VALUE_MAX - 1 ) {
+    if( value->length > HEADER_VALUE_MAX - 1 ) {
         CS_LOG_ERROR("Trying to set a value in a reply header longer than %d", HEADER_VALUE_MAX-1); 
         return true;
     }
@@ -962,9 +959,10 @@ static bool PrivateSetReplyHeader( struct CS_Reply *reply,
     int32_t indexToSet = reply->numHeaders;
 
     for( int32_t i = 0; i < reply->numHeaders; ++i ) {
-        if( strncmp(header, reply->replyHeaders[i].header, HEADER_MAX) == 0) {
+        if( CS_stringStrncmp(header, &reply->replyHeaders[i].name.name, HEADER_MAX) == 0) {
             indexAlreadySet = i;
             indexToSet = i;
+            break;
         }
     }
     if( indexToSet >= MAX_REQUEST_HEADERS ) {
@@ -975,23 +973,21 @@ static bool PrivateSetReplyHeader( struct CS_Reply *reply,
         if( indexAlreadySet < 0 ) {
             indexToSet = reply->numHeaders;
             ++reply->numHeaders;
-            strncpy(reply->replyHeaders[indexToSet].header, header, HEADER_MAX);
+            CS_stringCopyToStatic(&reply->replyHeaders[indexToSet].name.name, header, HEADER_MAX);
         }
-        strncpy(reply->replyHeaders[indexToSet].value, value, HEADER_VALUE_MAX);
+        CS_stringCopyToStatic(&reply->replyHeaders[indexToSet].value.value, value, HEADER_VALUE_MAX);
         return false;
     }
     return true;
 }
 
-static bool PrivateSetReplyHeaderInt( struct CS_Reply *reply, bool overwrite, const char *header, int32_t value ) {
-    char *temp = (char*)CS_tempBuff( 64 );
-    snprintf( temp, 64, "%d", value );
-    return PrivateSetReplyHeader( reply, overwrite, header, temp );
+static bool PrivateSetReplyHeaderInt( struct CS_Reply *reply, bool overwrite, const struct CS_String *header, int32_t value ) {
+    return PrivateSetReplyHeader( reply, overwrite, header, CS_stringTempSnprintf(64, "%d", value ) );
 }
 
-static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly, int32_t sameSiteEnum ) {
+static bool PrivateSetReplyCookie( struct CS_Reply *reply, const struct CS_String *cookie, const struct CS_String *value, bool httpOnly, int32_t sameSiteEnum ) {
     if( cookie == NULL || value == NULL ) {
-        CS_LOG_ERROR("Trying to set an invalid value as a cookie... %s=%s",cookie?cookie:"NULL",value?value:"NULL");
+        CS_LOG_ERROR("Trying to set an invalid value as a cookie... %s=%s",CS_stringTempCstringOrNULL(cookie),CS_stringTempCstringOrNULL(value) );
         return true;
     }
     if( reply->numCookies >= MAX_REPLY_COOKIES ) {
@@ -1002,41 +998,38 @@ static bool PrivateSetReplyCookie( struct CS_Reply *reply, const char *cookie, c
         CS_LOG_ERROR("Trying to set the SameSite attribute on a cookie out of range.");
         return true;
     }
-    int32_t nLen = strnlen( cookie, COOKIE_MAX );
-    if( nLen > COOKIE_MAX - 1 ) {
+    if( cookie->length > COOKIE_MAX ) {
         CS_LOG_ERROR("Trying to set a cookie name longer than %d", COOKIE_MAX - 1 );
         return true;
     }
-    nLen = strnlen( value, COOKIE_VALUE_MAX );
-    if( nLen > COOKIE_VALUE_MAX - 1 ) {
+    if( value->length > COOKIE_VALUE_MAX ) {
         CS_LOG_ERROR("Trying to set a cookie value longer than %d", COOKIE_VALUE_MAX - 1 );
         return true;
     }
-    strncpy( reply->setCookie[ reply->numCookies ].cookie, cookie, COOKIE_MAX );
-    strncpy( reply->setCookie[ reply->numCookies ].value, value, COOKIE_VALUE_MAX );
+    CS_stringCopyToStatic( &reply->setCookie[ reply->numCookies ].cookie.cookie, cookie, COOKIE_MAX );
     reply->setCookie[ reply->numCookies ].httpOnly = httpOnly;
     reply->setCookie[ reply->numCookies ].sameSiteEnum = sameSiteEnum;
     reply->numCookies++;
     return false;
 }
 
-const char *PrivateGetReplyHeader(const struct CS_Reply *reply, const char *header ) {
-    if( reply == NULL || header == NULL || *header == 0 ) {
+const struct CS_String *PrivateGetReplyHeader(const struct CS_Reply *reply, const struct CS_String *header ) {
+    if( (reply == NULL) || (header == NULL) || (header->length == 0) ) {
         return NULL;
     }
     for(int32_t i = 0; i < reply->numHeaders; ++i) {
-        if(strncasecmp(header, reply->replyHeaders[i].header, HEADER_MAX) == 0) {
-            return reply->replyHeaders[i].value;
+        if(CS_stringStrncasecmp(header, &reply->replyHeaders[i].name.name, HEADER_MAX) == 0) {
+            return &reply->replyHeaders[i].value.value;
         }
     }
 
     return NULL;
 }
 
-const char *CS_serverGetRequestTempIdAddress( struct CS_ClientInfo *info ) {
+const struct CS_String *CS_serverGetRequestTempIdAddress( struct CS_ClientInfo *info ) {
     if( info->server->behindProxy ) {
-        const char *realIp = CS_serverGetRequestHeader( info, "X-Real-IP" );
-        if( realIp != NULL ) return CS_tempStringCopy(realIp);
+        const struct CS_String *realIp = CS_serverGetRequestHeader( info, &CS_STRING("X-Real-IP") );
+        if( realIp ) return realIp;
     }
     return CS_networkAddressToTempString( &info->clientSocketAddress );
 }
@@ -1056,22 +1049,22 @@ void CS_serverReturnReply(struct CS_ClientInfo *info, struct CS_Reply *reply) {
     CS_slabReturn(info->server->replyStack, reply);
 }
 
-bool CS_serverSetReplyHeader( struct CS_Reply *reply, const char *header, const char *value ) {
+bool CS_serverSetReplyHeader( struct CS_Reply *reply, const struct CS_String *header, const struct CS_String *value ) {
     return PrivateSetReplyHeader(reply,true,header,value);
 }
-bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const char *header, const char *value ) {
+bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const struct CS_String *header, const struct CS_String *value ) {
     return PrivateSetReplyHeader(reply,false,header,value);
 }
-bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const char *header, int32_t value ) {
+bool CS_serverSetReplyHeaderInt( struct CS_Reply *reply, const struct CS_String *header, int32_t value ) {
     return PrivateSetReplyHeaderInt( reply, true, header, value );
 }
-bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const char *header, int32_t value ) {
+bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const struct CS_String *header, int32_t value ) {
     return PrivateSetReplyHeaderInt( reply, false, header, value );
 }
-const char *CS_serverGetReplyHeader( struct CS_Reply *reply, const char *header ) {
+const struct CS_String *CS_serverGetReplyHeader( struct CS_Reply *reply, const struct CS_String *header ) {
     return PrivateGetReplyHeader( reply, header );
 }
-bool CS_serverSetReplyCookie( struct CS_Reply *reply, const char *cookie, const char *value, bool httpOnly, int32_t sameSiteEnum ) {
+bool CS_serverSetReplyCookie( struct CS_Reply *reply, const struct CS_String *cookie, const struct CS_String *value, bool httpOnly, int32_t sameSiteEnum ) {
     return PrivateSetReplyCookie( reply, cookie, value, httpOnly, sameSiteEnum );
 }
 
@@ -1083,25 +1076,25 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
 
     void *compressedBuffer = NULL;
     int32_t compressedLength = 0;
-    const char *acceptEncoding = CS_serverGetRequestHeader(info, "Accept-Encoding");
+    const struct CS_String *acceptEncoding = CS_serverGetRequestHeader(info, &CS_STRING("Accept-Encoding") );
 
-    if (acceptEncoding && strstr(acceptEncoding, "gzip") && 
+    if (acceptEncoding && CS_stringStrstr(acceptEncoding, &CS_STRING("gzip") ) && 
         reply->outputBuffer != NULL && reply->outputLength > 128) {
         
         bool shouldCompress = false;
-        const char *contentType = NULL;
+        const struct CS_String *contentType = NULL;
         if (reply->contentTypeEnum != CS_MIME_DO_NOT_SET) {
-            contentType = CS_mimeEnumToString(reply->contentTypeEnum);
+            contentType = CS_stringTempCopyCstring(CS_mimeEnumToString(reply->contentTypeEnum), -1);
         } else {
-            contentType = CS_serverGetReplyHeader(reply, "Content-Type");
+            contentType = CS_serverGetReplyHeader(reply, &CS_STRING("Content-Type") );
         }
 
         if (contentType) {
-            if (strstr(contentType, "text/") || 
-                strstr(contentType, "application/json") ||
-                strstr(contentType, "application/javascript") ||
-                strstr(contentType, "application/xml") ||
-                strstr(contentType, "image/svg+xml")) {
+            if (CS_stringStrstr(contentType, &CS_STRING("text/") ) || 
+                CS_stringStrstr(contentType, &CS_STRING("application/json") ) ||
+                CS_stringStrstr(contentType, &CS_STRING("application/javascript") ) ||
+                CS_stringStrstr(contentType, &CS_STRING("application/xml") ) ||
+                CS_stringStrstr(contentType, &CS_STRING("image/svg+xml") ) ) {
                 shouldCompress = true;
             }
         } else {
@@ -1109,7 +1102,7 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         }
 
         if (shouldCompress) {
-            if( CS_serverGetReplyHeader(reply,"Content-Encoding") != NULL ) {
+            if( CS_serverGetReplyHeader(reply,&CS_STRING("Content-Encoding") ) != NULL ) {
                 shouldCompress = false;
             }
         }
@@ -1129,7 +1122,7 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
                     if (CS_compressGzip(&ctx, &in_pp, &out_pp) >= 0) {
                         compressedBuffer = outBuff;
                         compressedLength = CS_PP_dataSize(&out_pp);
-                        CS_serverSetReplyHeader(reply, "Content-Encoding", "gzip");
+                        CS_serverSetReplyHeader(reply, &CS_STRING("Content-Encoding"), &CS_STRING("gzip") );
                     }
                 }
                 if (!compressedBuffer) CS_free(outBuff);
@@ -1141,22 +1134,26 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     int32_t replyNumber = CS_httpResponseEnumToCode( reply->returnStatusEnum );
     const char *replyString = CS_httpResponseEnumToString( reply->returnStatusEnum );
     if( reply->contentTypeEnum != CS_MIME_DO_NOT_SET ) {
-        CS_serverSetReplyHeaderIfMissing(reply, "Content-Type", CS_mimeEnumToString( reply->contentTypeEnum ) );
+        CS_serverSetReplyHeaderIfMissing(reply, &CS_STRING("Content-Type"), CS_stringTempCopyCstring( CS_mimeEnumToString( reply->contentTypeEnum), -1 ) );
     }
 
     void *bufferToSend = compressedBuffer ? compressedBuffer : (void*)reply->outputBuffer;
     int32_t lengthToSend = compressedBuffer ? compressedLength : reply->outputLength;
 
-    CS_serverSetReplyHeaderInt(reply, "Content-Length", lengthToSend );
+    CS_serverSetReplyHeaderInt(reply, &CS_STRING("Content-Length"), lengthToSend );
 
-    CS_serverSetReplyHeaderIfMissing(reply, "Date", timeString(time(NULL)));
-    CS_serverSetReplyHeaderIfMissing(reply, "Cache-Control", "no-cache" );
+    CS_serverSetReplyHeaderIfMissing(reply, &CS_STRING("Date"), &CS_STRING_PTR(timeString(time(NULL))));
+    CS_serverSetReplyHeaderIfMissing(reply, &CS_STRING("Cache-Control"), &CS_STRING("no-cache") );
     CS_PP_printf( info->output, "%s %d %s\r\n", HTTP_VERSION, replyNumber, replyString );
     for( int32_t i = 0; i < reply->numHeaders; ++i ) {
-        CS_PP_printf( info->output, "%s: %s\r\n", reply->replyHeaders[i].header, reply->replyHeaders[i].value );
+        CS_PP_printf( info->output, "%s: %s\r\n", 
+                CS_stringTempCstring(&reply->replyHeaders[i].name.name),
+                CS_stringTempCstring(&reply->replyHeaders[i].value.value) );
     }
     for( int32_t i = 0; i < reply->numCookies; ++i ) {
-        CS_PP_printf( info->output, "Set-Cookie: %s=%s", reply->setCookie[i].cookie, reply->setCookie[i].value);
+        CS_PP_printf( info->output, "Set-Cookie: %s=%s",
+                CS_stringTempCstring(&reply->setCookie[i].cookie.cookie),
+                CS_stringTempCstring(&reply->setCookie[i].value.value) );
         if( reply->setCookie[i].httpOnly ) CS_PP_printf( info->output, "; HttpOnly" );
         if( info->ssl ) CS_PP_printf( info->output, "; Secure");
         switch( reply->setCookie[i].sameSiteEnum ) {

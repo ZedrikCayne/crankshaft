@@ -19,7 +19,7 @@ static int32_t testCount = 0;
 static int32_t testSucceeded = 0;
 
 static struct CS_Route testRoutes[] = {
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, 0, "/test", CS_serverDiagnostic200 }
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, &CS_STRING("/test"), CS_serverDiagnostic200 }
 };
 
 bool test_socket(void) {

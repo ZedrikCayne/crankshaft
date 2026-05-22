@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #include <crankshaft/alloc.h>
 #include <crankshaft/logger.h>
@@ -8,7 +9,7 @@
 #include <crankshaft/util.h>
 #include <crankshaft/network.h>
 #include <crankshaft/tempbuff.h>
-#include <stdint.h>
+#include <crankshaft/string.h>
 
 struct addrinfo *CS_networkLookupAddress( const char *address, int32_t portNum ) {
     struct addrinfo hints = { 0 };
@@ -29,16 +30,16 @@ void CS_networkReleaseAddressInfos( struct addrinfo *infos ) {
     freeaddrinfo( infos );
 }
 
-const char *CS_networkAddressToTempString( struct sockaddr *inputAddr ) {
+const struct CS_String *CS_networkAddressToTempString( struct sockaddr *inputAddr ) {
     if( inputAddr->sa_family == AF_INET ) {
         unsigned char *addr = (unsigned char*)&(((struct sockaddr_in*)inputAddr)->sin_addr.s_addr);
-        return CS_tempBuffSnprintf( 64, "%d.%d.%d.%d", (int32_t)addr[0], (int32_t)addr[1], (int32_t)addr[2], (int32_t)addr[3] );
+        return CS_stringTempSnprintf( 64, "%d.%d.%d.%d", (int32_t)addr[0], (int32_t)addr[1], (int32_t)addr[2], (int32_t)addr[3] );
     }
     if( inputAddr->sa_family == AF_INET6 ) {
         unsigned char *addr = ((struct sockaddr_in6*)inputAddr)->sin6_addr.s6_addr;
-        return CS_tempBuffSnprintf( 64, "%20X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X", addr[0], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7], addr[8], addr[9], addr[10], addr[11], addr[12], addr[13], addr[14], addr[15] );
+        return CS_stringTempSnprintf( 64, "%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X::%02X", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7], addr[8], addr[9], addr[10], addr[11], addr[12], addr[13], addr[14], addr[15] );
     }
-    return "BAD SOCKADDR";
+    return &CS_STRING("BAD SOCKADDR");
 }
 
 int32_t CS_networkSockaddrSize( struct sockaddr *addr ) {

@@ -7,6 +7,8 @@
 #include <netdb.h>
 #include <stdint.h>
 
+#include <crankshaft/string.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,7 +18,7 @@ void CS_networkReleaseAddressInfos( struct addrinfo *infos );
 
 int32_t CS_networkSockaddrSize( struct sockaddr *addr );
 bool CS_networkCopySockaddr( struct sockaddr *to, struct sockaddr *addr );
-const char *CS_networkAddressToTempString( struct sockaddr *addr );
+const struct CS_String *CS_networkAddressToTempString( struct sockaddr *addr );
 
 bool CS_networkAddressRoutable( struct sockaddr *addr );
 

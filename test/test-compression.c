@@ -18,7 +18,7 @@ static bool compressed_route( struct CS_ClientInfo *info ) {
 }
 
 static struct CS_Route routes[] = {
-    { CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_EXACT, 0, "/compressed", compressed_route }
+    { CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_EXACT, &CS_STRING("/compressed"), compressed_route }
 };
 
 static int32_t testCount = 0;
@@ -33,17 +33,17 @@ bool test_compression() {
 
     // Request with Accept-Encoding: gzip
     struct CS_RequestHeader headers[] = {
-        { "Accept-Encoding", "gzip" }
+        { CS_STRING("Accept-Encoding"), CS_STRING("gzip") }
     };
 
-    struct CS_RequestReply *reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, url, headers, 1, NULL, 0, NULL, 0, NULL, 0, true, NULL );
+    struct CS_RequestReply *reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, CS_stringTempReferenceCstring(url,-1), headers, 1, NULL, 0, NULL, 0, NULL, 0, true, NULL );
     
     if( !reply ) {
         CS_serverKill( server );
         return true;
     }
 
-    const char *encoding = CS_httpReplyHeader( reply, "Content-Encoding" );
+    const struct CS_String *encoding = CS_httpReplyHeader( reply, &CS_STRING("Content-Encoding") );
 
     // If it's still gzipped, the size will likely be much smaller than 1024
     CS_FAIL_ON_FALSE( CS_PP_dataSize( reply->buffer ) == 1024,  "Expected 1024 bytes", "Got %d", CS_PP_dataSize( reply->buffer ) );
@@ -59,15 +59,15 @@ bool test_compression() {
 
     // Request with Accept-Encoding: identity
     struct CS_RequestHeader headers2[] = {
-        { "Accept-Encoding", "identity" }
+        { CS_STRING("Accept-Encoding"), CS_STRING("identity") }
     };
 
-    reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, url, headers2, 1, NULL, 0, NULL, 0, NULL, 0, false, NULL );
+    reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, CS_stringTempReferenceCstring(url,-1), headers2, 1, NULL, 0, NULL, 0, NULL, 0, false, NULL );
     CS_FAIL_ON_NULL( reply, "Make request", "Failed" );
     if( reply ) {
-        encoding = CS_httpReplyHeader( reply, "Content-Encoding" );
+        encoding = CS_httpReplyHeader( reply, &CS_STRING("Content-Encoding") );
         
-        CS_FAIL_ON_TRUE( encoding != NULL && strstr( encoding, "gzip" ), "Expecting no encoding.", "Got %s", encoding );
+        CS_FAIL_ON_TRUE( encoding != NULL && CS_stringStrstr( encoding, &CS_STRING("gzip") ), "Expecting no encoding.", "Got %s", CS_stringTempCstring(encoding) );
 
         CS_FAIL_ON_TRUE( CS_PP_dataSize( reply->buffer ) != 1024, "Expecting 1024 bytes", "Got %d",CS_PP_dataSize(reply->buffer) );
 
