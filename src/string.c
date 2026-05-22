@@ -307,6 +307,7 @@ static bool matchDelimeter( const struct CS_String *delimeters, const char *this
     while( deliHead < deliEnd ) {
         if( *deliHead == *this )
             return true;
+        ++deliHead;
     }
     return false;
 }
@@ -315,9 +316,10 @@ struct CS_String *CS_stringTempStrtok( const struct CS_String *source, const str
     if( savePtr == NULL ) return NULL;
     const char *returnStart = NULL;
     const char *currentReadHead = *savePtr;
+    if( source == NULL ) return NULL;
     const char *endOfString = source->data + source->length;
 
-    if( currentReadHead == NULL && source == NULL ) return NULL;
+    if( currentReadHead == NULL ) currentReadHead = source->data;
 
     //The current saved head points at the last delimited. Or we're at the start of the string....as per regular strtok we need to skip until we find the 'first' non delimeter.
     while( currentReadHead < endOfString && matchDelimeter( delimeters, currentReadHead ) ) ++currentReadHead;

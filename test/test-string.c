@@ -25,6 +25,8 @@ static char *cStrings[] = {
     "abcdefghi"
 };
 
+static const struct CS_String toTokenize = CS_STRING("g_state={\"i_l\":0,\"i_ll\":1779131810435,\"i_e\":{\"enable_itp_optimization\":0},\"i_et\":1776726929083}; webmud_session=39300000-7e16-4cd3-9f27-04a72c1c65d6");
+
 const struct CS_String *newStrings[] = {
     NULL,
     NULL,
@@ -121,6 +123,16 @@ bool test_string(void) {
     for( int32_t i = 0; i < nStrings; ++i ) {
         CS_stringFree( randStrings[i] );
         CS_free( randCStrings[i] );
+    }
+
+    const struct CS_String *tokenReturn;
+    const char *saveptr = NULL;
+
+    tokenReturn = CS_stringTempStrtok( &toTokenize, &CS_STRING(";"), &saveptr );
+
+    CS_FAIL_ON_NULL(tokenReturn, "CS_stringStrtok", "Failed!" );
+    if( tokenReturn ) {
+            CS_FAIL_ON_FALSE( CS_stringStrncmp( &toTokenize, tokenReturn, 30 ) == 0, "Check strtok output", "Failed." );
     }
 
     return testCount !=
