@@ -439,6 +439,26 @@ static bool BASIC_OK(struct CS_ClientInfo *info, const struct CS_String *what) {
     return CS_serverDoReply( info, reply );
 }
 
+
+static int32_t privateParseForm( struct CS_ClientInfo *info, const char *currentPoint, const char *endOfContent ) {
+    const struct CS_String *wholeForm = CS_stringTempReferenceCstring( currentPoint, endOfContent - currentPoint );
+    const struct CS_String *formEntry = NULL;
+    const char *outerSavePtr = NULL;
+    const char *innerSavePtr = NULL;
+
+    while( (formEntry = CS_stringTempStrtok(wholeForm, &CS_STRING("&"), &outerSavePtr)) ) {
+        innerSavePtr = NULL;
+        struct CS_String *formEntryName = CS_stringTempStrtok(formEntry,&CS_STRING("="),&innerSavePtr);
+        struct CS_String *formEntryValue = CS_stringTempStrtok(formEntry,&CS_STRING("="),&innerSavePtr);
+        if( formEntryName == NULL || formEntryValue == NULL ) return -1;
+        CS_stringInitReference( &info->requestInfo.formParameters[ info->requestInfo.numFormParameters ].name, formEntryName );
+        CS_stringInitCopy( &info->requestInfo.formParameters[ info->requestInfo.numFormParameters ].value, formEntryValue );
+        CS_httpUrlDecodeInPlace( &info->requestInfo.formParameters[ info->requestInfo.numFormParameters ].value );
+        info->requestInfo.numFormParameters++;
+    }
+    return endOfContent - currentPoint;
+}
+
 enum HeaderState {
     HEADER_STATE_POSSIBLE_WHITE_SPACE,
     HEADER_STATE_METHOD,
@@ -452,8 +472,6 @@ enum HeaderState {
     HEADER_STATE_HEADER_NAME,
     HEADER_STATE_HEADER_SEPARATOR,
     HEADER_STATE_HEADER_VALUE,
-    HEADER_STATE_FORM_NAME,
-    HEADER_STATE_FORM_VALUE,
     HEADER_STATE_DONE,
 };
 
@@ -496,7 +514,6 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
     int32_t currentHeaderState = HEADER_STATE_POSSIBLE_WHITE_SPACE;
     int32_t currentHeaderIndex = 0;
     int32_t currentParameterIndex = 0;
-    int32_t currentFormParameterIndex = 0;
     const struct CS_String *contentType = NULL;
     const struct CS_String *contentLength = NULL;
     const char *endOfContent = NULL;
@@ -614,7 +631,6 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                     //until we can't anymore.
                     while( endOfContent > endOfData ) {
                         if( CS_PP_bufferRemaining( info->buffer ) <= 0 ) {
-                            CS_LOG_ERROR("Header + Payload for urlencoded form too big.");
                             return -1;
                         }
                         int32_t bytesRead = CS_serverFillIncomingBuffer( info );
@@ -622,7 +638,9 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                         endOfData = CS_PP_endOfData(info->buffer);
                     }
                     CS_LOG_TRACE( "%.*s", length, startOfToken );
-                    currentHeaderState = HEADER_STATE_FORM_NAME;
+                    if( privateParseForm( info, startOfToken, endOfContent ) < 0 )
+                        return -1;
+                    return endOfContent - startOfData;
                     break;
                 }
                 if( currentHeaderIndex >= MAX_REQUEST_HEADERS ) return -1;
@@ -661,28 +679,6 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                         }
                     } else {
                         return -1;
-                    }
-                }
-                break;
-           case HEADER_STATE_FORM_NAME:
-                if( *currentPoint == EQUAL || currentPoint >= endOfContent ) {
-                    SET_STRING(info->requestInfo.formParameters[ currentFormParameterIndex ].name);
-                    currentHeaderState = HEADER_STATE_FORM_VALUE;
-                    startOfToken = NULL;
-                }
-                break;
-            case HEADER_STATE_FORM_VALUE:
-                if( *currentPoint == AMPERSAND
-                        || currentPoint >= endOfContent ) {
-                    SET_STRING_COPY(info->requestInfo.formParameters[ currentFormParameterIndex ].value);
-                    if( CS_httpUrlDecodeInPlace( &info->requestInfo.formParameters[ currentFormParameterIndex ].value ) ) return -1;
-                    ++currentFormParameterIndex;
-                    info->requestInfo.numFormParameters = currentFormParameterIndex;
-                    startOfToken = NULL;
-                    if( currentPoint >= endOfContent ) {
-                        return currentPoint - startOfData;
-                    } else {
-                        currentHeaderState = HEADER_STATE_FORM_NAME;
                     }
                 }
                 break;
@@ -1009,6 +1005,7 @@ static bool PrivateSetReplyCookie( struct CS_Reply *reply, const struct CS_Strin
         return true;
     }
     CS_stringCopyToStatic( &reply->setCookie[ reply->numCookies ].cookie.cookie, cookie, COOKIE_MAX );
+    CS_stringCopyToStatic( &reply->setCookie[ reply->numCookies ].value.value, value, COOKIE_MAX );
     reply->setCookie[ reply->numCookies ].httpOnly = httpOnly;
     reply->setCookie[ reply->numCookies ].sameSiteEnum = sameSiteEnum;
     reply->numCookies++;
