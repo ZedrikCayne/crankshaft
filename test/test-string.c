@@ -25,7 +25,14 @@ static char *cStrings[] = {
     "abcdefghi"
 };
 
-static const struct CS_String toTokenize = CS_STRING("g_state={\"i_l\":0,\"i_ll\":1779131810435,\"i_e\":{\"enable_itp_optimization\":0},\"i_et\":1776726929083}; webmud_session=39300000-7e16-4cd3-9f27-04a72c1c65d6");
+static struct CS_String toTokenize = CS_STRING("g_state={\"i_l\":0,\"i_ll\":1779131810435,\"i_e\":{\"enable_itp_optimization\":0},\"i_et\":0000000000083}; new_session_key=01234567-89ab-cdef-fedc-ba9876543210; third=wakka ;trim");
+
+static const struct CS_String toTokenizeResults[] = {
+    CS_STRING("g_state={\"i_l\":0,\"i_ll\":1779131810435,\"i_e\":{\"enable_itp_optimization\":0},\"i_et\":0000000000083}"),
+    CS_STRING(" new_session_key=01234567-89ab-cdef-fedc-ba9876543210"),
+    CS_STRING(" third=wakka"),
+};
+
 
 const struct CS_String *newStrings[] = {
     NULL,
@@ -128,12 +135,15 @@ bool test_string(void) {
     const struct CS_String *tokenReturn;
     const char *saveptr = NULL;
 
-    tokenReturn = CS_stringTempStrtok( &toTokenize, &CS_STRING(";"), &saveptr );
+    toTokenize.length -= 6; //Removing " ;trim"
 
-    CS_FAIL_ON_NULL(tokenReturn, "CS_stringStrtok", "Failed!" );
-    if( tokenReturn ) {
-            CS_FAIL_ON_FALSE( CS_stringStrncmp( &toTokenize, tokenReturn, 30 ) == 0, "Check strtok output", "Failed." );
+    int numTokens = 0;
+
+    while( (tokenReturn = CS_stringTempStrtok( &toTokenize, &CS_STRING(";"), &saveptr )) ) {
+        CS_FAIL_ON_FALSE( CS_stringStrcmp( toTokenizeResults + numTokens, tokenReturn ) == 0, "Check strtok output", "Failed." );
+        ++numTokens;
     }
+    CS_FAIL_ON_FALSE( numTokens == 3, "Check number of tokens parsed.", "Wanted 3 got %d", numTokens ); 
 
     return testCount !=
            testSucceeded;

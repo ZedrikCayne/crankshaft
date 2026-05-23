@@ -621,6 +621,7 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                         if( bytesRead < 0 ) return -1;
                         endOfData = CS_PP_endOfData(info->buffer);
                     }
+                    CS_LOG_TRACE( "%.*s", length, startOfToken );
                     currentHeaderState = HEADER_STATE_FORM_NAME;
                     break;
                 }
@@ -912,14 +913,15 @@ const struct CS_String *CS_serverGetRequestCookie( struct CS_ClientInfo *info, c
     if( cookie == NULL ) return NULL;
     const struct CS_String *cookieValue = CS_serverGetRequestHeader( info, &CS_STRING("Cookie") );
     if( cookieValue == NULL ) return NULL;
-    const char *savePtrOuter;
-    const char *savePtrInner;
+    const char *savePtrOuter = NULL;
+    const char *savePtrInner = NULL;
     struct CS_String *current = NULL;
     struct CS_String *innerCurrent = NULL;
     struct CS_String *innerValue = NULL;
     while( (current = CS_stringTempStrtok( cookieValue, &CS_STRING(";"), &savePtrOuter )) ) {
+        savePtrInner = NULL;
         innerCurrent = CS_stringTempStrtok( current, &CS_STRING("="), &savePtrInner );
-        innerValue = CS_stringTempStrtok( current, &CS_STRING(";"), &savePtrInner );
+        innerValue = CS_stringTempStrtok( current, &CS_STRING("="), &savePtrInner );
         CS_stringLtrim( innerCurrent );
         if( CS_stringStrcmp( cookie, innerCurrent ) == 0 ) {
             return innerValue;

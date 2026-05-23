@@ -314,10 +314,12 @@ static bool matchDelimeter( const struct CS_String *delimeters, const char *this
 
 struct CS_String *CS_stringTempStrtok( const struct CS_String *source, const struct CS_String *delimeters, const char **savePtr ) {
     if( savePtr == NULL ) return NULL;
+    if( source == NULL ) return NULL;
+    if( delimeters == NULL ) return NULL;
     const char *returnStart = NULL;
     const char *currentReadHead = *savePtr;
-    if( source == NULL ) return NULL;
     const char *endOfString = source->data + source->length;
+    if( currentReadHead >= endOfString ) return NULL;
 
     if( currentReadHead == NULL ) currentReadHead = source->data;
 
@@ -329,6 +331,8 @@ struct CS_String *CS_stringTempStrtok( const struct CS_String *source, const str
     returnStart = currentReadHead;
 
     while( currentReadHead < endOfString && !matchDelimeter( delimeters, currentReadHead ) ) ++currentReadHead;
+
+    *savePtr = currentReadHead;
 
     return (struct CS_String*)CS_stringTempReferenceCstring( returnStart, currentReadHead - returnStart );
 }
