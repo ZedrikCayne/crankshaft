@@ -411,7 +411,9 @@ static int32_t privateDecode( const char *toDecode, int32_t decodeBufferLength, 
         }
         ++in;
     }
-    *out = 0;
+    if( out < output + outputLength ) {
+        *out = 0;
+    }
     return out - toDecode;
 }
 
@@ -421,7 +423,11 @@ static int32_t privateDecodeInPlace( char *toDecode, int32_t decodeBufferLength 
 
 bool CS_httpUrlDecodeInPlace( struct CS_String *toDecode ) {
     int32_t length = privateDecodeInPlace( (char*)toDecode->data, toDecode->length );
-    return length == DECODE_INVALID_LENGTH;
+    if( length == DECODE_INVALID_LENGTH ) {
+        return true;
+    }
+    toDecode->length = length;
+    return false;
 }
 
 struct CS_String *CS_httpUrlDecodeTemp( const struct CS_String *doDecode ) {

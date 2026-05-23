@@ -81,11 +81,23 @@ struct CS_String *CS_stringInitCopyCstring( struct CS_String *out, const char *i
         memcpy( copyTo, in, stringLength );
         out->data = copyTo;
         out->flags = CS_STRING_FLAG_FREE_DATA;
-        out->data = in;
         out->length = stringLength;
     } else {
         return NULL;
     }
+    return out;
+}
+
+struct CS_String *CS_stringInitCopy( struct CS_String *out, const struct CS_String *in ) {
+    return CS_stringInitCopyCstring( out, in->data, in->length );
+}
+
+const struct CS_String *CS_stringInitReference( struct CS_String *out, const struct CS_String *in ) {
+    if( out == NULL ) return NULL;
+    if( in == NULL ) return NULL;
+    out->length = in->length;
+    out->flags = 0;
+    out->data = in->data;
     return out;
 }
 
