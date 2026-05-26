@@ -353,14 +353,14 @@ static const struct CS_String googlelogin = CS_STRING("/googlelogin");
 static const struct CS_String ws = CS_STRING("/ws");
 static const struct CS_String api = CS_STRING("/api");
 struct CS_Route serverRoutes[] = {
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, &googlelogin, googleLogin},
-    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &googlelogin, googleLogin},
-    { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_FILTER, NULL, cookieFilter},
-    { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_PREFIX, &ws, websocket},
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, &api, fudge },
-    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api, fudge },
-    { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer },
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_EXACT, &googlelogin, googleLogin, NULL },
+    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &googlelogin, googleLogin, NULL },
+    { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_FILTER, NULL, cookieFilter, NULL },
+    { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_PREFIX, &ws, websocket, NULL },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, &api, fudge, NULL },
+    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api, fudge, NULL },
+    { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer, NULL },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer, NULL },
 };
 
 int main(int argc, char *argv[] ) {

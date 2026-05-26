@@ -181,6 +181,8 @@ int32_t CS_httpPushBufferToRemote( struct CS_RequestReply *requestReply, struct 
 int32_t CS_httpPushBytesToRemote( struct CS_RequestReply *requestReply, void *data, int32_t dataLength );
 
 void CS_httpCleanupReplies();
+
+int32_t CS_httpParseUri( const struct CS_String *uri, struct CS_String *addressOut, int32_t *portOut, bool *sslOut, struct CS_String *restOut );
 #ifdef __cplusplus
 }
 #endif

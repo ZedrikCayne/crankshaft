@@ -132,6 +132,7 @@ static struct CS_ClientInfo *createClientInfoWithThread( int32_t socket,
 
     ci->disconnectCallback = NULL;
     ci->persistentData = NULL;
+    ci->appData = NULL;
     pthread_attr_setstacksize(&threadAttr, PTHREAD_STACK_MIN * 2 );
     int32_t result = pthread_create( &newThread, &threadAttr, clientThread, ci );
     if( result < 0 ) {
@@ -704,7 +705,10 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
         return true;
     }
     //Consume the bytes for the headers. Might cause the incoming buffer to reset
-    //But that should be just fine at this point.
+    //But that should be just fine at this point. Save the # of bytes in case we
+    //want to retrieve the whole header again. (Buffer is fully intact at this
+    //point)
+    info->requestInfo.headerSize = bytesRequiredForHeaders;
     CS_PP_write(info->buffer,bytesRequiredForHeaders);
     if( info->server->logAccess ) {
         CS_logfilePrintf( info->server->logAccess, "Request: %s %s %s", CS_stringTempCstring(CS_networkAddressToTempString( &info->clientSocketAddress ) ), CS_stringTempCstring(&info->requestInfo.method), CS_stringTempCstring(&info->requestInfo.uri) );
@@ -716,17 +720,22 @@ static bool HTTP_STATE_MACHINE(struct CS_ClientInfo *info) {
     for( int32_t i = 0; i < nRoutes; ++i ) {
         switch( routes[ i ].routeType ) {
             case CS_ROUTE_TYPE_FILTER:
-                if( routes[i].handler(info) )
+                info->appData = routes[i].appData;
+                if( routes[i].handler(info) ) {
                     return true;
+                }
                 break;
             case CS_ROUTE_TYPE_WILDCARD:
+                info->appData = routes[i].appData;
                 return routes[ i ].handler( info );
                 break;
             case CS_ROUTE_TYPE_PREFIX:
+                info->appData = routes[i].appData;
                 if( CS_stringStrncmp(&info->requestInfo.uri,routes[ i ].route, routes[i].route->length) == 0 )
                     return routes[ i ].handler( info );
                 break;
             case CS_ROUTE_TYPE_EXACT:
+                info->appData = routes[i].appData;
                 if( CS_stringStrcmp( &info->requestInfo.uri, routes[ i ].route ) == 0 )
                     return routes[ i ].handler( info );
                 break;

@@ -79,6 +79,7 @@ struct CS_RequestInfo {
     int32_t numHeaders;
     int32_t numParameters;
     int32_t numFormParameters;
+    int32_t headerSize;
     struct CS_String uri;
     struct CS_String method;
     struct CS_String httpVersion;
@@ -101,6 +102,7 @@ struct CS_ClientInfo {
     struct CS_PushPullBuffer *output;
     void (*disconnectCallback)(struct CS_ClientInfo *info);
     void *persistentData;
+    const void *appData;
     SSL *ssl;
     struct CS_RequestInfo requestInfo;
 };
@@ -117,6 +119,7 @@ struct CS_Route {
     int32_t routeType;
     const struct CS_String *route;
     bool (*handler)(struct CS_ClientInfo *);
+    const void *appData;
 };
 
 struct CS_Reply {

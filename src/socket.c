@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <poll.h>
+#include <fcntl.h>
 
 #include <crankshaft/alloc.h>
 #include <crankshaft/logger.h>
@@ -153,6 +154,9 @@ struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int3
             CS_LOG_ERROR("Failed negotiate SSL. %s", err_buf);
             goto CLEANUP_CONNECT;
         }
+    } else {
+        int32_t flags = fcntl(returnValue->socket, F_GETFL, 0);
+        fcntl(returnValue->socket, F_SETFL, flags & ~O_NONBLOCK);
     }
     return returnValue;
 
@@ -208,7 +212,7 @@ int32_t CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock ) {
     struct CS_PushPullBuffer *pp = lock?CS_socketLockOutputBuffer( socket ):socket->output;
     if( pp == NULL ) return -1;
     signal(SIGPIPE,SIG_IGN);
-    int32_t returnValue = socket->ssl?CS_PP_writeToSSL( pp, socket->ssl ):CS_PP_writeToFile( pp, socket->socket );
+    int32_t returnValue = socket->ssl?CS_PP_writeToSSL( pp, socket->ssl ):CS_PP_writeToSocket( pp, socket->socket );
     if( returnValue < 0 ) {
         CS_socketClose( socket );
     }
@@ -220,8 +224,8 @@ int32_t CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock ) {
     if( socket == NULL || socket->socket < 0 ) return -1;
     struct CS_PushPullBuffer *pp = lock?CS_socketLockInputBuffer( socket ):socket->buffer;
     if( pp == NULL ) return -1;
-    signal(SIGPIPE,SIG_IGN);
-    int32_t returnValue = socket->ssl?CS_PP_readFromSSL( pp, socket->ssl ):CS_PP_readFromFile( pp, socket->socket );
+    //signal(SIGPIPE,SIG_IGN);
+    int32_t returnValue = socket->ssl?CS_PP_readFromSSL( pp, socket->ssl ):CS_PP_readFromSocket( pp, socket->socket );
     if( returnValue < 0 ) {
         CS_socketClose( socket );
     }

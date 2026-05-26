@@ -14,6 +14,10 @@ extern "C" {
  *
  * Push pull buffer for io.
  *
+ * Data comes in at buffer + readOffset and is written from buffer + writeOffset
+ *
+ * So, readOffset should always be >= writeOffset
+ *
  */
 
 struct CS_PushPullBuffer {
@@ -54,12 +58,14 @@ int32_t CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int32_t fileDescrip
 int32_t CS_PP_readFromBuffer(struct CS_PushPullBuffer *buffer, const void *source, int32_t nBytes);
 int32_t CS_PP_readFromSSL(struct CS_PushPullBuffer *buffer, SSL *ssl);
 int32_t CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file);
+int32_t CS_PP_readFromSocket(struct CS_PushPullBuffer *buffer, int32_t socket);
 #define CS_PP_read(PPbuff,PPnBytes) CS_PP_readFromBuffer(PPbuff,NULL,PPnBytes)
 
 int32_t CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int32_t fileDescriptor);
 int32_t CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination, int32_t nBytes);
 int32_t CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl);
 int32_t CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file);
+int32_t CS_PP_writeToSocket(struct CS_PushPullBuffer *buffer, int32_t socket);
 #define CS_PP_write(PPbuff,PPnBytes) CS_PP_writeToBuffer(PPbuff,NULL,PPnBytes)
 
 #define CS_PP_setFull(PPBUFF) ((PPBUFF)->currentReadOffset=(PPBUFF)->size)
@@ -71,6 +77,11 @@ bool CS_PP_removeOffEnd( struct CS_PushPullBuffer *buffer, int32_t nBytes );
 bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int32_t offset, int32_t nBytes );
 bool CS_PP_makeRoom( struct CS_PushPullBuffer *buffer );
 char *CS_PP_findChar( struct CS_PushPullBuffer *buffer, char needle );
+
+//Puts toothpaste back in the tube... rewinds nBytes. If the entire buffer has
+//been consumed already, will just set it so that it has nBytes in it.
+//Assumes you know what you are doing. With great power etc.
+bool CS_PP_toothpaste( struct CS_PushPullBuffer *buffer, int32_t nBytes );
 
 //Moves as much as possible from the source to the destination.
 int32_t CS_PP_moveBuffer( struct CS_PushPullBuffer *source, struct CS_PushPullBuffer *destination );

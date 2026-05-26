@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/socket.h>
 
 #include <crankshaft/alloc.h>
 #include <crankshaft/pushpull.h>
@@ -88,6 +89,23 @@ int32_t CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int32_t fileDescrip
     return 0;
 }
 
+int32_t CS_PP_readFromSocket(struct CS_PushPullBuffer *buffer, int32_t fileDescriptor) {
+    buffer->err = 0;
+    if( buffer->currentReadOffset < buffer->size ) {
+        int32_t bytesRead = recv( fileDescriptor,
+                              CS_PP_endOfData(buffer),
+                              CS_PP_bufferRemaining(buffer),
+                              0 );
+        if( bytesRead < 0 ) {
+            buffer->err = errno;
+        } else {
+            buffer->currentReadOffset += bytesRead;
+        }
+        return bytesRead;
+    }
+    return 0;
+}
+
 int32_t CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int32_t fileDescriptor) {
     buffer->err = 0;
     if( buffer->currentWriteOffset < buffer->currentReadOffset ) {
@@ -106,6 +124,10 @@ int32_t CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int32_t fileDescript
         return bytesWritten;
     }
     return 0;
+}
+
+int32_t CS_PP_writeToSocket(struct CS_PushPullBuffer *buffer, int32_t socket) {
+    return CS_PP_writeToFile(buffer,socket);
 }
 
 int32_t CS_PP_readFromBuffer(struct CS_PushPullBuffer *buffer, const void *source, int32_t nBytes) {
@@ -281,3 +303,19 @@ const char *CS_PP_desc(struct CS_PushPullBuffer *buffer) {
             CS_PP_bufferRemaining( buffer ) );
     return temp;
 }
+
+bool CS_PP_toothpaste( struct CS_PushPullBuffer *buffer, int32_t nBytes ) {
+    //Buffer is empty or was reset from reading...just claim it has nBytes in it.
+    if( buffer->currentReadOffset == 0 && buffer->currentWriteOffset == 0 ) {
+        buffer->currentReadOffset = nBytes;
+        return false;
+    }
+    //We have data, but not enough to put back into the tube... return error.
+    if( buffer->currentWriteOffset < nBytes ) {
+        return true;
+    }
+    //Move the write offset back by nBytes.
+    buffer->currentWriteOffset -= nBytes;
+    return false;
+}
+

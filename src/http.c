@@ -506,7 +506,7 @@ enum WhatKindOfUri {
     URI_UNKNOWN,
     URI_HTTP,
     URI_TELNET,
-    URI_SSL
+    URI_SSL,
 };
 
 struct UriPrefixToKind {
@@ -534,24 +534,30 @@ static int32_t privateParseAddressAndPort( const char *currentPoint, const char 
     const struct CS_String *portChar = NULL;
     const char *start = currentPoint;
     while( currentPoint < endOfData && !(*currentPoint == ':' || *currentPoint == '/') ) ++currentPoint;
-    CS_stringInitReferenceCstring(address, start, currentPoint - start);
+    if( address ) CS_stringInitReferenceCstring(address, start, currentPoint - start);
     if( *currentPoint == ':' ) {
         ++currentPoint;
         const char *portCharStart = currentPoint;
         while( currentPoint < endOfData && (*currentPoint != '/') ) ++currentPoint;
         portChar = CS_stringTempReferenceCstring( portCharStart, currentPoint - portCharStart );
     }
-    if( portChar != NULL ) {
-        *port = CS_stringAtoi( portChar ); 
-    } else {
-        *port = wantSSL?defaultSSLPort:defaultNonSSLPort;
-    }
-    *ssl = wantSSL;
 
-    if( currentPoint >= endOfData ) {
-        CS_stringInitReferenceCstring(rest,NULL,0);
-    } else {
-        CS_stringInitReferenceCstring(rest,currentPoint,endOfData - currentPoint);
+    if( port ) {
+        if( portChar != NULL ) {
+            *port = CS_stringAtoi( portChar ); 
+        } else {
+            *port = wantSSL?defaultSSLPort:defaultNonSSLPort;
+        }
+    }
+
+    if( ssl ) *ssl = wantSSL;
+
+    if( rest ) {
+        if( currentPoint >= endOfData ) {
+            CS_stringInitReferenceCstring(rest,NULL,0);
+        } else {
+            CS_stringInitReferenceCstring(rest,currentPoint,endOfData - currentPoint);
+        }
     }
 
     return 0;
@@ -625,6 +631,10 @@ static int32_t privateParseUri( const struct CS_String *uri, struct CS_String *a
             break;
     }
     return -1;
+}
+
+int32_t CS_httpParseUri( const struct CS_String *uri, struct CS_String *addressOut, int32_t *portOut, bool *sslOut, struct CS_String *restOut ) {
+    return privateParseUri(uri,addressOut,portOut,sslOut,restOut);
 }
 
 static const struct CS_String *headerHas( struct CS_RequestHeader *headers, int32_t numHeaders, const struct CS_String *which ) {
