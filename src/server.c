@@ -1174,6 +1174,7 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
                 CS_PP_printf( info->output, "; SameSite=None" );
                 break;
         }
+        CS_PP_printf( info->output, "; Path=/");
         CS_PP_printf( info->output, "\r\n" );
     }
     CS_PP_printf( info->output, "\r\n" );
