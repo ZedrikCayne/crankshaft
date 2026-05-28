@@ -1208,7 +1208,10 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
 
 int32_t CS_serverKillClientSocket( struct CS_ClientInfo *info ) {
     int32_t returnValue = 0;
-    if( info->clientSocket ) returnValue = close( info->clientSocket );
+    if( info->clientSocket ) {
+        fsync( info->clientSocket );
+        returnValue = close( info->clientSocket );
+    }
     info->clientSocket = 0;
     return returnValue;
 }

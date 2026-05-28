@@ -167,6 +167,7 @@ CLEANUP_CONNECT:
 
 bool CS_socketClose( struct CS_Socket *socket ) {
     if( !socket || socket->socket < 0 ) return true;
+    fsync( socket->socket );
     close( socket->socket );
     socket->socket = -1;
     return false;
