@@ -46,7 +46,7 @@ bool test_compression() {
     const struct CS_String *encoding = CS_httpReplyHeader( reply, &CS_STRING("Content-Encoding") );
 
     // If it's still gzipped, the size will likely be much smaller than 1024
-    CS_FAIL_ON_FALSE( CS_PP_dataSize( reply->buffer ) == 1024,  "Expected 1024 bytes", "Got %d", CS_PP_dataSize( reply->buffer ) );
+    CS_FAIL_ON_FALSE( reply->decompressedBuffer && CS_PP_dataSize( reply->decompressedBuffer) == 1024,  "Expected 1024 bytes", "Got %d", reply->decompressedBuffer?CS_PP_dataSize( reply->buffer ):-1 );
 
     if( CS_PP_dataSize( reply->buffer ) == 1024 ) {
         char *data = CS_PP_startOfData( reply->buffer );

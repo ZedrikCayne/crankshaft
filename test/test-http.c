@@ -79,8 +79,8 @@ bool test_http(void) {
         struct CS_RequestReply * reply = CS_httpMakeRequest( CS_HTTP_METHOD_GET, CS_stringTempCopyCstring(base, -1), NULL, 0, NULL, 0, NULL, 0, NULL, 0, true, NULL );
         CS_FAIL_ON_NULL( reply, "GET request to /test", "Failed" );
         if( reply ) {
-            struct CS_JsonNode *json = CS_jsonParse( CS_PP_startOfData( reply->buffer ),
-                    CS_PP_dataSize( reply->buffer ), 512 );
+            struct CS_JsonNode *json = CS_jsonParse( CS_PP_startOfData( CS_httpGetReplyBuffer(reply)),
+                    CS_PP_dataSize( CS_httpGetReplyBuffer(reply) ), 512 );
             CS_FAIL_ON_NULL( json, "Reply should be json.", "Did not parse as json." );
             if( json ) {
                 //Basic structure, so we're expecting no data or variables.
@@ -98,11 +98,11 @@ bool test_http(void) {
         reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, CS_stringTempCopyCstring(base,-1), NULL, 0, NULL, 0, NULL, 0, NULL, 0, true, NULL );
         CS_FAIL_ON_NULL( reply, "Make POST with uri parameters.", "Failed on %s", base );
         if( reply ) {
-            struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
-                    CS_PP_dataSize( reply->buffer ), 512 );
+            struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( CS_httpGetReplyBuffer(reply) ),
+                    CS_PP_dataSize( CS_httpGetReplyBuffer(reply) ), 512 );
             if( json ) {
                 struct CS_JsonNode *queryParams = CS_jsonNodeByPath( json, "queryParameters" );
-                CS_FAIL_ON_NULL( queryParams, "Check Query Parameters", "Could not find query parameters. %s", CS_PP_startOfData( reply->buffer ) );
+                CS_FAIL_ON_NULL( queryParams, "Check Query Parameters", "Could not find query parameters. %s", CS_PP_startOfData( CS_httpGetReplyBuffer(reply) ) );
                 CS_JSON_NODE_ITER(queryParams, queryParameter) {
                     struct CS_JsonNode *name = CS_jsonNodeByPath( queryParameter, "name" );
                     struct CS_JsonNode *value = CS_jsonNodeByPath( queryParameter, "value" );
@@ -149,12 +149,12 @@ bool test_http(void) {
             const struct CS_String *ctype = CS_httpReplyHeader(reply,&ContentType);
             CS_FAIL_ON_NULL( ctype, "Content type header.", "Got a null." );
             CS_FAIL_ON_FALSE( ctype && CS_stringStrcmp(ctype,&appjson) == 0, "Should have gotten json back.", "Got %s instead", CS_stringTempCstringOrNULL(ctype) );
-            struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
-                    CS_PP_dataSize( reply->buffer ), 512 );
+            struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( CS_httpGetReplyBuffer(reply) ),
+                    CS_PP_dataSize( CS_httpGetReplyBuffer(reply) ), 512 );
             CS_FAIL_ON_NULL( json, "Json parsing reply", "Json failed." );
             if( json ) {
                 struct CS_JsonNode *queryParams = CS_jsonNodeByPath( json, "queryParameters" );
-                CS_FAIL_ON_NULL( queryParams, "Check Query Parameters", "Could not find query parameters. %s", CS_PP_startOfData( reply->buffer ) );
+                CS_FAIL_ON_NULL( queryParams, "Check Query Parameters", "Could not find query parameters. %s", CS_PP_startOfData( CS_httpGetReplyBuffer(reply) ) );
                 CS_JSON_NODE_ITER(queryParams, queryParameter) {
                     struct CS_JsonNode *name = CS_jsonNodeByPath( queryParameter, "name" );
                     struct CS_JsonNode *value = CS_jsonNodeByPath( queryParameter, "value" );
@@ -195,8 +195,8 @@ bool test_http(void) {
         reply = CS_httpMakeRequest( CS_HTTP_METHOD_POST, CS_stringTempCopyCstring(base, -1), headers, 4, NULL, 0, formParameters, 3, NULL, 0, true, NULL );
         CS_FAIL_ON_NULL( reply, "Request with params, form params, uri paramaters.", "Failed." );
         if( reply ) {
-            struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( reply->buffer ),
-                    CS_PP_dataSize( reply->buffer ), 512 );
+            struct CS_JsonNode *json = CS_jsonParseCopy( CS_PP_startOfData( CS_httpGetReplyBuffer(reply) ),
+                    CS_PP_dataSize( CS_httpGetReplyBuffer(reply) ), 512 );
             if( json ) {
                 for( int32_t i = 0; i < sizeof(formParameters)/sizeof(formParameters[0]); ++i ) {
                     const char *tempPath = CS_tempBuffSnprintf( 64, "formParameters/|name=%s/value", CS_stringTempCstring(&formParameters[i].name));

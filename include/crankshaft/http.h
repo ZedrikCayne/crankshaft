@@ -129,6 +129,7 @@ struct CS_RequestReply {
     int32_t chunkedBytesOffset;
     struct CS_RequestHeader replyHeaders[MAX_REPLY_HEADERS];
     struct CS_PushPullBuffer *buffer;
+    struct CS_PushPullBuffer *decompressedBuffer;
 };
 
 #define CS_MAX_REQUEST_LENGTH 4096
@@ -146,6 +147,7 @@ struct CS_StringBuilder *CS_httpUrlDecodeAppend( const struct CS_String *toDecod
 struct CS_StringBuilder *CS_httpUrlEncodeAppend( const struct CS_String *toEncode, struct CS_StringBuilder *appendTo );
 int32_t CS_httpUrlDecodeBinary( const void *toDecode, int32_t decodeBufferLength, void *output, int32_t outputBufferLength );
 int32_t CS_httpUrlEncodeBinary( const void *toEncode, int32_t encodeBufferLength, void *output, int32_t outputBufferLength );
+struct CS_PushPullBuffer *CS_httpGetReplyBuffer( struct CS_RequestReply *reply );
 
 const struct CS_String *CS_httpReplyHeader( struct CS_RequestReply *reply, const struct CS_String *header );
 

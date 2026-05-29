@@ -1030,8 +1030,8 @@ static int32_t privateDecompressReply( struct CS_RequestReply *reply ) {
     }
     
     CS_compressDestroy( &ctx );
-    CS_PP_defaultFree( reply->buffer );
-    reply->buffer = decompressed;
+    //CS_PP_defaultFree( reply->buffer );
+    reply->decompressedBuffer = decompressed;
     return 0;
 }
 
@@ -1148,6 +1148,8 @@ void CS_httpCloseRequest( struct CS_RequestReply *toReturn ) {
     toReturn->ssl = 0;
     if( toReturn->buffer ) CS_PP_defaultFree( toReturn->buffer );
     toReturn->buffer = 0;
+    if( toReturn->decompressedBuffer ) CS_PP_defaultFree( toReturn->decompressedBuffer );
+    toReturn->decompressedBuffer = 0;
     privateReturnReply(toReturn);
 }
 
@@ -1164,4 +1166,9 @@ void CS_httpCleanupReplies() {
     if( requestSlabAlloc ) CS_slabFree( requestSlabAlloc );
     requestSlabAlloc = NULL;
     pthread_mutex_unlock( &slabAllocMutex );
+}
+struct CS_PushPullBuffer *CS_httpGetReplyBuffer( struct CS_RequestReply *reply ) {
+    if( !reply ) return NULL;
+    if( reply->decompressedBuffer ) return reply->decompressedBuffer;
+    return reply->buffer;
 }

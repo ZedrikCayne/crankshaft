@@ -59,7 +59,8 @@ static struct CS_StorageItem *privateWebCache( const struct CS_Cache *cache, con
         }
     }
     if( expireTime == 0 ) expireTime = time(NULL) + 3600;
-    struct CS_StorageItem *returnValue = CS_cachePut( cache, key, CS_PP_startOfData(reply->buffer), CS_PP_dataSize(reply->buffer), expireTime );
+    struct CS_PushPullBuffer *whichPP = CS_httpGetReplyBuffer( reply );
+    struct CS_StorageItem *returnValue = CS_cachePut( cache, key, CS_PP_startOfData(whichPP), CS_PP_dataSize(whichPP), expireTime );
 
     CS_httpCloseRequest( reply );
     return returnValue;
