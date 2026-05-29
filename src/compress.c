@@ -119,12 +119,8 @@ static long zlib_process(CS_Compress *ctx, struct CS_PushPullBuffer *in, struct 
     long bytes_read = strm->total_in - in_before;
     long bytes_written = strm->total_out - out_before;
 
-    in->currentWriteOffset += bytes_read;
-    if (in->currentWriteOffset == in->currentReadOffset) {
-        in->currentWriteOffset = in->currentReadOffset = 0;
-    }
-
-    out->currentReadOffset += bytes_written;
+    CS_PP_write( in, bytes_read );
+    CS_PP_read( out, bytes_written );
 
     ctx->bytesProcessed += bytes_read;
     ctx->bytesOutput += bytes_written;
