@@ -1193,7 +1193,6 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
             bytesWritten = CS_serverWriteOutputBuffer( info );
             bytesToWrite -= bytesWritten;
         } while( bytesToWrite > 0 && bytesWritten >= 0 );
-        if( bytesWritten < 0 ) CS_LOG_ERROR("Fail on write.");
     }
     //Stuff out everything else.
     while( bytesWritten >= 0 && CS_PP_dataSize( info->output ) > 0 ) {
