@@ -286,7 +286,7 @@ int32_t CS_httpStringToMethodEnum( const struct CS_String *methodString ) {
     }
 }
 
-const char *CS_httpResponseEnumToString( int32_t responseEnum ) {
+const char *CS_httpResponseEnumToCstring( int32_t responseEnum ) {
     if( responseEnum < 0 || responseEnum >= MAX_NUM_CS_RESPONSE_ENUMS ) return NULL;
     return codeToString[ responseEnum ].value;
 }
@@ -296,7 +296,7 @@ int32_t CS_httpResponseEnumToCode( int32_t responseEnum ) {
     return codeToString[ responseEnum ].code;
 }
 
-const char *CS_httpMethodEnumToString( int32_t methodEnum ) {
+const char *CS_httpMethodEnumToCstring( int32_t methodEnum ) {
     if( methodEnum < 0 || methodEnum >= CS_MAX_HTTP_METHODS ) return NULL;
     return methodEnumToName[ methodEnum ];
 }
@@ -788,7 +788,7 @@ struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
     struct CS_String tempAddress;
     struct CS_String rest;
     bool wantSSL;
-    const char *method = CS_httpMethodEnumToString( methodEnum );
+    const char *method = CS_httpMethodEnumToCstring( methodEnum );
     struct CS_StringBuilder *formString = NULL;
     struct CS_PushPullBuffer *pp = NULL;
 

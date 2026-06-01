@@ -25,12 +25,12 @@ int32_t CS_mimeFileExtensionToEnum(const char *extension ) {
     return CS_MIME_BIN;
 }
 
-const char *CS_mimeFileExtensionToString(const char *extension) {
+const char *CS_mimeFileExtensionToCstring(const char *extension) {
     int32_t mimeEnum = CS_mimeFileExtensionToEnum( extension );
     return extensions[ mimeEnum ].filetype;
 }
 
-const char *CS_mimeEnumToString(int32_t mimeEnum) {
+const char *CS_mimeEnumToCstring(int32_t mimeEnum) {
     if( mimeEnum < CS_MIME_AAC || mimeEnum >= MAX_CS_MIME_TYPES )
         return extensions[ CS_MIME_BIN ].filetype;
     return extensions[ mimeEnum ].filetype;

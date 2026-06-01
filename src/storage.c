@@ -383,7 +383,7 @@ static struct privateSqliteData *privateCreateSqliteFromConfig( const char *conf
         if( config ) {
             char *commasStorage;
             char *equalsStorage;
-            char *temp = CS_tempStringCopy( config );
+            char *temp = CS_tempCstringCopy( config );
             char *nextItem = strtok_r( temp, ",", &commasStorage );
             do {
                 char *key = strtok_r( nextItem, "=", &equalsStorage );

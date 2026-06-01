@@ -389,7 +389,7 @@ bool CS_serverKill( struct CS_WebServer *server ) {
 static void ERR(struct CS_ClientInfo *info, int32_t errorEnum, const char *details) {
     char *tempBuff = CS_tempBuff(STACK_BUFFER_SIZE);
     int32_t error = CS_httpResponseEnumToCode( errorEnum );
-    const char *errorString = CS_httpResponseEnumToString( errorEnum );
+    const char *errorString = CS_httpResponseEnumToCstring( errorEnum );
 
     int32_t contentLength = snprintf(tempBuff, STACK_BUFFER_SIZE, "{\"error\":\"%s\",\"status\":%d,\"details\":\"%s\"}",errorString,error,details?details:errorString);
     struct CS_Reply *reply = CS_serverCreateReply( info, errorEnum, CS_MIME_JSON, tempBuff, contentLength );
@@ -818,7 +818,7 @@ PUSH_FILE_RETRY:
     }
 
     //Doing this the long way so we have a default set.
-    const char *mimeType = CS_mimeFileExtensionToString(extension);
+    const char *mimeType = CS_mimeFileExtensionToCstring(extension);
 
     //If we're using the one we got, we need to put the output buffer in manually so
     //the do-send will do it's thing.
@@ -1092,7 +1092,7 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         bool shouldCompress = false;
         const struct CS_String *contentType = NULL;
         if (reply->contentTypeEnum != CS_MIME_DO_NOT_SET) {
-            contentType = CS_stringTempCopyCstring(CS_mimeEnumToString(reply->contentTypeEnum), -1);
+            contentType = CS_stringTempCopyCstring(CS_mimeEnumToCstring(reply->contentTypeEnum), -1);
         } else {
             contentType = CS_serverGetReplyHeader(reply, &CS_STRING("Content-Type") );
         }
@@ -1140,9 +1140,9 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     }
 
     int32_t replyNumber = CS_httpResponseEnumToCode( reply->returnStatusEnum );
-    const char *replyString = CS_httpResponseEnumToString( reply->returnStatusEnum );
+    const char *replyString = CS_httpResponseEnumToCstring( reply->returnStatusEnum );
     if( reply->contentTypeEnum != CS_MIME_DO_NOT_SET ) {
-        CS_serverSetReplyHeaderIfMissing(reply, &CS_STRING("Content-Type"), CS_stringTempCopyCstring( CS_mimeEnumToString( reply->contentTypeEnum), -1 ) );
+        CS_serverSetReplyHeaderIfMissing(reply, &CS_STRING("Content-Type"), CS_stringTempCopyCstring( CS_mimeEnumToCstring( reply->contentTypeEnum), -1 ) );
     }
 
     void *bufferToSend = compressedBuffer ? compressedBuffer : (void*)reply->outputBuffer;

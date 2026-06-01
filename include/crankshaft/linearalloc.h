@@ -24,7 +24,7 @@ struct CS_LinearAllocator;
 
 void *CS_linearTake(struct CS_LinearAllocator *linearAllocator, int32_t size, int32_t alignment );
 void *CS_linearTakeZero(struct CS_LinearAllocator *linearAllocator, int32_t size, int32_t alignment );
-char *CS_linearCopyString(struct CS_LinearAllocator *linearAllocator, const char *string );
+char *CS_linearCopyCstring(struct CS_LinearAllocator *linearAllocator, const char *string );
 void CS_linearReset(struct CS_LinearAllocator *linearAllocator);
 
 struct CS_LinearAllocator *CS_linearInit( int32_t size );

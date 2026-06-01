@@ -16,8 +16,8 @@ extern "C" {
 #include <stdint.h>
 
 int32_t CS_mimeFileExtensionToEnum(const char *extension );
-const char *CS_mimeFileExtensionToString(const char *extension);
-const char *CS_mimeEnumToString(int32_t mimeEnum);
+const char *CS_mimeFileExtensionToCstring(const char *extension);
+const char *CS_mimeEnumToCstring(int32_t mimeEnum);
  
 #ifdef __cplusplus
 }

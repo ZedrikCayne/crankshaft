@@ -78,10 +78,10 @@ static bool privateRotate( struct CS_LogFile *logfile ) {
         reopenFile = true;
     }
 
-    char *moveTo = CS_tempStringCopy( fileName( logfile, logfile->maxRotates ) );
+    char *moveTo = CS_tempCstringCopy( fileName( logfile, logfile->maxRotates ) );
     if( fileExistString( moveTo ) ) remove( moveTo );
     for( int32_t i = logfile->maxRotates - 1; i >= 0; --i ) {
-        char *moveFrom = CS_tempStringCopy( fileName( logfile, i ) );
+        char *moveFrom = CS_tempCstringCopy( fileName( logfile, i ) );
         if( fileExistString( moveFrom ) ) {
             if( rename( moveFrom, moveTo ) ) return true;
         }

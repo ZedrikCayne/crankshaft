@@ -25,13 +25,13 @@ bool test_hash(void) {
     int32_t *uuidHashes = CS_alloc( UUIDS_TO_MAKE * sizeof(int32_t) );
     const char **uuidStrings = CS_alloc( UUIDS_TO_MAKE * sizeof(char *) );
     for( int32_t i = 0; i < UUIDS_TO_MAKE; ++i ) {
-        const char *textUuid = CS_uuid4String();
+        const char *textUuid = CS_uuid4Cstring();
         uuidStrings[ i ] = textUuid;
         uuidHashes[ i ] = CS_hash(textUuid);
         for( int32_t j = i - 1; j >= 0; j-- ) CS_FAIL_ON_TRUE( uuidHashes[ i ] == uuidHashes[ j ], "Hashes should not match.", "Buh? uuidStrings[%d]'%s' vs. uuidStrings[%d]'%s'", i, uuidStrings[i], j, uuidStrings[j] );
     }
     for( int32_t i = 0; i < UUIDS_TO_MAKE; ++i ) {
-        CS_uuidFreeString( uuidStrings[i] );
+        CS_uuidFreeCstring( uuidStrings[i] );
     }
     CS_free( uuidHashes );
     CS_free( uuidStrings );

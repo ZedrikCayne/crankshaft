@@ -165,8 +165,8 @@ struct CS_StringBuilder *CS_jsonQuoteStringToStringBuilder(const char *inputStri
 struct CS_StringBuilder *CS_jsonQuoteString(const char *inputString, int32_t len);
 struct CS_StringBuilder *CS_jsonUnquoteString(const char *inputString, int32_t len);
 
-const char *CS_jsonEnumTypeAsString(const int32_t enumType);
-const char *CS_jsonNodeValueAsTempString( struct CS_JsonNode *mine );
+const char *CS_jsonEnumTypeAsCstring(const int32_t enumType);
+const char *CS_jsonNodeValueAsTempCstring( struct CS_JsonNode *mine );
 
 /****************************************************************************
  * Comparison by value. We're mostly using it in our tests to make sure when
@@ -182,13 +182,13 @@ struct CS_JsonNode *CS_jsonNodeReset( struct CS_JsonNode *node );
  * Convenience functions for modifying stuff in place
  *
  ******************************************************/
-struct CS_JsonNode *CS_jsonNodeAppendUnquotedString( struct CS_JsonNode *appendTo, const char *name, const char *value );
+struct CS_JsonNode *CS_jsonNodeAppendUnquotedCstring( struct CS_JsonNode *appendTo, const char *name, const char *value );
 struct CS_JsonNode *CS_jsonNodeAppendFloat( struct CS_JsonNode *appendTo, const char *name, double value );
 struct CS_JsonNode *CS_jsonNodeAppendInteger( struct CS_JsonNode *appendTo, const char *name, long long value );
 struct CS_JsonNode *CS_jsonNodeAppendObject( struct CS_JsonNode *appendTo, const char *name );
 struct CS_JsonNode *CS_jsonNodeAppendArray( struct CS_JsonNode *appendTo, const char *name );
-struct CS_JsonNode *CS_jsonNodeAddUnquotedString( struct CS_JsonNode *addTo, const char *name, const char *value );
-struct CS_JsonNode *CS_jsonNodeAddUnquotedStringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int32_t length );
+struct CS_JsonNode *CS_jsonNodeAddUnquotedCstring( struct CS_JsonNode *addTo, const char *name, const char *value );
+struct CS_JsonNode *CS_jsonNodeAddUnquotedCstringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int32_t length );
 struct CS_JsonNode *CS_jsonNodeAddFloat( struct CS_JsonNode *addTo, const char *name, double value );
 struct CS_JsonNode *CS_jsonNodeAddInteger( struct CS_JsonNode *addTo, const char *name, long long value );
 struct CS_JsonNode *CS_jsonNodeAddObject( struct CS_JsonNode *addTo, const char *name );
@@ -201,9 +201,9 @@ struct CS_JsonNode *CS_jsonNodeRemoveNode( struct CS_JsonNode *remove ); //Note,
  * Use with caution but I'm not your responsible adult.
  *
  *********************************************************************/
-struct CS_JsonNode *CS_jsonNodeAppendFloatAsString( struct CS_JsonNode *appendTo, const char *name, const char *value );
-struct CS_JsonNode *CS_jsonNodeAppendIntegerAsString( struct CS_JsonNode *appendTo, const char *name, const char *value );
-struct CS_JsonNode *CS_jsonNodeAppendQuotedString( struct CS_JsonNode *appendTo, const char *name, const char *value );
+struct CS_JsonNode *CS_jsonNodeAppendFloatAsCstring( struct CS_JsonNode *appendTo, const char *name, const char *value );
+struct CS_JsonNode *CS_jsonNodeAppendIntegerAsCstring( struct CS_JsonNode *appendTo, const char *name, const char *value );
+struct CS_JsonNode *CS_jsonNodeAppendQuotedCstring( struct CS_JsonNode *appendTo, const char *name, const char *value );
 
 #ifdef __cplusplus
 }

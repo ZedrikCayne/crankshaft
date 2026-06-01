@@ -85,7 +85,7 @@ void *CS_tempBuffZero( int32_t size ) {
     return returnValue;
 }
 
-char *CS_tempStringCopy(const char *copyFrom) {
+char *CS_tempCstringCopy(const char *copyFrom) {
     int32_t nLen = strlen(copyFrom) + 1;
     char *returnValue = CS_tempBuff( nLen );
     if( returnValue ) {
@@ -94,7 +94,7 @@ char *CS_tempStringCopy(const char *copyFrom) {
     return returnValue;
 }
 
-char *CS_tempStringCopyWithPad(const char *copyFrom, int32_t size, char pad, int32_t *outLength, int32_t aligned) {
+char *CS_tempCstringCopyWithPad(const char *copyFrom, int32_t size, char pad, int32_t *outLength, int32_t aligned) {
     int32_t nLen = size;
     int32_t newLength = size%aligned==0?size:(size + aligned - ( size % aligned ) );
     char *returnValue = CS_tempBuffZero( newLength + 1 );

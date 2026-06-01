@@ -31,8 +31,8 @@ bool test_uuid(void) {
         CS_FAIL_ON_FALSE( uuid->uuid[i] == uuid2->uuid[ i ], "Checking uuids match on same seed.", "No match!");
     }
 
-    const char *tempOne = CS_uuidToStringTemp( uuid );
-    const char *tempTwo = CS_uuidToStringTemp( uuid2 );
+    const char *tempOne = CS_uuidToCstringTemp( uuid );
+    const char *tempTwo = CS_uuidToCstringTemp( uuid2 );
     
     CS_uuidFree(uuid);
     CS_uuidFree(uuid2);

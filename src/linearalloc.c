@@ -66,7 +66,7 @@ void *CS_linearTakeZero(struct CS_LinearAllocator *linearAllocator, int32_t size
     return returnValue;
 }
 
-char *CS_linearCopyString(struct CS_LinearAllocator *linearAllocator, const char *string ) {
+char *CS_linearCopyCstring(struct CS_LinearAllocator *linearAllocator, const char *string ) {
     int32_t len = strlen( string );
     void *returnValue = CS_linearTake( linearAllocator, len+1, sizeof(void*) );
     if( returnValue ) strncpy( returnValue, string, len + 1 );

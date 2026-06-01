@@ -1007,7 +1007,7 @@ struct CS_StringBuilder *CS_jsonUnquoteString(const char *inputString, int32_t l
     return returnValue;
 }
  
-const char *CS_jsonEnumTypeAsString(const int32_t enumType) {
+const char *CS_jsonEnumTypeAsCstring(const int32_t enumType) {
     switch ( enumType ) {
         case CS_JSON_ARRAY:
             return "CS_JSON_ARRAY";
@@ -1059,7 +1059,7 @@ bool CS_jsonNodesEquivalent(struct CS_JsonNode *a, struct CS_JsonNode *b) {
     while( (currenta != NULL) &&
            (currentb != NULL) ) {
         if( currenta->typeEnum != currentb->typeEnum ) {
-            CS_LOG_ERROR("Types don't match %s vs %s.",CS_jsonEnumTypeAsString(currenta->typeEnum), CS_jsonEnumTypeAsString(currentb->typeEnum));
+            CS_LOG_ERROR("Types don't match %s vs %s.",CS_jsonEnumTypeAsCstring(currenta->typeEnum), CS_jsonEnumTypeAsCstring(currentb->typeEnum));
             return false;
         }
         if( (currenta->name != NULL) ^ (currentb->name != NULL) ) {
@@ -1154,7 +1154,7 @@ char *CS_jsonNodePrintableTemp(const struct CS_JsonNode *printMe) {
     char *returnValue = NULL;
 
     if( sb ) {
-        returnValue = CS_tempStringCopy( sb->buffer );
+        returnValue = CS_tempCstringCopy( sb->buffer );
         CS_SB_free( sb );
     }
 
@@ -1376,7 +1376,7 @@ static struct CS_JsonNode *stuffQuotedSBOntoJsonNodeAndFreeSB( struct CS_JsonNod
     return returnValue;
 }
 
-struct CS_JsonNode *CS_jsonNodeAppendUnquotedString( struct CS_JsonNode *appendTo, const char *name, const char *value ) {
+struct CS_JsonNode *CS_jsonNodeAppendUnquotedCstring( struct CS_JsonNode *appendTo, const char *name, const char *value ) {
     struct CS_StringBuilder *quoted = CS_jsonQuoteString( value, strlen(value) );
     if( quoted == NULL ) return NULL;
     struct CS_JsonNode *returnValue = privateAppend( appendTo, name );
@@ -1400,7 +1400,7 @@ struct CS_JsonNode *CS_jsonNodeAppendInteger( struct CS_JsonNode *appendTo, cons
     returnValue->intValue = value;
     return returnValue;
 }
-struct CS_JsonNode *CS_jsonNodeAppendFloatAsString( struct CS_JsonNode *appendTo, const char *name, const char *value ) {
+struct CS_JsonNode *CS_jsonNodeAppendFloatAsCstring( struct CS_JsonNode *appendTo, const char *name, const char *value ) {
     struct CS_JsonNode *returnValue = privateAppend( appendTo, name );
     if( returnValue == NULL ) {
         return NULL;
@@ -1414,7 +1414,7 @@ struct CS_JsonNode *CS_jsonNodeAppendFloatAsString( struct CS_JsonNode *appendTo
     returnValue->stringValue = stackAllocatedString;
     return returnValue;
 }
-struct CS_JsonNode *CS_jsonNodeAppendIntegerAsString( struct CS_JsonNode *appendTo, const char *name, const char *value ) {
+struct CS_JsonNode *CS_jsonNodeAppendIntegerAsCstring( struct CS_JsonNode *appendTo, const char *name, const char *value ) {
     struct CS_JsonNode *returnValue = privateAppend( appendTo, name );
     if( returnValue == NULL ) {
         return NULL;
@@ -1428,7 +1428,7 @@ struct CS_JsonNode *CS_jsonNodeAppendIntegerAsString( struct CS_JsonNode *append
     returnValue->stringValue = stackAllocatedString;
     return returnValue;return NULL;
 }
-struct CS_JsonNode *CS_jsonNodeAppendQuotedString( struct CS_JsonNode *appendTo, const char *name, const char *value ) {
+struct CS_JsonNode *CS_jsonNodeAppendQuotedCstring( struct CS_JsonNode *appendTo, const char *name, const char *value ) {
     struct CS_JsonNode *returnValue = privateAppend( appendTo, name );
     if( returnValue == NULL ) {
         return NULL;
@@ -1475,7 +1475,7 @@ struct CS_JsonNode *CS_jsonNodeAppendArray( struct CS_JsonNode *appendTo, const 
     }
     return returnValue;
 }
-struct CS_JsonNode *CS_jsonNodeAddUnquotedString( struct CS_JsonNode *addTo, const char *name, const char *value ) {
+struct CS_JsonNode *CS_jsonNodeAddUnquotedCstring( struct CS_JsonNode *addTo, const char *name, const char *value ) {
     struct CS_StringBuilder *quoted = CS_jsonQuoteString( value, strlen(value) );
     if( quoted == NULL ) return NULL;
     struct CS_JsonNode *returnValue = privateAdd( addTo, name );
@@ -1485,7 +1485,7 @@ struct CS_JsonNode *CS_jsonNodeAddUnquotedString( struct CS_JsonNode *addTo, con
     }
     return stuffQuotedSBOntoJsonNodeAndFreeSB( returnValue, quoted );
 }
-struct CS_JsonNode *CS_jsonNodeAddUnquotedStringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int32_t length ) {
+struct CS_JsonNode *CS_jsonNodeAddUnquotedCstringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int32_t length ) {
     struct CS_StringBuilder *quoted = CS_jsonQuoteString( value, length );
     if( quoted == NULL ) return NULL;
     struct CS_JsonNode *returnValue = privateAdd( addTo, name );
@@ -1533,7 +1533,7 @@ struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTr
     double newFloat;
     char *endOfValue;
     while( current ) {
-        CS_LOG_TRACE("Started with %s", CS_jsonEnumTypeAsString( current->typeEnum ));
+        CS_LOG_TRACE("Started with %s", CS_jsonEnumTypeAsCstring( current->typeEnum ));
         switch( current->typeEnum ) {
             case CS_JSON_ARRAY:
             case CS_JSON_OBJECT:
@@ -1594,7 +1594,7 @@ struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTr
             default:
                 break;
         }
-        CS_LOG_TRACE("Ended with %s", CS_jsonEnumTypeAsString( current->typeEnum ));
+        CS_LOG_TRACE("Ended with %s", CS_jsonEnumTypeAsCstring( current->typeEnum ));
         
         if( !followTree ) break;
         if( current->next ) {
@@ -1609,7 +1609,7 @@ struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTr
 
 
 struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *path) {
-    char *tmpPath = CS_tempStringCopy( path );
+    char *tmpPath = CS_tempCstringCopy( path );
     if( tmpPath == NULL ) return NULL;
     char *savePtr = NULL;
     char *currToken = NULL;
@@ -1624,7 +1624,7 @@ struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *pa
                 current = current->container;
                 while( current ) {
                     if( current->typeEnum == CS_JSON_OBJECT ) {
-                        const char *val = CS_jsonNodeValueAsTempString(CS_jsonNodeByPath(current,subName));
+                        const char *val = CS_jsonNodeValueAsTempCstring(CS_jsonNodeByPath(current,subName));
                         if( val && strcmp( val, subValue ) == 0 ) {
                             break;
                         }
@@ -1668,7 +1668,7 @@ struct CS_JsonNode *CS_jsonNodeByPath(struct CS_JsonNode *source, const char *pa
     return current;
 }
 
-const char *CS_jsonNodeValueAsTempString( struct CS_JsonNode *mine ) {
+const char *CS_jsonNodeValueAsTempCstring( struct CS_JsonNode *mine ) {
     if( mine == NULL ) return NULL;
     switch( mine->typeEnum ) {
         case CS_JSON_STRING_QUOTED_ALLOCATED:

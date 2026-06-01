@@ -136,7 +136,7 @@ const struct CS_UUID *CS_uuid4Temp() {
     return returnUuid;
 }
 
-const char *CS_uuid4String() {
+const char *CS_uuid4Cstring() {
     struct CS_UUID uuid;
     char *returnValue = CS_alloc(UUID_CHAR_SIZE_BYTES);
     if( returnValue ) {
@@ -146,7 +146,7 @@ const char *CS_uuid4String() {
     return returnValue;
 }
 
-const char *CS_uuid4StringTemp(void) {
+const char *CS_uuid4CstringTemp(void) {
     struct CS_UUID uuid;
     char *returnValue = CS_tempBuff(UUID_CHAR_SIZE_BYTES);
     if( returnValue ) {
@@ -156,7 +156,7 @@ const char *CS_uuid4StringTemp(void) {
     return returnValue;
 }
 
-const char *CS_uuid4StringOut(char *out, int32_t length) {
+const char *CS_uuid4CstringOut(char *out, int32_t length) {
     struct CS_UUID uuid;
     if( length < UUID_CHAR_SIZE_BYTES ) {
         return NULL;
@@ -166,19 +166,19 @@ const char *CS_uuid4StringOut(char *out, int32_t length) {
     return out;
 }
 
-const char *CS_uuidToString(const struct CS_UUID *uuid) {
+const char *CS_uuidToCstring(const struct CS_UUID *uuid) {
     char *returnValue = CS_alloc( UUID_CHAR_SIZE_BYTES );
     if( returnValue ) sixteenBytesToText( uuid, returnValue );
     return returnValue;
 }
 
-const char *CS_uuidToStringTemp(const struct CS_UUID *uuid) {
+const char *CS_uuidToCstringTemp(const struct CS_UUID *uuid) {
     char *returnValue = CS_tempBuff( UUID_CHAR_SIZE_BYTES );
     if( returnValue ) sixteenBytesToText( uuid, returnValue );
     return returnValue;
 }
 
-const struct CS_UUID *CS_uuidFromString(char *in, int32_t length) {
+const struct CS_UUID *CS_uuidFromCstring(char *in, int32_t length) {
     if( length < UUID_CHAR_SIZE_BYTES ) return NULL;
     struct CS_UUID *returnValue = CS_slabTake(voidSlabAllocator);
     if( returnValue ) {
@@ -190,14 +190,14 @@ const struct CS_UUID *CS_uuidFromString(char *in, int32_t length) {
     return returnValue;
 }
 
-const struct CS_UUID *CS_uuidFromStringTemp(char *in, int32_t length) {
+const struct CS_UUID *CS_uuidFromCstringTemp(char *in, int32_t length) {
     if( length < UUID_CHAR_SIZE_BYTES ) return NULL;
     struct CS_UUID *returnValue = CS_tempBuff( sizeof(struct CS_UUID) );
     if( returnValue && textToSixteenBytes( in, returnValue ) ) return NULL;
     return returnValue;
 }
 
-const char *CS_uuidToStringOut(const struct CS_UUID *uuid, char *out, int32_t outLength) {
+const char *CS_uuidToCstringOut(const struct CS_UUID *uuid, char *out, int32_t outLength) {
     if( outLength < UUID_CHAR_SIZE_BYTES ) return NULL;
     sixteenBytesToText( uuid, out );
     return out;
@@ -207,6 +207,6 @@ void CS_uuidCopy(struct CS_UUID *dest, const struct CS_UUID *src) {
     memcpy(dest, src, sizeof(struct CS_UUID) );
 }
 
-void CS_uuidFreeString( const char *uuidString ) {
+void CS_uuidFreeCstring( const char *uuidString ) {
     CS_free((void*)uuidString);
 }

@@ -135,8 +135,8 @@ struct CS_RequestReply {
 #define CS_MAX_REQUEST_LENGTH 4096
 
 int32_t CS_httpStringToMethodEnum( const struct CS_String *methodString );
-const char *CS_httpMethodEnumToString( int32_t methodEnum );
-const char *CS_httpResponseEnumToString( int32_t responseEnum );
+const char *CS_httpMethodEnumToCstring( int32_t methodEnum );
+const char *CS_httpResponseEnumToCstring( int32_t responseEnum );
 int32_t CS_httpResponseEnumToCode( int32_t responseEnum );
 bool CS_httpUrlDecodeInPlace( struct CS_String *toDecode );
 struct CS_String *CS_httpUrlDecodeTemp( const struct CS_String *doDecode ); 

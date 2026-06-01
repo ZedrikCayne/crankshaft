@@ -13,7 +13,7 @@
  * that do not require freeing. Functions ending in Out require
  * you to have a buffer for it to write to.
  *
- * Any others you should free using CS_uuidFreeString or CS_uuidFree
+ * Any others you should free using CS_uuidFreeCstring or CS_uuidFree
  *
  ********************************************************************/
 
@@ -33,15 +33,15 @@ void CS_uuidSetSeed( int32_t seed );
 const struct CS_UUID *CS_uuid4();
 const struct CS_UUID *CS_uuid4Temp(void);
 void CS_uuidFree(const struct CS_UUID *uuid);
-const char *CS_uuid4StringTemp(void);
-const char *CS_uuid4String(void);
-const char *CS_uuid4StringOut(char *out, int32_t length);
-const struct CS_UUID *CS_uuidFromString(char *in, int32_t length);
-const struct CS_UUID *CS_uuidFromStringTemp(char *in, int32_t length);
-const char *CS_uuidToString(const struct CS_UUID *uuid);
-const char *CS_uuidToStringTemp(const struct CS_UUID *uuid);
-const char *CS_uuidToStringOut(const struct CS_UUID *uuid, char *out, int32_t outLength);
-void CS_uuidFreeString( const char *uuidString );
+const char *CS_uuid4CstringTemp(void);
+const char *CS_uuid4Cstring(void);
+const char *CS_uuid4CstringOut(char *out, int32_t length);
+const struct CS_UUID *CS_uuidFromCstring(char *in, int32_t length);
+const struct CS_UUID *CS_uuidFromCstringTemp(char *in, int32_t length);
+const char *CS_uuidToCstring(const struct CS_UUID *uuid);
+const char *CS_uuidToCstringTemp(const struct CS_UUID *uuid);
+const char *CS_uuidToCstringOut(const struct CS_UUID *uuid, char *out, int32_t outLength);
+void CS_uuidFreeCstring( const char *uuidString );
 void CS_uuidCopy( struct CS_UUID *dest, const struct CS_UUID *source );
 
 #ifdef __cplusplus

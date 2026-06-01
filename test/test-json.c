@@ -84,14 +84,14 @@ static const char *invalidFloat[] = {
 
 static const char *wantedButGot(int32_t wantedEnum, struct CS_JsonNode *got) {
     char *returnValue = CS_tempBuff( TEMP_PRINT_SIZE );
-    snprintf(returnValue, TEMP_PRINT_SIZE, "Wanted a %s but got %s.", CS_jsonEnumTypeAsString( wantedEnum ),
-            got?CS_jsonEnumTypeAsString( got->typeEnum ):"NULL" );
+    snprintf(returnValue, TEMP_PRINT_SIZE, "Wanted a %s but got %s.", CS_jsonEnumTypeAsCstring( wantedEnum ),
+            got?CS_jsonEnumTypeAsCstring( got->typeEnum ):"NULL" );
     return returnValue;
 }
 
 static const char *nullButGot(struct CS_JsonNode *got) {
     char *returnValue = CS_tempBuff( TEMP_PRINT_SIZE );
-    snprintf(returnValue, TEMP_PRINT_SIZE, "Wanted a NULL but got %s.", got?CS_jsonEnumTypeAsString( got->typeEnum ):"NULL" );
+    snprintf(returnValue, TEMP_PRINT_SIZE, "Wanted a NULL but got %s.", got?CS_jsonEnumTypeAsCstring( got->typeEnum ):"NULL" );
     return returnValue;
 }
 
@@ -134,7 +134,7 @@ struct CS_JsonNode *addRandom( struct CS_JsonNode *to, int32_t index ) {
     if( addIfTrue ) {
         switch(typeToAdd) {
             case 0:
-                current = CS_jsonNodeAddUnquotedString(current, name, value);
+                current = CS_jsonNodeAddUnquotedCstring(current, name, value);
                 break;
             case 1:
                 current = CS_jsonNodeAddInteger(current, name, index);
@@ -152,7 +152,7 @@ struct CS_JsonNode *addRandom( struct CS_JsonNode *to, int32_t index ) {
     } else {
         switch(typeToAdd) {
             case 0:
-                current = CS_jsonNodeAppendUnquotedString(current, name, value);
+                current = CS_jsonNodeAppendUnquotedCstring(current, name, value);
                 break;
             case 1:
                 current = CS_jsonNodeAppendInteger(current, name, index);
@@ -261,12 +261,12 @@ bool test_json() {
         t1[ i ] = (i % 126) + 1;
     }
     t1[TEMP_BUFF_SIZE-1] = 0;
-    js = CS_jsonNodeAppendUnquotedString( js, NULL, t1 );
+    js = CS_jsonNodeAppendUnquotedCstring( js, NULL, t1 );
     CS_FAIL_ON_FALSE( js != NULL && js->typeEnum == CS_JSON_STRING_QUOTED_ALLOCATED, "Adding a very long string should allocate it.", "%s", wantedButGot( CS_JSON_STRING_QUOTED_ALLOCATED, js ) );
     if( root ) CS_jsonFree( root );
 
     root = js = CS_jsonNodeNew( TEMP_JSON_ALLOC_SIZE_BIG );
-    js = CS_jsonNodeAppendUnquotedString( js, NULL, t1 );
+    js = CS_jsonNodeAppendUnquotedCstring( js, NULL, t1 );
     CS_FAIL_ON_FALSE( js != NULL && js->typeEnum == CS_JSON_STRING_QUOTED, "Adding a very long string to a sufficienlty sized allocator should not allocate buffers for the string.", "%s", wantedButGot( CS_JSON_STRING_QUOTED, js ) );
     if( root ) CS_jsonFree( root );
 

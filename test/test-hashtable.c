@@ -26,7 +26,7 @@ bool test_hashtable(void) {
     if( !keys ) return true;
 
     for( int32_t i = 0; i < THINGS_TO_ADD; ++i ) {
-        keys[ i ] = CS_uuid4String();
+        keys[ i ] = CS_uuid4Cstring();
     }
 
     struct CS_HashTable *stringVoid = CS_HASHTABLE_STRING_VOID( 32, CS_HASHTABLE_FLAG_VERY_PEDANTIC );
@@ -54,18 +54,18 @@ bool test_hashtable(void) {
     CS_FAIL_ON_NULL(uuidVoid, "Creating a default UUID hash table with 32 entries.", "Failed" );
     if( uuidVoid ) {
         for( int32_t i = 0; i < THINGS_TO_ADD; ++i ) {
-            CS_FAIL_ON_NOT_NULL( CS_hashtablePut( uuidVoid, CS_uuidFromStringTemp( (char*)keys[ i ], UUID_CHAR_SIZE_BYTES ), keys[ i ] ), "Getting a non null here means we have a duplicated key.", "Duplicate key?" );
+            CS_FAIL_ON_NOT_NULL( CS_hashtablePut( uuidVoid, CS_uuidFromCstringTemp( (char*)keys[ i ], UUID_CHAR_SIZE_BYTES ), keys[ i ] ), "Getting a non null here means we have a duplicated key.", "Duplicate key?" );
         }
         int32_t count = 0;
         CS_HASHTABLE_ITER( uuidVoid, entry ) {
-            CS_FAIL_ON_FALSE( strcmp( CS_uuidToStringTemp(entry->fullKey), entry->value ) == 0,
+            CS_FAIL_ON_FALSE( strcmp( CS_uuidToCstringTemp(entry->fullKey), entry->value ) == 0,
                     "UUID key turned into a string should match the input UUID string.", "Nope." );
             ++count;
         }
         CS_FAIL_ON_FALSE( count == THINGS_TO_ADD, "Iterate count should match number put in.", "Buh %d vs %d", count, THINGS_TO_ADD );
         CS_hashtableResize( uuidVoid, 48 );
         CS_HASHTABLE_ITER( uuidVoid, entry ) {
-            CS_FAIL_ON_FALSE( strcmp( CS_uuidToStringTemp(entry->fullKey), entry->value ) == 0,
+            CS_FAIL_ON_FALSE( strcmp( CS_uuidToCstringTemp(entry->fullKey), entry->value ) == 0,
                     "UUID key turned into a string should match the input UUID string.", "Nope." );
             ++count;
         }
@@ -73,7 +73,7 @@ bool test_hashtable(void) {
     }
 
     for( int32_t i = 0; i < THINGS_TO_ADD; ++i ) {
-        CS_uuidFreeString( keys[ i ] );
+        CS_uuidFreeCstring( keys[ i ] );
     }
     CS_free( keys );
 

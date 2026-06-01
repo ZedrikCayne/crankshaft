@@ -239,21 +239,21 @@ static void privateSwapUrl( char *in, int32_t length ) {
 }
 void *CS_base64DecodeUrl( const char *toDecode, int32_t length, int32_t *outputLength ) {
     int32_t newLength;
-    char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
+    char *copy = CS_tempCstringCopyWithPad( toDecode, length, '=', &newLength, 4 );
     if( copy == NULL ) return NULL;
     privateSwapUrl(copy, newLength);
     return CS_base64Decode( copy, newLength, outputLength );
 }
 void *CS_base64DecodeUrlTemp( const char *toDecode, int32_t length, int32_t *outputLength ) {
     int32_t newLength;
-    char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
+    char *copy = CS_tempCstringCopyWithPad( toDecode, length, '=', &newLength, 4 );
     if( copy == NULL ) return NULL;
     privateSwapUrl(copy, newLength);
     return CS_base64DecodeTemp(copy, newLength, outputLength);
 }
 void *CS_base64DecodeUrlInPlace( char *toDecode, int32_t length, int32_t *outputLength ) {
     int32_t newLength;
-    char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
+    char *copy = CS_tempCstringCopyWithPad( toDecode, length, '=', &newLength, 4 );
     if( copy == NULL ) return NULL;
     privateSwapUrl(copy,newLength);
     int32_t outLength = privateDecode(copy, newLength, toDecode, length );
@@ -262,7 +262,7 @@ void *CS_base64DecodeUrlInPlace( char *toDecode, int32_t length, int32_t *output
 }
 void *CS_base64DecodeUrlLinearAlloc( const char *toDecode, int32_t length, int32_t *outputLength, void *linearAllocator ) {
     int32_t newLength;
-    char *copy = CS_tempStringCopyWithPad( toDecode, length, '=', &newLength, 4 );
+    char *copy = CS_tempCstringCopyWithPad( toDecode, length, '=', &newLength, 4 );
     if( copy == NULL ) return NULL;
     privateSwapUrl(copy, newLength);
     return CS_base64DecodeLinearAlloc(copy, newLength, outputLength, linearAllocator);

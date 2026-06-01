@@ -63,21 +63,21 @@ struct CS_HashTable *CS_hashtableCreateCustom( int32_t capacity, uint32_t flags,
 void CS_hashtableFree( struct CS_HashTable *table );
 
 
-int32_t CS_hashtableDefaultStringVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int32_t hash, const void *value );
-int32_t CS_hashtableDefaultStringVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry );
-int32_t CS_hashtableDefaultStringKeyHash( struct CS_HashTable *table, const void *key );
-int32_t CS_hashtableDefaultStringKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int32_t hash );
-const char *CS_hashtableDefaultStringKeyToTempString( struct CS_HashTable *table, const struct CS_HashTableEntry *entry );
+int32_t CS_hashtableDefaultCstringVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int32_t hash, const void *value );
+int32_t CS_hashtableDefaultCstringVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry );
+int32_t CS_hashtableDefaultCstringKeyHash( struct CS_HashTable *table, const void *key );
+int32_t CS_hashtableDefaultCstringKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int32_t hash );
+const char *CS_hashtableDefaultStringKeyToTempCstring( struct CS_HashTable *table, const struct CS_HashTableEntry *entry );
 
 int32_t CS_hashtableDefaultUuidVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int32_t hash, const void *value );
 int32_t CS_hashtableDefaultUuidVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry );
 int32_t CS_hashtableDefaultUuidKeyHash( struct CS_HashTable *table, const void *key );
 int32_t CS_hashtableDefaultUuidKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int32_t hash );
 int32_t CS_hashtableDefaultUuidCleanup( struct CS_HashTable *table );
-const char *CS_hahstableDefaultUuidKeyToTempString( struct CS_HashTable *table, const struct CS_HashTableEntry *entry );
+const char *CS_hahstableDefaultUuidKeyToTempCstring( struct CS_HashTable *table, const struct CS_HashTableEntry *entry );
 
-#define CS_HASHTABLE_STRING_VOID(__CAPACITY,__FLAGS) CS_hashtableCreateCustom(__CAPACITY,__FLAGS,NULL,CS_hashtableDefaultStringKeyHash,CS_hashtableDefaultStringKeyCompare,CS_hashtableDefaultStringVoidEntryInit,CS_hashtableDefaultStringVoidEntryRemove,CS_hashtableDefaultStringKeyToTempString,NULL)
-#define CS_HASHTABLE_UUID_VOID(__CAPACITY,__FLAGS,__KEY_SLAB_ALLOC) CS_hashtableCreateCustom(__CAPACITY,__FLAGS,__KEY_SLAB_ALLOC,CS_hashtableDefaultUuidKeyHash,CS_hashtableDefaultUuidKeyCompare,CS_hashtableDefaultUuidVoidEntryInit,CS_hashtableDefaultUuidVoidEntryRemove,CS_hahstableDefaultUuidKeyToTempString,CS_hashtableDefaultUuidCleanup)
+#define CS_HASHTABLE_STRING_VOID(__CAPACITY,__FLAGS) CS_hashtableCreateCustom(__CAPACITY,__FLAGS,NULL,CS_hashtableDefaultCstringKeyHash,CS_hashtableDefaultCstringKeyCompare,CS_hashtableDefaultCstringVoidEntryInit,CS_hashtableDefaultCstringVoidEntryRemove,CS_hashtableDefaultStringKeyToTempCstring,NULL)
+#define CS_HASHTABLE_UUID_VOID(__CAPACITY,__FLAGS,__KEY_SLAB_ALLOC) CS_hashtableCreateCustom(__CAPACITY,__FLAGS,__KEY_SLAB_ALLOC,CS_hashtableDefaultUuidKeyHash,CS_hashtableDefaultUuidKeyCompare,CS_hashtableDefaultUuidVoidEntryInit,CS_hashtableDefaultUuidVoidEntryRemove,CS_hahstableDefaultUuidKeyToTempCstring,CS_hashtableDefaultUuidCleanup)
 
 struct CS_HashTable *CS_hashtableResize( struct CS_HashTable *hashTable, int32_t newCapacity );
 

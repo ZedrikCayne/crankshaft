@@ -226,7 +226,7 @@ const void *CS_hashtableGet( struct CS_HashTable *table, const void *key ) {
 }
 
 
-int32_t CS_hashtableDefaultStringVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int32_t hash, const void *value ) {
+int32_t CS_hashtableDefaultCstringVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int32_t hash, const void *value ) {
     int32_t nLen = strlen( key );
     void *newKey = CS_allocB( table->flags&CS_HASHTABLE_FLAG_MALLOC, nLen + 1 );
     if( !newKey ) return -1;
@@ -241,7 +241,7 @@ int32_t CS_hashtableDefaultStringVoidEntryInit( struct CS_HashTable *table, stru
     return 0;
 }
 
-int32_t CS_hashtableDefaultStringKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int32_t hash ) {
+int32_t CS_hashtableDefaultCstringKeyCompare( struct CS_HashTable *table, const struct CS_HashTableEntry *entry, const void *key, int32_t hash ) {
     if( entry->keyHash == hash ) {
         if( table->flags & CS_HASHTABLE_FLAG_PEDANTIC ) {
             if( strncmp( entry->keyPrefix, key, sizeof( entry->keyPrefix ) ) ) {
@@ -260,17 +260,17 @@ int32_t CS_hashtableDefaultStringKeyCompare( struct CS_HashTable *table, const s
     return 1;
 }
 
-int32_t CS_hashtableDefaultStringVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry ) {
+int32_t CS_hashtableDefaultCstringVoidEntryRemove( struct CS_HashTable *table, struct CS_HashTableEntry *entry ) {
     if( entry->fullKey ) CS_freeB( table->flags&CS_HASHTABLE_FLAG_MALLOC, (void*)entry->fullKey );
     return 0;
 }
 
-int32_t CS_hashtableDefaultStringKeyHash( struct CS_HashTable *table, const void *key ) {
+int32_t CS_hashtableDefaultCstringKeyHash( struct CS_HashTable *table, const void *key ) {
     return CS_hash( key );
 }
 
-const char *CS_hashtableDefaultStringKeyToTempString( struct CS_HashTable *table, const struct CS_HashTableEntry *entry ) {
-    return CS_tempStringCopy( entry->fullKey );
+const char *CS_hashtableDefaultStringKeyToTempCstring( struct CS_HashTable *table, const struct CS_HashTableEntry *entry ) {
+    return CS_tempCstringCopy( entry->fullKey );
 }
 
 int32_t CS_hashtableDefaultUuidVoidEntryInit( struct CS_HashTable *table, struct CS_HashTableEntry *entry, const void *key, int32_t hash, const void *value ) {
@@ -293,8 +293,8 @@ int32_t CS_hashtableDefaultUuidKeyHash( struct CS_HashTable *table, const void *
     return CS_hashBin(key, sizeof(struct CS_UUID));
 }
 
-const char *CS_hahstableDefaultUuidKeyToTempString( struct CS_HashTable *table, const struct CS_HashTableEntry *entry ) {
-    return CS_uuidToStringTemp( entry->fullKey );
+const char *CS_hahstableDefaultUuidKeyToTempCstring( struct CS_HashTable *table, const struct CS_HashTableEntry *entry ) {
+    return CS_uuidToCstringTemp( entry->fullKey );
 }
 
 

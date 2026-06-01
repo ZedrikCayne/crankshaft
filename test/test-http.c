@@ -178,7 +178,7 @@ bool test_http(void) {
 
                 for( int32_t i = 0; i < sizeof(headers)/sizeof(headers[0]); ++i ) {
                     const char *tempPath = CS_tempBuffSnprintf( 64, "headers/|name=%s/value", CS_stringTempCstring(&headers[i].header) );
-                    const struct CS_String *tempVal = CS_stringTempCopyCstring(CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) ), -1);
+                    const struct CS_String *tempVal = CS_stringTempCopyCstring(CS_jsonNodeValueAsTempCstring(CS_jsonNodeByPath( json, tempPath ) ), -1);
                     CS_FAIL_ON_FALSE( tempVal && CS_stringStrcmp(tempVal,&headers[i].values) == 0, CS_tempBuffSnprintf(64, "Looking for %s in %s", CS_stringTempCstringOrNULL(&headers[i].values), tempPath), "Found %s", CS_stringTempCstringOrNULL(tempVal) );
                 }
                 CS_jsonFree( json );
@@ -200,7 +200,7 @@ bool test_http(void) {
             if( json ) {
                 for( int32_t i = 0; i < sizeof(formParameters)/sizeof(formParameters[0]); ++i ) {
                     const char *tempPath = CS_tempBuffSnprintf( 64, "formParameters/|name=%s/value", CS_stringTempCstring(&formParameters[i].name));
-                    const struct CS_String *tempVal = CS_stringTempCopyCstring(CS_jsonNodeValueAsTempString(CS_jsonNodeByPath( json, tempPath ) ), -1);
+                    const struct CS_String *tempVal = CS_stringTempCopyCstring(CS_jsonNodeValueAsTempCstring(CS_jsonNodeByPath( json, tempPath ) ), -1);
                     CS_FAIL_ON_FALSE( tempVal && CS_stringStrcmp(tempVal,&formParameters[i].value)==0, tempPath, "No match." );
 
                 }

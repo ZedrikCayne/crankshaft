@@ -82,7 +82,7 @@ static struct CS_HtmlAttribute *privateAddAttribute( struct CS_HtmlNode *node, c
     if( !newAttribute ) {
         newAttribute = NEWATTRIBUTE( node->linearAllocator );
         if( !newAttribute ) return NULL;
-        newAttribute->name = CS_linearCopyString( node->linearAllocator, attributeName );
+        newAttribute->name = CS_linearCopyCstring( node->linearAllocator, attributeName );
         if( !newAttribute->name ) return NULL;
         insertNew = true;
     }
@@ -91,7 +91,7 @@ static struct CS_HtmlAttribute *privateAddAttribute( struct CS_HtmlNode *node, c
         if( !newValue ) {
             return NULL;
         }
-        newValue->value = CS_linearCopyString( node->linearAllocator, attributeValue );
+        newValue->value = CS_linearCopyCstring( node->linearAllocator, attributeValue );
         if( !newValue->value ) {
             return NULL;
         }
@@ -191,7 +191,7 @@ struct CS_HtmlNode *CS_htmlCreateRoot(const char *name, int32_t initialAlloc) {
         if( !returnValue ) {
             CS_linearFree( linearAllocator );
         } else {
-            returnValue->name = CS_linearCopyString(linearAllocator, name);
+            returnValue->name = CS_linearCopyCstring(linearAllocator, name);
             returnValue->linearAllocator = linearAllocator;
             return returnValue;
         }
@@ -221,7 +221,7 @@ struct CS_HtmlNode *CS_htmlAddNext(struct CS_HtmlNode *node, const char *name) {
     if( !node || !node->linearAllocator ) return NULL;
     struct CS_HtmlNode *returnValue = NEWNODE(node->linearAllocator);
     if( returnValue ) {
-        returnValue->name = CS_linearCopyString( node->linearAllocator, name );
+        returnValue->name = CS_linearCopyCstring( node->linearAllocator, name );
         returnValue->next = node->next;
         returnValue->up = node->up;
         if( returnValue->next ) returnValue->next->last = returnValue;
@@ -240,7 +240,7 @@ struct CS_HtmlNode *CS_htmlAddBefore(struct CS_HtmlNode *node, const char *name)
     if( !node || !node->linearAllocator ) return NULL;
     struct CS_HtmlNode *returnValue = NEWNODE(node->linearAllocator);
     if( returnValue ) {
-        returnValue->name = CS_linearCopyString( node->linearAllocator, name );
+        returnValue->name = CS_linearCopyCstring( node->linearAllocator, name );
         returnValue->next = node;
         returnValue->last = node->last;
         returnValue->up = node->up;
@@ -261,7 +261,7 @@ struct CS_HtmlNode *CS_htmlAddContainerBefore(struct CS_HtmlNode *node, const ch
     if( !node->container ) {
         struct CS_HtmlNode *returnValue = NEWNODE(node->linearAllocator);
         if( returnValue ) {
-            returnValue->name = CS_linearCopyString( node->linearAllocator, name );
+            returnValue->name = CS_linearCopyCstring( node->linearAllocator, name );
             node->container = returnValue;
             returnValue->up = node;
             returnValue->linearAllocator = node->linearAllocator;
@@ -281,7 +281,7 @@ struct CS_HtmlNode *CS_htmlAddContainerAfter(struct CS_HtmlNode *node, const cha
     if( !node->container ) {
         struct CS_HtmlNode *returnValue = NEWNODE(node->linearAllocator);
         if( returnValue ) {
-            returnValue->name = CS_linearCopyString( node->linearAllocator, name );
+            returnValue->name = CS_linearCopyCstring( node->linearAllocator, name );
             node->container = returnValue;
             returnValue->up = node;
             returnValue->linearAllocator = node->linearAllocator;
@@ -296,7 +296,7 @@ struct CS_HtmlNode *CS_htmlAddContainerAfter(struct CS_HtmlNode *node, const cha
 
 struct CS_HtmlNode *CS_htmlSetContents(struct CS_HtmlNode *node, const char *contents, bool raw) {
     if( !node || !node->linearAllocator ) return NULL;
-    node->contents = CS_linearCopyString( node->linearAllocator, contents );
+    node->contents = CS_linearCopyCstring( node->linearAllocator, contents );
     node->raw = raw;
     return node->contents?node:NULL;
 }

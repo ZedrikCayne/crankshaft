@@ -48,8 +48,8 @@ struct CS_TempBuffer;
 
 void *CS_tempBuff(int32_t size);
 void *CS_tempBuffZero( int32_t size );
-char *CS_tempStringCopy(const char *copyMe);
-char *CS_tempStringCopyWithPad(const char *copyme, int32_t size, char pad, int32_t *outLength, int32_t aligned);
+char *CS_tempCstringCopy(const char *copyMe);
+char *CS_tempCstringCopyWithPad(const char *copyme, int32_t size, char pad, int32_t *outLength, int32_t aligned);
 void *CS_tempMemCopy(const void *from, int32_t size);
 bool CS_tempAllocateGlobal(int32_t globalSize);
 bool CS_tempFreeGlobal();
