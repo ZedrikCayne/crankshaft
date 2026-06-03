@@ -95,6 +95,8 @@ int32_t CS_logfilePrintf(struct CS_LogFile *logfile, const char *format, ...) {
     if( !logfile || !logfile->mutex || !logfile->openLogFile ) return -1;
     char timeOutputBuff[ 42 ] = {0};
     int32_t returnValue = -1;
+    va_list va;
+
     CS_mutexLock( logfile->mutex );
 
     time_t currentTime = time(NULL);
@@ -124,7 +126,6 @@ int32_t CS_logfilePrintf(struct CS_LogFile *logfile, const char *format, ...) {
 
 CONTINUE_WITHOUT_TIME:
 
-    va_list va;
     va_start( va, format );
     struct CS_StringBuilder *sb = CS_SB_vsnprintf( logfile->forOutput, 0, format, va );
     va_end( va );
