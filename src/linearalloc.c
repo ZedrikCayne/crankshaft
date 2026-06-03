@@ -12,10 +12,11 @@
 struct CS_LinearAllocator {
     int32_t size;
     int32_t current;
+    bool growable;
     struct CS_LinearAllocator *next;
 };
 
-static struct CS_LinearAllocator *privateAlloc(int32_t size) {
+static struct CS_LinearAllocator *privateAlloc(int32_t size, bool growable) {
     if( size < 0 ) {
         CS_LOG_ERROR("Size must be bigger than 0 on a linear allocator.");
         return NULL;
@@ -29,6 +30,7 @@ static struct CS_LinearAllocator *privateAlloc(int32_t size) {
     returnValue->size = size;
     returnValue->current = 0;
     returnValue->next = NULL;
+    returnValue->growable = growable;
     return returnValue;
 }
 
@@ -52,7 +54,7 @@ void *CS_linearTake(struct CS_LinearAllocator *linearAllocator, int32_t size, in
             return NULL;
         }
         if( linearAllocator->next == NULL ) {
-            linearAllocator->next = privateAlloc( linearAllocator->size );
+            if( linearAllocator->growable ) linearAllocator->next = privateAlloc( linearAllocator->size, linearAllocator->growable );
             if( linearAllocator->next == NULL ) return NULL;
         }
         linearAllocator = linearAllocator->next;
@@ -81,7 +83,11 @@ void CS_linearReset( struct CS_LinearAllocator *linearAllocator ) {
 }
 
 struct CS_LinearAllocator *CS_linearInit( int32_t size ) {
-    return privateAlloc(size);
+    return privateAlloc(size, true);
+}
+
+struct CS_LinearAllocator *CS_linearInitNonGrowable( int32_t size ) {
+    return privateAlloc(size, false);
 }
 
 void CS_linearFree( struct CS_LinearAllocator *linearAllocator ) {

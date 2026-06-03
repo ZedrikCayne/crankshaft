@@ -18,7 +18,7 @@ static int32_t testSucceeded = 0;
 bool test_linearalloc(void) {
     
     //Tests go here:
-    void *voidAllocator;
+    struct CS_LinearAllocator *voidAllocator;
 
     void *t1;
     void *t2;
@@ -66,6 +66,20 @@ bool test_linearalloc(void) {
 
     CS_linearFree(voidAllocator);
 
+    voidAllocator = CS_linearInitNonGrowable( SIZE_OF_ALLOCATOR );
+
+    t1 = CS_linearTake( voidAllocator, SIZE_OF_ALLOCATOR - 20, 1 );
+    t2 = CS_linearTake( voidAllocator, 0, 1 );
+    t3 = CS_linearTake( voidAllocator, SIZE_OF_ALLOCATOR, 1 );
+    t4 = CS_linearTake( voidAllocator, 20, 1 );
+    
+    CS_FAIL_ON_FALSE( t3 == NULL, "Non growable should have failed here.", "Got %p", t3 );
+
+    CS_linearReset(voidAllocator);
+    CS_FAIL_ON_FALSE( t1 == CS_linearTake( voidAllocator, SIZE_OF_ALLOCATOR - 20, 1 ), "Replay #5", "Values different." );
+    CS_FAIL_ON_FALSE( t2 == CS_linearTake( voidAllocator, 0, 1 ), "Replay #6", "Values different." );
+    CS_FAIL_ON_FALSE( t3 == CS_linearTake( voidAllocator, SIZE_OF_ALLOCATOR, 1 ), "Replay #7", "Values different." );
+    CS_FAIL_ON_FALSE( t4 == CS_linearTake( voidAllocator, 20, 1 ), "Replay #8", "Values different." );
     return testCount !=
            testSucceeded;
 }

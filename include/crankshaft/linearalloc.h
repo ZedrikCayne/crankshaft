@@ -28,6 +28,7 @@ char *CS_linearCopyCstring(struct CS_LinearAllocator *linearAllocator, const cha
 void CS_linearReset(struct CS_LinearAllocator *linearAllocator);
 
 struct CS_LinearAllocator *CS_linearInit( int32_t size );
+struct CS_LinearAllocator *CS_linearInitNonGrowable( int32_t size );
 void CS_linearFree( struct CS_LinearAllocator *voidAllocator );
 
 #ifdef __cplusplus
