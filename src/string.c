@@ -201,7 +201,8 @@ int32_t CS_stringStrncasecmp( const struct CS_String *left, const struct CS_Stri
     }
     return 0;
 }
-const struct CS_String *CS_stringStrstr( const struct CS_String *haystack, const struct CS_String *needle ) {
+
+static const struct CS_String *_stringStrstr( const struct CS_String *haystack, const struct CS_String *needle, bool temp ) {
     if( needle == NULL || haystack == NULL ) {
         CS_LOG_ERROR_IF( needle == NULL, "CS_stringStrstr: needle is NULL" );
         CS_LOG_ERROR_IF( haystack == NULL, "CS_stringStrstr: haystack is NULL" );
@@ -218,9 +219,46 @@ const struct CS_String *CS_stringStrstr( const struct CS_String *haystack, const
         for( j = 0; j < needleLength; ++j ) {
             if( hayHead[j] != needleHead[j] ) break;
         }
-        if( j == needleLength ) return CS_stringReferenceCstring( hayHead, haystack->length - i );
+        if( j == needleLength ) return temp?CS_stringTempReferenceCstring(hayHead, haystack->length - i):CS_stringReferenceCstring( hayHead, haystack->length - i );
     }
     return NULL;
+}
+
+const struct CS_String *CS_stringStrstr( const struct CS_String *haystack, const struct CS_String *needle ) {
+    return _stringStrstr( haystack, needle, false );
+}
+
+const struct CS_String *CS_stringTempStrstr( const struct CS_String *haystack, const struct CS_String *needle ) {
+    return _stringStrstr( haystack, needle, true );
+}
+
+static const struct CS_String *_stringStrrstr( const struct CS_String *haystack, const struct CS_String *needle, bool temp ) {
+    if( needle == NULL || haystack == NULL ) {
+        CS_LOG_ERROR_IF( needle == NULL, "CS_stringStrrstr: needle is NULL" );
+        CS_LOG_ERROR_IF( haystack == NULL, "CS_stringStrrstr: haystack is NULL" );
+        return NULL;
+    }
+    if( needle->length > haystack->length )  return NULL;
+    int32_t needleLength = needle->length;
+    const char *hayHead = haystack->data;
+    const char *needleHead = needle->data;
+    int32_t tries = haystack->length - needleLength + 1;
+    for( int32_t i = tries; i >= 0; --i ) {
+        int32_t j;
+        hayHead = haystack->data + i;
+        for( j = 0; j < needleLength; ++j ) {
+            if( hayHead[j] != needleHead[j] ) break;
+        }
+        if( j == needleLength ) {
+            return temp?CS_stringTempReferenceCstring( hayHead, haystack->length - i ):CS_stringReferenceCstring( hayHead, haystack->length - i );
+        }
+    }
+    return NULL;
+}
+
+
+const struct CS_String *CS_stringStrrstr( const struct CS_String *haystack, const struct CS_String *needle ) {
+    return _stringStrrstr(haystack, needle, false );
 }
 
 int64_t CS_stringAtol( const struct CS_String *toAtol ) {

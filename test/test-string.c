@@ -31,6 +31,7 @@ static const struct CS_String toTokenizeResults[] = {
     CS_STRING("g_state={\"i_l\":0,\"i_ll\":1779131810435,\"i_e\":{\"enable_itp_optimization\":0},\"i_et\":0000000000083}"),
     CS_STRING(" new_session_key=01234567-89ab-cdef-fedc-ba9876543210"),
     CS_STRING(" third=wakka"),
+    CS_STRING("; third=wakka")
 };
 
 
@@ -143,7 +144,13 @@ bool test_string(void) {
         CS_FAIL_ON_FALSE( CS_stringStrcmp( toTokenizeResults + numTokens, tokenReturn ) == 0, "Check strtok output", "Failed." );
         ++numTokens;
     }
+
     CS_FAIL_ON_FALSE( numTokens == 3, "Check number of tokens parsed.", "Wanted 3 got %d", numTokens ); 
+
+    tokenReturn = CS_stringStrrstr( &toTokenize, &CS_STRING(";") );
+    CS_FAIL_ON_FALSE( tokenReturn && CS_stringStrcmp( toTokenizeResults + 3, tokenReturn ) == 0, "Check Strrstr result", "Failed." );
+    if( tokenReturn ) CS_stringFree(tokenReturn);
+
 
     return testCount !=
            testSucceeded;

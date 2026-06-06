@@ -85,6 +85,9 @@ int32_t CS_stringStrncmp( const struct CS_String *left, const struct CS_String *
 int32_t CS_stringStrcasecmp( const struct CS_String *left, const struct CS_String *right );
 int32_t CS_stringStrncasecmp( const struct CS_String *left, const struct CS_String *right, int32_t maxLength );
 const struct CS_String *CS_stringStrstr( const struct CS_String *haystack, const struct CS_String *needle );
+const struct CS_String *CS_stringStrrstr( const struct CS_String *haystack, const struct CS_String *needle );
+const struct CS_String *CS_stringTempStrstr( const struct CS_String *haystack, const struct CS_String *needle );
+const struct CS_String *CS_stringTempStrrstr( const struct CS_String *haystack, const struct CS_String *needle );
 int32_t CS_stringAtoi( const struct CS_String *toAtoi );
 int64_t CS_stringAtol( const struct CS_String *toAtoi );
 struct CS_String *CS_stringTempStrtok( const struct CS_String *source, const struct CS_String *delimeters, const char **savePtr );
