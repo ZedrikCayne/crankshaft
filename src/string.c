@@ -261,6 +261,10 @@ const struct CS_String *CS_stringStrrstr( const struct CS_String *haystack, cons
     return _stringStrrstr(haystack, needle, false );
 }
 
+const struct CS_String *CS_stringTempStrrstr( const struct CS_String *haystack, const struct CS_String *needle ) {
+    return _stringStrrstr(haystack, needle, true );
+}
+
 int64_t CS_stringAtol( const struct CS_String *toAtol ) {
     int64_t accumulator = 0;
     int64_t startChar = 0;
