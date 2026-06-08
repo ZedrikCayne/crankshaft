@@ -8,6 +8,7 @@
 #include <crankshaft/alloc.h>
 #include <crankshaft/logger.h>
 #include <crankshaft/tempbuff.h>
+#include <crankshaft/linearalloc.h>
 
 #include <crankshaft/string.h>
 #include <stdint.h>
@@ -31,6 +32,15 @@ struct CS_String *CS_stringCopyCstring( const char *in, int32_t length ) {
 
 struct CS_String *CS_stringReserveTemp( int32_t length ) {
     return CS_stringTempCopyCstring( NULL, length );
+}
+
+struct CS_String *CS_stringLinearCopyCstring( const char *in, int32_t length, struct CS_LinearAllocator *allocator ) {
+    int32_t stringLength = length < 0 ? strlen( in ) : length;
+    int32_t allocSize = sizeof(struct CS_String) + stringLength + 1;
+    struct CS_String *returnValue = CS_linearTake( allocator, allocSize, sizeof(void*) );
+    if( returnValue ) CS_stringInitCopyCstring(returnValue, in, stringLength);
+
+    return returnValue;
 }
 
 struct CS_String *CS_stringCopyToStatic( struct CS_String *out, const struct CS_String *in, int32_t staticSize ) {
