@@ -63,6 +63,14 @@ struct CS_String *CS_stringCopyToStatic( struct CS_String *out, const struct CS_
     memcpy( staticStandIn->realData, in->data, in->length );
     return out;
 }
+struct CS_String *CS_stringCopyCstringToStatic( struct CS_String *out, int32_t staticSize, const char *in, int32_t inLength ) {
+    struct CS_String temp;
+    int32_t realLength = (inLength<0)?strlen(in):inLength;
+    temp.length = realLength;
+    temp.data = in;
+    CS_stringCopyToStatic(out, &temp, staticSize);
+    return out;
+}
 
 struct CS_String *CS_stringTempCopyCstring( const char *in, int32_t length ) {
     int32_t stringLength = length < 0 ? strlen( in ) : length;

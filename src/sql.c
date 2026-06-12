@@ -31,15 +31,16 @@ bool CS_sqlClose( struct CS_SqlBackend *backend ) {
     return backend->backendDefinition->kill( backend );
 }
 
-struct CS_SqlResponse *CS_sqlQuery( struct CS_SqlBackend *backend, const struct CS_String *query ) {
+const struct CS_SqlResponse *CS_sqlQuery( struct CS_SqlBackend *backend, const struct CS_String *query ) {
     return backend->backendDefinition->runSql( backend, query );
 }
 
-void CS_sqlReturnResponse( struct CS_SqlResponse *response ) {
+void CS_sqlReturnResponse( const struct CS_SqlResponse *response ) {
     if( response ) {
-        if( response->responseAllocator ) CS_linearFree( response->responseAllocator);
-        response->responseAllocator = NULL;
-        CS_free( response );
+        struct CS_SqlResponse *nonConst = (struct CS_SqlResponse *)response;
+        if( nonConst->responseAllocator ) CS_linearFree( nonConst->responseAllocator);
+        nonConst->responseAllocator = NULL;
+        CS_free( nonConst );
     }
 }
 

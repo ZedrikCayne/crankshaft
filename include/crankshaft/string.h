@@ -76,6 +76,7 @@ struct CS_String *CS_stringLinearCopyCstring( const char *in, int32_t length, st
 struct CS_String *CS_stringInitCopy( struct CS_String *out, const struct CS_String *in );
 struct CS_String *CS_stringReserveTemp( int32_t length );
 struct CS_String *CS_stringCopyToStatic( struct CS_String *out, const struct CS_String *in, int32_t staticSize );
+struct CS_String *CS_stringCopyCstringToStatic( struct CS_String *out, int32_t staticSize, const char *in, int32_t inLength );
 const struct CS_String *CS_stringReferenceCstring( const char *in, int32_t length );
 const struct CS_String *CS_stringTempReferenceCstring( const char *in, int32_t length );
 const struct CS_String *CS_stringInitReferenceCstring( struct CS_String *out, const char *in, int32_t length );

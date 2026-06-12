@@ -84,8 +84,8 @@ struct CS_SqlSQLITEInitData {
 
 struct CS_SqlBackend *CS_sqlInit( const struct CS_SqlBackendDefinition *definition, const void *data );
 bool CS_sqlClose( struct CS_SqlBackend *backend );
-struct CS_SqlResponse *CS_sqlQuery( struct CS_SqlBackend *backend, const struct CS_String *query );
-void CS_sqlReturnResponse( struct CS_SqlResponse *response );
+const struct CS_SqlResponse *CS_sqlQuery( struct CS_SqlBackend *backend, const struct CS_String *query );
+void CS_sqlReturnResponse( const struct CS_SqlResponse *response );
 
 #ifdef __cplusplus
 }
