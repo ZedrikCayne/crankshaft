@@ -177,7 +177,11 @@ static struct CS_SqlResponse *_sqliteRunSql( struct CS_SqlBackend *backend, cons
                     returnValue = NULL;
                 }
                 returnValue->numRows++;
-                if( lastRow ) lastRow->next = currentRow;
+                if( lastRow ) {
+                    lastRow->next = currentRow;
+                } else {
+                    returnValue->rows = currentRow;
+                }
                 lastRow = currentRow;
             break;
             case SQLITE_DONE:
