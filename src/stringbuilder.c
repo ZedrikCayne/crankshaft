@@ -7,6 +7,7 @@
 #include <crankshaft/logger.h>
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/tempbuff.h>
+#include <crankshaft/string.h>
 #include <stdint.h>
 
 struct CS_StringBuilder *CS_SB_create( int32_t initialSize ) {
@@ -46,13 +47,26 @@ struct CS_StringBuilder *CS_SB_appendChar( struct CS_StringBuilder *buffer, cons
     return buffer;
 }
 
-struct CS_StringBuilder *CS_SB_append( struct CS_StringBuilder *buffer, const char *string ) {
-    int32_t bytesNeeded = strlen(string);
+struct CS_StringBuilder *privateAppendBytes( struct CS_StringBuilder *buffer, const char *data, int32_t bytesNeeded ) {
     if( expandIfNeeded( buffer, bytesNeeded ) ) return NULL;
-    memcpy( buffer->buffer + buffer->currentHead, string, bytesNeeded + 1 );
+    memcpy( buffer->buffer + buffer->currentHead, data, bytesNeeded + 1 );
     buffer->currentHead += bytesNeeded;
     buffer->buffer[ buffer->currentHead ] = 0;
     return buffer;
+}
+
+struct CS_StringBuilder *CS_SB_append( struct CS_StringBuilder *buffer, const char *string ) {
+    int32_t bytesNeeded = strlen(string);
+    return privateAppendBytes( buffer, string, bytesNeeded );
+}
+
+struct CS_StringBuilder *CS_SB_appendBytes( struct CS_StringBuilder *buffer, const char *bytes, int32_t length ) {
+    return privateAppendBytes( buffer, bytes, length );
+
+}
+
+struct CS_StringBuilder *CS_SB_appendString( struct CS_StringBuilder *buffer, const struct CS_String *string ) {
+    return privateAppendBytes( buffer, string->data, string->length );
 }
 
 bool CS_SB_expandBy( struct CS_StringBuilder *buffer, int32_t minimumNewCapacity ) {
