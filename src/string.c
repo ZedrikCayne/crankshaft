@@ -409,6 +409,37 @@ struct CS_String *CS_stringTempStrtok( const struct CS_String *source, const str
     return (struct CS_String*)CS_stringTempReferenceCstring( returnStart, currentReadHead - returnStart );
 }
 
+
+struct CS_String *CS_stringTempStrrtok( const struct CS_String *source, const struct CS_String *delimeters, const char **savePtr ) {
+    if( savePtr == NULL ) return NULL;
+    if( source == NULL ) return NULL;
+    if( delimeters == NULL ) return NULL;
+    const char *returnEnd = NULL;
+    const char *currentReadHead = *savePtr;
+    const char *startOfString = source->data;
+
+    const char *endOfString = (source->length == 0)?source->data:source->data + source->length - 1;
+
+    if( currentReadHead == startOfString ) return NULL;
+
+    if( currentReadHead == NULL ) currentReadHead = endOfString;
+
+    //The current saved head points at the last delimited. Or we're at the start of the string....as per regular strtok we need to skip until we find the 'first' non delimeter.
+    while( currentReadHead > startOfString && matchDelimeter( delimeters, currentReadHead ) ) --currentReadHead;
+
+    if( currentReadHead == startOfString ) return NULL;
+
+    returnEnd = currentReadHead;
+
+    while( currentReadHead > startOfString && !matchDelimeter( delimeters, currentReadHead ) ) --currentReadHead;
+
+    *savePtr = currentReadHead;
+
+    if( currentReadHead != startOfString ) ++currentReadHead;
+
+    return (struct CS_String*)CS_stringTempReferenceCstring( currentReadHead, returnEnd - currentReadHead + 1 );
+}
+
 #define LF ((char)10)
 #define CR ((char)13)
 #define HT ((char)9)

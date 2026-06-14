@@ -34,6 +34,15 @@ static const struct CS_String toTokenizeResults[] = {
     CS_STRING("; third=wakka")
 };
 
+static struct CS_String toReverseTokenize = CS_STRING("g_state={\"i_l\":0,\"i_ll\":1779131810435,\"i_e\":{\"enable_itp_optimization\":0},\"i_et\":0000000000083}; new_session_key=01234567-89ab-cdef-fedc-ba9876543210;;third=wakka ;trim");
+
+static const struct CS_String toReverseTokenizeResults [] = {
+    CS_STRING("trim"),
+    CS_STRING("third=wakka"),
+    CS_STRING("new_session_key=01234567-89ab-cdef-fedc-ba9876543210"),
+    CS_STRING("g_state={\"i_l\":0,\"i_ll\":1779131810435,\"i_e\":{\"enable_itp_optimization\":0},\"i_et\":0000000000083}"),
+};
+
 
 const struct CS_String *newStrings[] = {
     NULL,
@@ -150,6 +159,13 @@ bool test_string(void) {
     tokenReturn = CS_stringStrrstr( &toTokenize, &CS_STRING(";") );
     CS_FAIL_ON_FALSE( tokenReturn && CS_stringStrcmp( toTokenizeResults + 3, tokenReturn ) == 0, "Check Strrstr result", "Failed." );
     if( tokenReturn ) CS_stringFree(tokenReturn);
+
+    saveptr = NULL;
+    numTokens = 0;
+    while( (tokenReturn = CS_stringTempStrrtok( &toReverseTokenize, &CS_STRING("; "), &saveptr ) ) ) {
+        CS_FAIL_ON_FALSE( CS_stringStrcmp( toReverseTokenizeResults + numTokens, tokenReturn ) == 0, "Check strrtok output", "Failed." );
+        ++numTokens;
+    }
 
 
     return testCount !=

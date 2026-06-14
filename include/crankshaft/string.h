@@ -95,6 +95,7 @@ const struct CS_String *CS_stringTempStrrstr( const struct CS_String *haystack, 
 int32_t CS_stringAtoi( const struct CS_String *toAtoi );
 int64_t CS_stringAtol( const struct CS_String *toAtoi );
 struct CS_String *CS_stringTempStrtok( const struct CS_String *source, const struct CS_String *delimeters, const char **savePtr );
+struct CS_String *CS_stringTempStrrtok( const struct CS_String *source, const struct CS_String *delimeters, const char **savePtr );
 
 const char *CS_stringCstring( const struct CS_String *from );
 const char *CS_stringTempCstring( const struct CS_String *from );
