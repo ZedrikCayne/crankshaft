@@ -347,15 +347,19 @@ const struct CS_String *CS_stringTempSnprintf(int32_t max, const char *fmt, ...)
 const struct CS_String *CS_stringSlice( const struct CS_String *source, int32_t startIndex, int32_t lengthOrNegative ) {
     if( source == NULL ) return NULL;
     if( startIndex > source->length ) return NULL;
-    if( lengthOrNegative + startIndex > source->length ) return NULL;
-    return CS_stringCopyCstring( source->data + startIndex, lengthOrNegative );
+    int32_t lengthToPull = lengthOrNegative;
+    if( lengthToPull < 0 ) lengthToPull = source->length - startIndex;
+    if( lengthToPull + startIndex > source->length ) return NULL;
+    return CS_stringCopyCstring( source->data + startIndex, lengthToPull );
 }
 
 const struct CS_String *CS_stringSliceTemp( const struct CS_String *source, int32_t startIndex, int32_t lengthOrNegative ) {
     if( source == NULL ) return NULL;
     if( startIndex > source->length ) return NULL;
-    if( lengthOrNegative + startIndex > source->length ) return NULL;
-    return CS_stringTempCopyCstring( source->data + startIndex, lengthOrNegative );
+    int32_t lengthToPull = lengthOrNegative;
+    if( lengthToPull < 0 ) lengthToPull = source->length - startIndex;
+    if( lengthToPull + startIndex > source->length ) return NULL;
+    return CS_stringTempCopyCstring( source->data + startIndex, lengthToPull );
 }
 
 const struct CS_String *CS_stringSliceReference( const struct CS_String *source, int32_t startIndex, int32_t lengthOrNegative ) {
