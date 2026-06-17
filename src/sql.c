@@ -153,6 +153,7 @@ static struct CS_SqlResponse *_sqliteRunSql( struct CS_SqlBackend *backend, cons
     int prepareReturn = sqlite3_prepare_v2( info->connection, sql->data, sql->length, &statement, NULL );
     if( prepareReturn != SQLITE_OK ) {
         CS_LOG_ERROR( "sqlite3_prepare_v2: %s", sqlite3_errmsg(info->connection) );
+        CS_LOG_ERROR( "SQL: %s", CS_stringTempCstring(sql) );
         privateReturnResponse(returnValue);
         return NULL;
     }

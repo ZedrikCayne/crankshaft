@@ -190,10 +190,6 @@ CLIENT_BAIL_NOSSL:
         clientInfo->disconnectCallback( clientInfo );
         clientInfo->disconnectCallback = NULL;
     }
-    if( clientInfo->persistentData!= NULL ) {
-        CS_free( clientInfo->persistentData );
-        clientInfo->persistentData = NULL;
-    }
     CS_PP_defaultFree(clientInfo->buffer);
     CS_PP_defaultFree(clientInfo->output);
     CS_free(clientInfo);
