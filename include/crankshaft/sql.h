@@ -44,6 +44,7 @@ enum CS_sqlValueType {
     CS_SQL_VALUE_STRING,
     CS_SQL_VALUE_DATE,
     CS_SQL_VALUE_BLOB,
+    CS_SQL_VALUE_BOOL,
     CS_SQL_VALUE_NULL,
 };
 
@@ -51,6 +52,7 @@ struct CS_SqlValue {
     union {
         int64_t intValue;
         double floatValue;
+        bool boolValue;
         const struct CS_String *stringValue;
     };
     int32_t type;
