@@ -1475,6 +1475,20 @@ struct CS_JsonNode *CS_jsonNodeAppendArray( struct CS_JsonNode *appendTo, const 
     }
     return returnValue;
 }
+struct CS_JsonNode *CS_jsonNodeAppendNull( struct CS_JsonNode *appendTo, const char *name ) {
+    struct CS_JsonNode *returnValue = privateAppend( appendTo, name );
+    if( returnValue != NULL ) {
+        returnValue->typeEnum = CS_JSON_null;
+    }
+    return returnValue;
+}
+struct CS_JsonNode *CS_jsonNodeAppendBool( struct CS_JsonNode *appendTo, const char *name, bool value ) {
+    struct CS_JsonNode *returnValue = privateAppend( appendTo, name );
+    if( returnValue != NULL ) {
+        returnValue->typeEnum = value?CS_JSON_true:CS_JSON_false;
+    }
+    return returnValue;
+}
 struct CS_JsonNode *CS_jsonNodeAddUnquotedCstring( struct CS_JsonNode *addTo, const char *name, const char *value ) {
     struct CS_StringBuilder *quoted = CS_jsonQuoteString( value, strlen(value) );
     if( quoted == NULL ) return NULL;
@@ -1523,6 +1537,20 @@ struct CS_JsonNode *CS_jsonNodeAddArray( struct CS_JsonNode *addTo, const char *
     struct CS_JsonNode *returnValue = privateAdd( addTo, name );
     if( returnValue != NULL ) {
         returnValue->typeEnum = CS_JSON_ARRAY;
+    }
+    return returnValue;
+}
+struct CS_JsonNode *CS_jsonNodeAddNull( struct CS_JsonNode *addTo, const char *name ) {
+    struct CS_JsonNode *returnValue = privateAdd( addTo, name );
+    if( returnValue != NULL ) {
+        returnValue->typeEnum = CS_JSON_null;
+    }
+    return returnValue;
+}
+struct CS_JsonNode *CS_jsonNodeAddBool( struct CS_JsonNode *addTo, const char *name, bool value ) {
+    struct CS_JsonNode *returnValue = privateAdd( addTo, name );
+    if( returnValue != NULL ) {
+        returnValue->typeEnum = value?CS_JSON_true:CS_JSON_false;
     }
     return returnValue;
 }

@@ -187,12 +187,16 @@ struct CS_JsonNode *CS_jsonNodeAppendFloat( struct CS_JsonNode *appendTo, const 
 struct CS_JsonNode *CS_jsonNodeAppendInteger( struct CS_JsonNode *appendTo, const char *name, long long value );
 struct CS_JsonNode *CS_jsonNodeAppendObject( struct CS_JsonNode *appendTo, const char *name );
 struct CS_JsonNode *CS_jsonNodeAppendArray( struct CS_JsonNode *appendTo, const char *name );
+struct CS_JsonNode *CS_jsonNodeAppendNull(struct CS_JsonNode *appendTo, const char *name );
+struct CS_JsonNode *CS_jsonNodeAppendBool(struct CS_JsonNode *appendTo, const char *name, bool value );
 struct CS_JsonNode *CS_jsonNodeAddUnquotedCstring( struct CS_JsonNode *addTo, const char *name, const char *value );
 struct CS_JsonNode *CS_jsonNodeAddUnquotedCstringWithLength( struct CS_JsonNode *addTo, const char *name, const char *value, int32_t length );
 struct CS_JsonNode *CS_jsonNodeAddFloat( struct CS_JsonNode *addTo, const char *name, double value );
 struct CS_JsonNode *CS_jsonNodeAddInteger( struct CS_JsonNode *addTo, const char *name, long long value );
 struct CS_JsonNode *CS_jsonNodeAddObject( struct CS_JsonNode *addTo, const char *name );
 struct CS_JsonNode *CS_jsonNodeAddArray( struct CS_JsonNode *addTo, const char *name );
+struct CS_JsonNode *CS_jsonNodeAddNull(struct CS_JsonNode *appendTo, const char *name );
+struct CS_JsonNode *CS_jsonNodeAddBool(struct CS_JsonNode *appendTo, const char *name, bool value );
 struct CS_JsonNode *CS_jsonNodeRemoveNode( struct CS_JsonNode *remove ); //Note, you cannot remove the root node.
 
 /*********************************************************************
