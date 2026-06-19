@@ -1038,7 +1038,7 @@ const struct CS_String *CS_serverGetRequestTempIdAddress( struct CS_ClientInfo *
     return CS_networkAddressToTempString( &info->clientSocketAddress );
 }
 
-struct CS_Reply *CS_serverCreateReply(struct CS_ClientInfo *info, int32_t responseEnum, int32_t mimeEnum, void *outputBuffer, int32_t outputLength ) {
+struct CS_Reply *CS_serverCreateReply(struct CS_ClientInfo *info, int32_t responseEnum, int32_t mimeEnum, const void *outputBuffer, int32_t outputLength ) {
         struct CS_Reply *returnValue = CS_slabTake(info->server->replyStack);
     returnValue->returnStatusEnum = responseEnum;
     returnValue->contentTypeEnum = mimeEnum;

@@ -163,7 +163,7 @@ bool CS_serverSetReplyHeaderIfMissing( struct CS_Reply *reply, const struct CS_S
 bool CS_serverSetReplyHeaderIntIfMissing( struct CS_Reply *reply, const struct CS_String *header, int32_t value );
 bool CS_serverSetReplyCookie( struct CS_Reply *reply, const struct CS_String *cookie, const struct CS_String *value, bool httpOnly, int32_t sameSiteEnum );
 
-struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int32_t responseEnum, int32_t mimeEnum, void *replyBuffer, int32_t replyLength );
+struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int32_t responseEnum, int32_t mimeEnum, const void *replyBuffer, int32_t replyLength );
 void CS_serverReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
 bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
 
