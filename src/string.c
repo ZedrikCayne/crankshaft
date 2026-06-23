@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 #include <sys/param.h>
 
@@ -490,3 +491,30 @@ void CS_cstringFree( const char *toFree ) {
     if(toFree)CS_free( (void*)toFree );
 }
 
+int32_t CS_stringStrchr( struct CS_String *haystack, char needle ) {
+    for( int32_t i = 0; i < haystack->length; ++i ) {
+        if( needle == haystack->data[i] ) return i;
+    }
+    return -1;
+}
+
+int32_t CS_stringStrrchr( struct CS_String *haystack, char needle ) {
+    for( int32_t i = haystack->length; i >= 0; --i ) {
+        if( needle == haystack->data[i] ) return i;
+    }
+    return -1;
+}
+
+bool CS_stringOnlyHas( struct CS_String *toCheck, struct CS_String *theseCharacters ) {
+    for( int32_t i = 0; i < toCheck->length; ++i ) {
+        if( CS_stringStrchr(theseCharacters,toCheck->data[i]) < 0 ) return false;
+    }
+    return true;
+}
+
+bool CS_stringAlnum( struct CS_String *toCheck ) {
+    for( int32_t i = 0; i < toCheck->length; ++i ) {
+        if( !isalnum(toCheck->data[i]) ) return false;
+    }
+    return true;
+}

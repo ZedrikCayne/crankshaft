@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <crankshaft/util.h>
 #include <crankshaft/alloc.h>
@@ -166,6 +167,19 @@ bool test_string(void) {
         CS_FAIL_ON_FALSE( CS_stringStrcmp( toReverseTokenizeResults + numTokens, tokenReturn ) == 0, "Check strrtok output", "Failed." );
         ++numTokens;
     }
+
+    struct CS_String8 aCh = {0};
+    struct CS_String *paCh = (struct CS_String *)&aCh;
+    CS_stringCopyCstringToStatic( paCh, 8, "0", 1 );
+    for( unsigned char ch = 0; ch < 254; ++ch ) {
+        CS_stringCopyCstringToStatic( paCh, 8, (char*)&ch, 1 );
+        if( isalnum(ch ) ) {
+            CS_FAIL_ON_FALSE( CS_stringAlnum(paCh), "Checking alnum", "Failed on %c (%d)", ch, (unsigned int)ch );
+        } else {
+            CS_FAIL_ON_TRUE( CS_stringAlnum(paCh), "Checking not alnum", "Failed on %c (%d)", ch, (unsigned int)ch );
+        }
+    }
+
 
 
     return testCount !=

@@ -107,6 +107,8 @@ const struct CS_String *CS_stringSliceReference( const struct CS_String *source,
 const struct CS_String *CS_stringSliceTempReference( const struct CS_String *source, int32_t startIndex, int32_t lengthOrZero );
 void CS_stringLtrim( struct CS_String *trimmable );
 void CS_stringRtrim( struct CS_String *trimmable );
+bool CS_stringOnlyHas( struct CS_String *toCheck, struct CS_String *theseCharacters );
+bool CS_stringAlnum( struct CS_String *toCheck );
 
 char *CS_cstringCopy( const char *in );
 void CS_cstringFree( const char *toFree );
