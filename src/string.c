@@ -505,14 +505,14 @@ int32_t CS_stringStrrchr( struct CS_String *haystack, char needle ) {
     return -1;
 }
 
-bool CS_stringOnlyHas( struct CS_String *toCheck, struct CS_String *theseCharacters ) {
+bool CS_stringOnlyHas( const struct CS_String *toCheck, const struct CS_String *theseCharacters ) {
     for( int32_t i = 0; i < toCheck->length; ++i ) {
         if( CS_stringStrchr(theseCharacters,toCheck->data[i]) < 0 ) return false;
     }
     return true;
 }
 
-bool CS_stringAlnum( struct CS_String *toCheck ) {
+bool CS_stringAlnum( const struct CS_String *toCheck ) {
     for( int32_t i = 0; i < toCheck->length; ++i ) {
         if( !isalnum(toCheck->data[i]) ) return false;
     }
