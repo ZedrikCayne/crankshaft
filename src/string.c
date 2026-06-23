@@ -491,14 +491,14 @@ void CS_cstringFree( const char *toFree ) {
     if(toFree)CS_free( (void*)toFree );
 }
 
-int32_t CS_stringStrchr( struct CS_String *haystack, char needle ) {
+int32_t CS_stringStrchr( const struct CS_String *haystack, char needle ) {
     for( int32_t i = 0; i < haystack->length; ++i ) {
         if( needle == haystack->data[i] ) return i;
     }
     return -1;
 }
 
-int32_t CS_stringStrrchr( struct CS_String *haystack, char needle ) {
+int32_t CS_stringStrrchr( const struct CS_String *haystack, char needle ) {
     for( int32_t i = haystack->length; i >= 0; --i ) {
         if( needle == haystack->data[i] ) return i;
     }

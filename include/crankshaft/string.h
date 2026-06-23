@@ -109,6 +109,8 @@ void CS_stringLtrim( struct CS_String *trimmable );
 void CS_stringRtrim( struct CS_String *trimmable );
 bool CS_stringOnlyHas( const struct CS_String *toCheck, const struct CS_String *theseCharacters );
 bool CS_stringAlnum( const struct CS_String *toCheck );
+int32_t CS_stringStrchr( const struct CS_String *haystack, char needle );
+int32_t CS_stringStrrchr( const struct CS_String *haystack, char needle );
 
 char *CS_cstringCopy( const char *in );
 void CS_cstringFree( const char *toFree );
