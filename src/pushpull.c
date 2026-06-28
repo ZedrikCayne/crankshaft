@@ -199,6 +199,7 @@ int32_t CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
 int32_t CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
     buffer->err = 0;
     if( buffer->currentReadOffset < buffer->size ) {
+        errno = 0;
         int32_t bytesRead = fread( CS_PP_endOfData(buffer),
                                1,
                                CS_PP_bufferRemaining(buffer),

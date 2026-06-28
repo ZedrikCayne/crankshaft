@@ -30,7 +30,7 @@ bool test_sql(void) {
                 amount INT(20),\
                 CONSTRAINT PK_test_table PRIMARY KEY ( col1, col2 )\
                 ) WITHOUT ROWID;");
-        struct CS_SqlResponse *response = CS_sqlQuery( sqlite, &createTable );
+        const struct CS_SqlResponse *response = CS_sqlQuery( sqlite, &createTable );
         CS_FAIL_ON_NULL( response, "Create Table", "Failed!" );
         if( response ) {
             CS_sqlReturnResponse(response);
