@@ -118,7 +118,6 @@ struct CS_ClientInfo *CS_WS_destroy( struct CS_WebSocket *ws ) {
 
 struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int32_t opcode, bool masked, const void *payload, int32_t payloadSize ) {
     if( payload && payloadSize <= 0 ) {
-        CS_LOG_ERROR( "Trying to put a payload in with no payload supplied." );
         return NULL;
     }
     struct CS_WebSocketFrame *frame = CS_WS_getEmptyFrame(ws);
@@ -129,7 +128,6 @@ struct CS_WebSocketFrame *CS_WS_createFrame( struct CS_WebSocket *ws, int32_t op
         if( payloadSize > 0 ) {
             frame->payload = CS_alloc( payloadSize );
             if( frame->payload == NULL ) {
-                CS_LOG_ERROR( "OOM trying to allocate a payload for a new frame." );
                 CS_WS_returnFrame( ws, frame );
                 return NULL;
             }
@@ -192,7 +190,6 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
 
     struct CS_WebSocketFrame *frame = CS_WS_getEmptyFrame( ws );
     if( !frame ) {
-        CS_LOG_ERROR( "OOM creating a frame." );
         return NULL;
     }
 
@@ -215,7 +212,6 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
     CS_PP_write( ws->clientInfo->buffer, 2 );
 
     if( frame->payloadLength == 127 ) {
-        CS_LOG_ERROR("Incoming frame too big.");
         goto ERROR_READING;
     }
 
@@ -235,7 +231,6 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
 
     frame->payload = CS_alloc( frame->payloadLength );
     if( frame->payload == NULL ) {
-        CS_LOG_ERROR("OOM for taking in the payload.");
         goto ERROR_READING;
     }
 
@@ -258,7 +253,6 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
         if( numBytesTransferred < frame->payloadLength ) {
             int32_t numBytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
             if( numBytesRead < 0 ) {
-                CS_LOG_ERROR("Error reading from client socket.");
                 goto ERROR_READING;
             }
         }
@@ -330,12 +324,10 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame, 
                          ((char*)frame->payload) + bytesTotallyTransferred,
                          frame->payloadLength - bytesTotallyTransferred );
         if( lastTransfer < 0 ) {
-            CS_LOG_ERROR("Websocket failed to push data to the output buffer.");
             return true;
         }
         int32_t lastWriteToSocket = CS_serverWriteOutputBuffer( ws->clientInfo );
         if( lastWriteToSocket < 0 ) {
-            CS_LOG_ERROR("Websocket write failed.");
             return true;
         }
         bytesTotallyTransferred += lastWriteToSocket;
