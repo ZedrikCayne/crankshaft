@@ -220,8 +220,8 @@ void dcCallback( struct CS_ClientInfo *info ) {
 }
 
 struct CS_Route serverRoutes[] = {
-    { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, 0, "", CS_serverFileServer },
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_WILDCARD, 0, "", CS_serverFileServer },
+    { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer },
+    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer },
 };
 
 int main(int argc, char *argv[] ) {
