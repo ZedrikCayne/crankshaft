@@ -178,6 +178,8 @@ static void *clientThread(void *var) {
         } else {
             if( HTTP_STATE_MACHINE(clientInfo) )
                 break;
+            //We can get wedged in here if we don't make room
+            CS_PP_makeRoom(clientInfo->buffer);
         }
     }
 CLIENT_BAIL_NOSSL:
