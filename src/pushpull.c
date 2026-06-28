@@ -76,6 +76,7 @@ void CS_PP_defaultFree(struct CS_PushPullBuffer *freeMe) {
 int32_t CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int32_t fileDescriptor) {
     buffer->err = 0;
     if( buffer->currentReadOffset < buffer->size ) {
+        errno = 0;
         int32_t bytesRead = read( fileDescriptor,
                               CS_PP_endOfData(buffer),
                               CS_PP_bufferRemaining(buffer) );
@@ -92,6 +93,7 @@ int32_t CS_PP_readFromFile(struct CS_PushPullBuffer *buffer, int32_t fileDescrip
 int32_t CS_PP_readFromSocket(struct CS_PushPullBuffer *buffer, int32_t fileDescriptor) {
     buffer->err = 0;
     if( buffer->currentReadOffset < buffer->size ) {
+        errno = 0;
         int32_t bytesRead = recv( fileDescriptor,
                               CS_PP_endOfData(buffer),
                               CS_PP_bufferRemaining(buffer),
@@ -109,6 +111,7 @@ int32_t CS_PP_readFromSocket(struct CS_PushPullBuffer *buffer, int32_t fileDescr
 int32_t CS_PP_writeToFile(struct CS_PushPullBuffer *buffer, int32_t fileDescriptor) {
     buffer->err = 0;
     if( buffer->currentWriteOffset < buffer->currentReadOffset ) {
+        errno = 0;
         int32_t bytesWritten = write( fileDescriptor,
                                   CS_PP_startOfData(buffer),
                                   CS_PP_dataSize(buffer) );
@@ -162,6 +165,7 @@ int32_t CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination,
  int32_t CS_PP_readFromSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
     buffer->err = 0;
     if( buffer->currentReadOffset < buffer->size ) {
+        errno = 0;
         int32_t bytesRead = SSL_read( ssl,
                                   CS_PP_endOfData(buffer),
                                   CS_PP_bufferRemaining(buffer) );
@@ -179,6 +183,7 @@ int32_t CS_PP_writeToBuffer(struct CS_PushPullBuffer *buffer, void *destination,
 int32_t CS_PP_writeToSSL(struct CS_PushPullBuffer *buffer, SSL *ssl) {
     buffer->err = 0;
     if( buffer->currentWriteOffset < buffer->currentReadOffset ) {
+        errno = 0;
         int32_t bytesWritten = SSL_write( ssl,
                                       CS_PP_startOfData(buffer),
                                       CS_PP_dataSize(buffer) );
@@ -218,6 +223,7 @@ int32_t CS_PP_readFromFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
 int32_t CS_PP_writeToFILE(struct CS_PushPullBuffer *buffer, FILE *file) {
     buffer->err = 0;
     if( buffer->currentWriteOffset < buffer->currentReadOffset ) {
+        errno = 0;
         int32_t bytesWritten = fwrite( CS_PP_startOfData(buffer),
                                    1,
                                    CS_PP_dataSize(buffer),
