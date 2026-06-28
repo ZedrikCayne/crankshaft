@@ -127,6 +127,7 @@ struct CS_Reply {
     int32_t contentTypeEnum;
     int32_t numHeaders;
     int32_t numCookies;
+    bool closeConnection;
     struct CS_ReplyHeader replyHeaders[MAX_REQUEST_HEADERS];
     struct CS_ReplyCookie setCookie[MAX_REPLY_COOKIES];
     const void *outputBuffer;

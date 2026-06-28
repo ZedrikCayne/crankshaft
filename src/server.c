@@ -828,7 +828,7 @@ PUSH_FILE_RETRY:
     
     CS_serverSetReplyHeader(reply, &CS_STRING("Last-Modified"), &CS_STRING_PTR(timeString( lastModified) ) );
     CS_serverSetReplyHeader(reply, &CS_STRING("Content-Type"), &CS_STRING_PTR(mimeType) );
-    CS_serverSetReplyHeader(reply, &CS_STRING("Connection"), &CS_STRING("close") );
+    reply->closeConnection = true;
     if( cacheSeconds != 0 ) {
         CS_serverSetReplyHeader(reply, &CS_STRING("Cache-Control"), CS_stringTempSnprintf(64,"max-age=%d", cacheSeconds ) );
     } else {
@@ -1046,6 +1046,7 @@ struct CS_Reply *CS_serverCreateReply(struct CS_ClientInfo *info, int32_t respon
     returnValue->contentTypeEnum = mimeEnum;
     returnValue->numHeaders = 0;
     returnValue->numCookies = 0;
+    returnValue->closeConnection = false;
     returnValue->outputBuffer = outputBuffer;
     returnValue->outputLength = outputLength;
     return returnValue;
@@ -1150,6 +1151,9 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
 
     CS_serverSetReplyHeaderIfMissing(reply, &CS_STRING("Date"), &CS_STRING_PTR(timeString(time(NULL))));
     CS_serverSetReplyHeaderIfMissing(reply, &CS_STRING("Cache-Control"), &CS_STRING("no-cache") );
+    if( reply->closeConnection ) {
+        CS_serverSetReplyHeaderIfMissing(reply, &CS_STRING("Connection"), &CS_STRING("close") );
+    }
     CS_PP_printf( info->output, "%s %d %s\r\n", HTTP_VERSION, replyNumber, replyString );
     for( int32_t i = 0; i < reply->numHeaders; ++i ) {
         CS_PP_printf( info->output, "%s: %s\r\n", 
@@ -1199,8 +1203,9 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
             break;
     }
     if (compressedBuffer) CS_free(compressedBuffer);
+    bool requireClose = reply->closeConnection;
     CS_serverReturnReply(info, reply);
-    return bytesWritten < 0;
+    return requireClose || bytesWritten < 0;
 }
 
 int32_t CS_serverKillClientSocket( struct CS_ClientInfo *info ) {
