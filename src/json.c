@@ -1220,13 +1220,13 @@ struct CS_StringBuilder *CS_jsonNodePrintableToStringBuilder(const struct CS_Jso
                 CS_SB_printf(sb, "%f", current->floatValue );
                 break;
             case CS_JSON_true:
-                appendQuoted(sb,"true");
+                CS_SB_append(sb,"true");
                 break;
             case CS_JSON_false:
-                appendQuoted(sb,"false");
+                CS_SB_append(sb,"false");
                 break;
             case CS_JSON_null:
-                appendQuoted(sb,"null");
+                CS_SB_append(sb,"null");
                 break;
         }
         while( current && current->next == NULL ) {
