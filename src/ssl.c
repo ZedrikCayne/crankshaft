@@ -31,8 +31,10 @@ bool CS_sslInit( const char *keyFile, const char *certFile, const char *selfSign
         gSSL_CTX = SSL_CTX_new( TLS_method() );
         gSSL_TLSV1_CTX = SSL_CTX_new( TLS_method() );
         SSL_CTX_set_security_level( gSSL_TLSV1_CTX, 0 );
+        SSL_CTX_set_options(gSSL_CTX, SSL_OP_NO_TICKET);
+        SSL_CTX_set_session_cache_mode(gSSL_CTX, SSL_SESS_CACHE_OFF);
         if( !selfSignHostname && keyFile && certFile ) {
-            if( SSL_CTX_use_certificate_file( gSSL_CTX, certFile, SSL_FILETYPE_PEM) <= 0 ) {
+            if( SSL_CTX_use_certificate_chain_file( gSSL_CTX, certFile ) <= 0 ) {
                 return true;
             }
             if( SSL_CTX_use_PrivateKey_file( gSSL_CTX, keyFile, SSL_FILETYPE_PEM) <= 0 ) {
