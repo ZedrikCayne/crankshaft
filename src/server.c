@@ -463,8 +463,8 @@ static int32_t privateParseForm( struct CS_ClientInfo *info, const char *current
         struct CS_String *formEntryName = CS_stringTempStrtok(formEntry,&CS_STRING("="),&innerSavePtr);
         struct CS_String *formEntryValue = CS_stringTempStrtok(formEntry,&CS_STRING("="),&innerSavePtr);
         if( formEntryName == NULL || formEntryValue == NULL ) return -1;
-        CS_stringInitReference( &info->requestInfo.formParameters[ info->requestInfo.numFormParameters ].name, formEntryName );
-        CS_stringInitCopy( &info->requestInfo.formParameters[ info->requestInfo.numFormParameters ].value, formEntryValue );
+        CS_stringInitLinearCopy( &info->requestInfo.formParameters[ info->requestInfo.numFormParameters ].name, formEntryName, info->allocator );
+        CS_stringInitLinearCopy( &info->requestInfo.formParameters[ info->requestInfo.numFormParameters ].value, formEntryValue, info->allocator );
         CS_httpUrlDecodeInPlace( &info->requestInfo.formParameters[ info->requestInfo.numFormParameters ].value );
         info->requestInfo.numFormParameters++;
     }
@@ -502,17 +502,8 @@ enum HeaderState {
 #define REQUIRE_CHAR_NO_EAT(X) if( currentPoint<endOfData && *currentPoint!=X)return -1;
 #define REQUIRE_CRLF() REQUIRE_CHAR(CR);REQUIRE_CHAR_NO_EAT(LF)
 #define SET_STRING(_WHAT) CS_stringInitLinearCopyCstring(&(_WHAT),startOfToken,currentPoint - startOfToken,info->allocator);
-#define SET_STRING_COPY(_WHAT) CS_stringInitLinearCopyCstring(&(_WHAT),startOfToken,currentPoint - startOfToken,info->allocator);
 
 static void clearRequestInfo(struct CS_ClientInfo *info) {
-    //We used _COPY on these, so we need to actually free them.
-    CS_stringFree(&info->requestInfo.uri);
-    for( int32_t i = 0; i < info->requestInfo.numHeaders; ++i ) {
-        CS_stringFree(&info->requestInfo.headers[i].values);
-    }
-    for( int32_t i = 0; i < info->requestInfo.numFormParameters; ++i ) {
-        CS_stringFree(&info->requestInfo.formParameters[i].value);
-    }
     memset(&(info->requestInfo),0,sizeof(struct CS_RequestInfo));
 }
 
@@ -554,7 +545,7 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
             case HEADER_STATE_URI:
                 if( *currentPoint == SP || *currentPoint == QUESTION )  {
                     currentHeaderState = (*currentPoint==SP)?HEADER_STATE_HTTP:HEADER_STATE_QUERY_PARAM;
-                    SET_STRING_COPY(info->requestInfo.uri);
+                    SET_STRING(info->requestInfo.uri);
                     if( info->requestInfo.uri.data[0] != '/' ) {
                         return -1;
                     }
@@ -587,6 +578,7 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
                         ?HEADER_STATE_QUERY_PARAM
                         :HEADER_STATE_QUERY_PARAM_VALUE;
                     SET_STRING(info->requestInfo.parameters[ currentParameterIndex ].name);
+                    if( CS_httpUrlDecodeInPlace( &info->requestInfo.parameters[ currentParameterIndex ].name ) ) return -1;
                     startOfToken = NULL;
                     break;
                 }
@@ -594,6 +586,7 @@ static int32_t parseRequest(struct CS_ClientInfo *info) {
             case HEADER_STATE_QUERY_PARAM_VALUE:
                 if( *currentPoint == AMPERSAND || *currentPoint == POUND || *currentPoint == SP ) {
                     SET_STRING(info->requestInfo.parameters[ currentParameterIndex ].value);
+                    if( CS_httpUrlDecodeInPlace( &info->requestInfo.parameters[ currentParameterIndex ].value ) ) return -1;
                     ++currentParameterIndex;
                     info->requestInfo.numParameters = currentParameterIndex;
                     startOfToken = NULL;

@@ -44,6 +44,10 @@ struct CS_String *CS_stringInitLinearCopyCstring( struct CS_String *out, const c
     return (struct CS_String*)CS_stringInitReferenceCstring(out, destString, stringLength);
 }
 
+struct CS_String *CS_stringInitLinearCopy( struct CS_String *out, const struct CS_String *in, struct CS_LinearAllocator *allocator ) {
+    return CS_stringInitLinearCopyCstring( out, in->data, in->length, allocator );
+}
+
 struct CS_String *CS_stringLinearCopyCstring( const char *in, int32_t length, struct CS_LinearAllocator *allocator ) {
     int32_t stringLength = length < 0 ? strlen( in ) : length;
     int32_t allocSize = sizeof(struct CS_String) + stringLength + 1;
