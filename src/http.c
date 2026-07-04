@@ -24,23 +24,25 @@
 #include <stdint.h>
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#define _CONNECT 0x404f4e4e
-#define _DELETE  0x44454c45
-#define _GET     0x47455420
-#define _HEAD    0x48454144
-#define _POST    0x504f5d54
-#define _PUT     0x50555420
-#define _TRACE   0x54524143
-#define _PRE     0x50524520
+#define _CONNECT 0x404f4e00
+#define _DELETE  0x44454c00
+#define _GET     0x47455400
+#define _HEAD    0x48454100
+#define _POST    0x504f5d00
+#define _PUT     0x50555400
+#define _TRACE   0x54524100
+#define _PRE     0x50524500
+#derine _MASK    0xFFFFFF00
 #else
-#define _CONNECT 0x43434340
-#define _DELETE  0x454c4544
-#define _GET     0x20544547
-#define _HEAD    0x44414548
-#define _POST    0x54534f50
-#define _PUT     0x20545550
-#define _TRACE   0x43415254
-#define _PRE     0x20455250
+#define _CONNECT 0x00434340
+#define _DELETE  0x004c4544
+#define _GET     0x00544547
+#define _HEAD    0x00414548
+#define _POST    0x00534f50
+#define _PUT     0x00545550
+#define _TRACE   0x00415254
+#define _PRE     0x00455250
+#define _MASK    0x00FFFFFF
 #endif
 
 static void *requestSlabAlloc = NULL;
@@ -255,7 +257,7 @@ static const char *methodEnumToName[] = {
 };
 
 int32_t CS_httpStringToMethodEnum( const struct CS_String *methodString ) {
-    int32_t command = *(int32_t*)methodString->data;
+    int32_t command = (*(int32_t*)methodString->data & _MASK);
     switch(command) {
         case _CONNECT:
             return CS_HTTP_METHOD_CONNECT;

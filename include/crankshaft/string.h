@@ -72,6 +72,7 @@ struct CS_String *CS_stringCopyCstring( const char *in, int32_t length );
 struct CS_String *CS_stringTempCopyCstring( const char *in, int32_t length );
 struct CS_String *CS_stringCopy( const struct CS_String *in );
 struct CS_String *CS_stringInitCopyCstring( struct CS_String *out, const char *in, int32_t length );
+struct CS_String *CS_stringInitLinearCopyCstring( struct CS_String *out, const char *in, int32_t length, struct CS_LinearAllocator *allocator );
 struct CS_String *CS_stringLinearCopyCstring( const char *in, int32_t length, struct CS_LinearAllocator *allocator );
 struct CS_String *CS_stringInitCopy( struct CS_String *out, const struct CS_String *in );
 struct CS_String *CS_stringReserveTemp( int32_t length );

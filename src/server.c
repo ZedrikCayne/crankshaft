@@ -115,6 +115,11 @@ static struct CS_ClientInfo *createClientInfoWithThread( int32_t socket,
         CS_LOG_ERROR( "Out of memory allocating client buffer." );
         goto CLIENT_ERR_OUTPUT_BUFF;
     }
+    ci->allocator = CS_linearInit(8129);
+    if( ci->allocator == NULL ) {
+        CS_LOG_ERROR( "Out of memory allocating variable storage." );
+        goto CLIENT_ERR_STORAGE;
+    }
     signal(SIGPIPE,pipeHandler);
     //struct timeval tv;
     //tv.tv_sec = 1;
@@ -142,6 +147,8 @@ static struct CS_ClientInfo *createClientInfoWithThread( int32_t socket,
     pthread_detach( newThread );
     return ci;
 CLIENT_ERR_PTHREAD:
+    CS_linearFree(ci->allocator);
+CLIENT_ERR_STORAGE:
     CS_PP_defaultFree(ci->output);
 CLIENT_ERR_OUTPUT_BUFF:
     CS_PP_defaultFree(ci->buffer);
@@ -180,9 +187,15 @@ static void *clientThread(void *var) {
                 break;
             //We can get wedged in here if we don't make room
             CS_PP_makeRoom(clientInfo->buffer);
+            //Clear our copy of the things.
+            CS_linearReset(clientInfo->allocator);
         }
     }
 CLIENT_BAIL_NOSSL:
+    if( clientInfo->allocator ) {
+        CS_linearFree(clientInfo->allocator);
+        clientInfo->allocator = NULL;
+    }
     if( clientInfo->ssl ) {
         SSL_free( clientInfo->ssl );
         clientInfo->ssl = NULL;
@@ -488,8 +501,8 @@ enum HeaderState {
 #define REQUIRE_CHAR(X) if( currentPoint<endOfData && *currentPoint==X)++currentPoint;else return -1;
 #define REQUIRE_CHAR_NO_EAT(X) if( currentPoint<endOfData && *currentPoint!=X)return -1;
 #define REQUIRE_CRLF() REQUIRE_CHAR(CR);REQUIRE_CHAR_NO_EAT(LF)
-#define SET_STRING(_WHAT) CS_stringInitReferenceCstring(&(_WHAT),startOfToken,currentPoint - startOfToken);
-#define SET_STRING_COPY(_WHAT) CS_stringInitCopyCstring(&(_WHAT),startOfToken,currentPoint - startOfToken);
+#define SET_STRING(_WHAT) CS_stringInitLinearCopyCstring(&(_WHAT),startOfToken,currentPoint - startOfToken,info->allocator);
+#define SET_STRING_COPY(_WHAT) CS_stringInitLinearCopyCstring(&(_WHAT),startOfToken,currentPoint - startOfToken,info->allocator);
 
 static void clearRequestInfo(struct CS_ClientInfo *info) {
     //We used _COPY on these, so we need to actually free them.

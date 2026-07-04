@@ -104,6 +104,7 @@ struct CS_ClientInfo {
     void *persistentData;
     const void *appData;
     SSL *ssl;
+    struct CS_LinearAllocator *allocator;
     struct CS_RequestInfo requestInfo;
 };
 

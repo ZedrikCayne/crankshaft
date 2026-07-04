@@ -35,6 +35,15 @@ struct CS_String *CS_stringReserveTemp( int32_t length ) {
     return CS_stringTempCopyCstring( NULL, length );
 }
 
+struct CS_String *CS_stringInitLinearCopyCstring( struct CS_String *out, const char *in, int32_t length, struct CS_LinearAllocator *allocator ) {
+    int32_t stringLength = length < 0 ? strlen( in ) : length;
+    int32_t allocSize = stringLength + 1;
+    char *destString = CS_linearTake(allocator, allocSize, sizeof(void*));
+    memcpy(destString,in,stringLength);
+    destString[stringLength] = 0;
+    return (struct CS_String*)CS_stringInitReferenceCstring(out, destString, stringLength);
+}
+
 struct CS_String *CS_stringLinearCopyCstring( const char *in, int32_t length, struct CS_LinearAllocator *allocator ) {
     int32_t stringLength = length < 0 ? strlen( in ) : length;
     int32_t allocSize = sizeof(struct CS_String) + stringLength + 1;
