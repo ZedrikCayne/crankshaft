@@ -101,8 +101,8 @@ struct CS_PipeFileData {
 };
 
 //File pipe pieces, copies from FILE* to buffer or buffer to FILE*
-extern struct CS_PipeDefinition *CS_PIPE_FILE_IN;
-extern struct CS_PipeDefinition *CS_PIPE_FILE_OUT;
+extern const struct CS_PipeDefinition *CS_PIPE_FILE_IN;
+extern const struct CS_PipeDefinition *CS_PIPE_FILE_OUT;
 
 //Provide an already open socket
 struct CS_PipeSocketData {
@@ -110,8 +110,8 @@ struct CS_PipeSocketData {
 };
 
 //Socket pipe pieces, copies from file handle to buffer or buffer to file handle
-extern struct CS_PipeDefinition *CS_PIPE_SOCKET_IN;
-extern struct CS_PipeDefinition *CS_PIPE_SOCKET_OUT;
+extern const struct CS_PipeDefinition *CS_PIPE_SOCKET_IN;
+extern const struct CS_PipeDefinition *CS_PIPE_SOCKET_OUT;
 
 //Provide a ssl to user for input/output
 struct CS_PipeSSLData {
@@ -119,17 +119,17 @@ struct CS_PipeSSLData {
 };
 
 //SSL pipe pieces...copies from ssl to buffer or buffer to ssl
-extern struct CS_PipeDefinition *CS_PIPE_SSL_IN;
-extern struct CS_PipeDefinition *CS_PIPE_SSL_OUT;
+extern const struct CS_PipeDefinition *CS_PIPE_SSL_IN;
+extern const struct CS_PipeDefinition *CS_PIPE_SSL_OUT;
 
 //Compress pipe pieces.
-extern struct CS_PipeDefinition *CS_PIPE_INFLATE;
-extern struct CS_PipeDefinition *CS_PIPE_DEFLATE;
-extern struct CS_PipeDefinition *CS_PIPE_GZIP;
-extern struct CS_PipeDefinition *CS_PIPE_GUNZIP;
+extern const struct CS_PipeDefinition *CS_PIPE_INFLATE;
+extern const struct CS_PipeDefinition *CS_PIPE_DEFLATE;
+extern const struct CS_PipeDefinition *CS_PIPE_GZIP;
+extern const struct CS_PipeDefinition *CS_PIPE_GUNZIP;
 
 //Null pipe. Copies from the in side to its buffer.
-extern struct CS_PipeDefinition *CS_PIPE_NULL;
+extern const struct CS_PipeDefinition *CS_PIPE_NULL;
 
 //Global init and kill for pipe storage
 bool CS_pipeInitPipes( int32_t initialPipes );

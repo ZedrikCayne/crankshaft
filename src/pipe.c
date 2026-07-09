@@ -259,14 +259,14 @@ static bool _file_close( struct CS_Pipe *currentSection ) {
     return false;
 }
 
-static struct CS_PipeDefinition _CS_PIPE_FILE_IN = {
+static const struct CS_PipeDefinition _CS_PIPE_FILE_IN = {
     0,_file_in,_file_close,_file_create
 };
-struct CS_PipeDefinition *CS_PIPE_FILE_IN = &_CS_PIPE_FILE_IN;
-static struct CS_PipeDefinition _CS_PIPE_FILE_OUT = {
+const struct CS_PipeDefinition *CS_PIPE_FILE_IN = &_CS_PIPE_FILE_IN;
+static const struct CS_PipeDefinition _CS_PIPE_FILE_OUT = {
     0,_file_out,_file_close,_file_create
 };
-struct CS_PipeDefinition *CS_PIPE_FILE_OUT = &_CS_PIPE_FILE_OUT;
+const struct CS_PipeDefinition *CS_PIPE_FILE_OUT = &_CS_PIPE_FILE_OUT;
 
 static int32_t _socket_in( struct CS_Pipe *currentSection ) {
     int32_t returnValue = CS_PP_readFromFile( currentSection->buffer, (int32_t)(uintptr_t)currentSection->pipeData );
@@ -291,14 +291,14 @@ static bool _socket_close( struct CS_Pipe *currentSection ) {
     return false;
 }
 
-static struct CS_PipeDefinition _CS_PIPE_SOCKET_IN = {
+static const struct CS_PipeDefinition _CS_PIPE_SOCKET_IN = {
     0, _socket_in, _socket_close, _socket_create
 };
-struct CS_PipeDefinition *CS_PIPE_SOCKET_IN = &_CS_PIPE_SOCKET_IN;
-static struct CS_PipeDefinition _CS_PIPE_SOCKET_OUT = {
+const struct CS_PipeDefinition *CS_PIPE_SOCKET_IN = &_CS_PIPE_SOCKET_IN;
+static const struct CS_PipeDefinition _CS_PIPE_SOCKET_OUT = {
     0, _socket_out, _socket_close, _socket_create
 };
-struct CS_PipeDefinition *CS_PIPE_SOCKET_OUT = &_CS_PIPE_SOCKET_OUT;
+const struct CS_PipeDefinition *CS_PIPE_SOCKET_OUT = &_CS_PIPE_SOCKET_OUT;
 
 static int32_t _ssl_in( struct CS_Pipe *currentSection ) {
     int32_t returnValue = CS_PP_readFromSSL( currentSection->buffer, (SSL*)currentSection->pipeData );
@@ -323,19 +323,19 @@ static bool _ssl_close( struct CS_Pipe *currentSection ) {
     return false;
 }
 
-static struct CS_PipeDefinition _CS_PIPE_SSL_IN = {
+static const struct CS_PipeDefinition _CS_PIPE_SSL_IN = {
     0, _ssl_in, _ssl_close, _ssl_create
 };
-struct CS_PipeDefinition *CS_PIPE_SSL_IN = &_CS_PIPE_SSL_IN;
-static struct CS_PipeDefinition _CS_PIPE_SSL_OUT = {
+const struct CS_PipeDefinition *CS_PIPE_SSL_IN = &_CS_PIPE_SSL_IN;
+static const struct CS_PipeDefinition _CS_PIPE_SSL_OUT = {
     0, _ssl_out, _ssl_close, _ssl_create
 };
-struct CS_PipeDefinition *CS_PIPE_SSL_OUT = &_CS_PIPE_SSL_OUT;
+const struct CS_PipeDefinition *CS_PIPE_SSL_OUT = &_CS_PIPE_SSL_OUT;
 
-static struct CS_PipeDefinition _CS_PIPE_NULL = {
+static const struct CS_PipeDefinition _CS_PIPE_NULL = {
     0, NULL, NULL, NULL
 };
-struct CS_PipeDefinition *CS_PIPE_NULL = &_CS_PIPE_NULL;
+const struct CS_PipeDefinition *CS_PIPE_NULL = &_CS_PIPE_NULL;
 
 struct compress_pipe_state {
     z_stream *stream;
@@ -478,12 +478,12 @@ static bool _gunzip_close( struct CS_Pipe *currentSection ) {
     return destroyCompression(currentSection, false, true);
 }
 
-static struct CS_PipeDefinition _CS_PIPE_INFLATE = {
+static const struct CS_PipeDefinition _CS_PIPE_INFLATE = {
     0, _inflate, _inflate_close, _inflate_create
 };
-struct CS_PipeDefinition *CS_PIPE_INFLATE = &_CS_PIPE_INFLATE;
+const struct CS_PipeDefinition *CS_PIPE_INFLATE = &_CS_PIPE_INFLATE;
 
-static struct CS_PipeDefinition _CS_PIPE_DEFLATE = {
+static const struct CS_PipeDefinition _CS_PIPE_DEFLATE = {
     0, _deflate, _compress_close, _compress_create
 };
 
@@ -491,8 +491,8 @@ static int32_t _gzip( struct CS_Pipe *currentSection ) {
     return driveZlib(currentSection,true);
 }
 
-struct CS_PipeDefinition *CS_PIPE_DEFLATE = &_CS_PIPE_DEFLATE;
-static struct CS_PipeDefinition _CS_PIPE_GZIP = {
+const struct CS_PipeDefinition *CS_PIPE_DEFLATE = &_CS_PIPE_DEFLATE;
+static const struct CS_PipeDefinition _CS_PIPE_GZIP = {
     0, _gzip, _gzip_close, _gzip_create
 };
 
@@ -500,8 +500,8 @@ static int32_t _gunzip( struct CS_Pipe *currentSection ) {
     return driveZlib(currentSection, false);
 }
 
-struct CS_PipeDefinition *CS_PIPE_GZIP = &_CS_PIPE_GZIP;
-static struct CS_PipeDefinition _CS_PIPE_GUNZIP = {
+const struct CS_PipeDefinition *CS_PIPE_GZIP = &_CS_PIPE_GZIP;
+static const struct CS_PipeDefinition _CS_PIPE_GUNZIP = {
     0, _gunzip, _gunzip_close, _gunzip_create
 };
-struct CS_PipeDefinition *CS_PIPE_GUNZIP = &_CS_PIPE_GUNZIP;
+const struct CS_PipeDefinition *CS_PIPE_GUNZIP = &_CS_PIPE_GUNZIP;
