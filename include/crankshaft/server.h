@@ -153,6 +153,7 @@ bool CS_serverFileServer( struct CS_ClientInfo *info );
 bool CS_serverPushFile( const char *fileToOpen, struct CS_ClientInfo *info, int32_t cacheSeconds, struct CS_Reply *useMe );
 
 void CS_serverRemoveRequestHeader( struct CS_ClientInfo *info, const struct CS_String *header );
+bool CS_serverAddOrReplaceRequestHeader( struct CS_ClientInfo *info, const struct CS_String *header, const struct CS_String *value );
 const struct CS_String *CS_serverGetRequestFormParameter( struct CS_ClientInfo *info, const struct CS_String *name );
 const struct CS_String *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const struct CS_String *header );
 const struct CS_String *CS_serverGetRequestQueryParameter( struct CS_ClientInfo *info, const struct CS_String *name );
@@ -169,9 +170,11 @@ struct CS_Reply *CS_serverCreateReply( struct CS_ClientInfo *info, int32_t respo
 void CS_serverReturnReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
 bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply );
 
+
 int32_t CS_serverKillClientSocket( struct CS_ClientInfo *info );
 int32_t CS_serverFillIncomingBuffer( struct CS_ClientInfo *info );
 int32_t CS_serverWriteOutputBuffer( struct CS_ClientInfo *info );
+int32_t CS_serverParseRequest( struct CS_ClientInfo *info );
 
 #ifdef __cplusplus
 }

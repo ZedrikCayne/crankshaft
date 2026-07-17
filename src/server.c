@@ -900,6 +900,23 @@ void CS_serverRemoveRequestHeader( struct CS_ClientInfo *info, const struct CS_S
     }
 }
 
+bool CS_serverAddOrReplaceRequestHeader( struct CS_ClientInfo *info, const struct CS_String *header, const struct CS_String *value ) {
+    struct CS_RequestInfo *request = &info->requestInfo;
+    for( int32_t i = 0; i < request->numHeaders; ++i ) {
+        if( CS_stringStrcmp(header,&request->headers[i].header) == 0 ) {
+            if( CS_stringInitLinearCopy( &request->headers[i].values, value, info->allocator ) == NULL ) return true;
+            return false;
+        }
+    }
+    if( request->numHeaders >= MAX_REQUEST_HEADERS ) {
+        return true;
+    }
+    if( CS_stringInitLinearCopy( &request->headers[request->numHeaders].header, header, info->allocator ) == NULL ) return true;
+    if( CS_stringInitLinearCopy( &request->headers[request->numHeaders].values, value, info->allocator ) == NULL ) return true;
+    ++request->numHeaders;
+    return false;
+}
+
 const struct CS_String *CS_serverGetRequestHeader( struct CS_ClientInfo *info, const struct CS_String *header ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     for( int32_t i = 0; i < request->numHeaders; ++i ) {
@@ -1237,4 +1254,8 @@ int32_t CS_serverWriteOutputBuffer( struct CS_ClientInfo *info ) {
     return info->ssl?
         CS_PP_writeToSSL( info->output, info->ssl ):
         CS_PP_writeToFile( info->output, info->clientSocket );
+}
+
+int32_t CS_serverParseRequest( struct CS_ClientInfo *info ) {
+    return parseRequest(info);
 }
