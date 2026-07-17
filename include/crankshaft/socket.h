@@ -49,6 +49,7 @@ int32_t CS_socketEmptyOutputBuffer( struct CS_Socket *socket, bool lock );
 int32_t CS_socketFillIncomingBuffer( struct CS_Socket *socket, bool lock );
 void *CS_socketGetContext( struct CS_Socket *socket );
 void *CS_socketPutContext( struct CS_Socket *socket, void *context );
+void CS_socketTeardownAll();
 
 #ifdef __cplusplus
 }

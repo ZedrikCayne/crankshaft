@@ -297,6 +297,19 @@ int32_t CS_PP_moveBuffer( struct CS_PushPullBuffer *source, struct CS_PushPullBu
     return moveSize;
 }
 
+int32_t CS_PP_moveBufferExplicit( struct CS_PushPullBuffer *source, struct CS_PushPullBuffer *destination, int32_t max ) {
+    int32_t sourceSize = CS_PP_dataSize( source );
+    if( sourceSize == 0 ) return 0;
+    int32_t destinationSize = CS_PP_bufferRemaining( destination );
+    if( destinationSize == 0 ) return 0;
+    int32_t moveSize = sourceSize < destinationSize?sourceSize:destinationSize;
+    if( max < moveSize ) moveSize = max;
+    //updates the destination pointers.
+    CS_PP_readFromBuffer( destination, CS_PP_startOfData( source ), moveSize );
+    //updates the source pointers.
+    CS_PP_write( source, moveSize );
+    return moveSize;
+ }
 
 #define MAX_PRINT_SIZE 1024
 const char *CS_PP_desc(struct CS_PushPullBuffer *buffer) {

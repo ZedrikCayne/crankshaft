@@ -31,7 +31,7 @@ __inline__ static void *CS_alignVoid(void *root, int32_t alignment) {
 
 //Assumes __XMUTEX is a static ptherad_mutex * and __GLOBAL should be volatile because
 //of course gcc might compile the second check out.
-#define CS_PMUTEX_PROTECT_GLOBAL(__GLOBAL,__XMUTEX) if(!(__GLOBAL)&&(pthread_mutex_lock(__XMUTEX)==0)&&!(__GLOBAL))
+#define CS_PMUTEX_PROTECT_GLOBAL(__GLOBAL,__XMUTEX) if(!((volatile void *)(__GLOBAL))&&(pthread_mutex_lock(__XMUTEX)==0)&&((((volatile void *)(__GLOBAL))&&pthread_mutex_unlock(__XMUTEX)!=0)||(!((volatile void *)(__GLOBAL)))))
 
 void *CS_utilLoadWholeFile( const char *filename, int32_t *outSize );
 

@@ -55,6 +55,10 @@
  * Pipe has 'OWN_BUFFER': The pipe 'owns' the buffer and should free
  *                        it via the default means when done.
  *
+ * Functions which operate on 'anyStage' will return a cumulative
+ * value. (Flags or'd together etc)
+ * Functions which operate on 'thisStage' operate on the indicated
+ * stage (or, in some cases, earlier stages) but not forward stages
  ********************************************************************/
 
 #ifdef __cplusplus
@@ -66,6 +70,7 @@ extern "C" {
 #define CS_PIPE_STATUS_WOULDBLOCK   0x00000004
 #define CS_PIPE_STATUS_CLOSED       0x00000008
 #define CS_PIPE_STATUS_EOF          0x00000010
+#define CS_PIPE_STATUS_FREE         0x00000020
 
 #define CS_PIPE_FLAG_FRAGILE        0x00000001
 #define CS_PIPE_FLAG_NOBLOCK        0x00000002
@@ -142,9 +147,11 @@ int32_t CS_pipeProcess( struct CS_Pipe *anyStage );
 int32_t CS_pipeStatus( struct CS_Pipe *anyStage );
 int32_t CS_pipeClose( struct CS_Pipe *anyStage );
 int32_t CS_pipeFree( struct CS_Pipe *anyStage );
+bool CS_pipeEmpty( struct CS_Pipe *thisStage );
 bool CS_pipeHook( struct CS_Pipe *in, struct CS_Pipe *out );
 struct CS_Pipe *CS_pipeReconnect( struct CS_Pipe *in, struct CS_Pipe *out);
 bool CS_pipeDoneOrError( struct CS_Pipe *anyStage );
+struct CS_PushPullBuffer *CS_pipeNearestInBuffer( const struct CS_Pipe *currentSection );
 
 #ifdef __cplusplus
 }

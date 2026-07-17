@@ -59,6 +59,11 @@ static struct CS_SlabAllocator *socketContexts = NULL;
 
 static pthread_mutex_t socketsMutex = PTHREAD_MUTEX_INITIALIZER;
 
+void CS_socketTeardownAll() {
+    if( sockets )CS_slabFree( sockets );
+    if( socketContexts ) CS_slabFree( socketContexts );
+}
+
 struct CS_Socket *CS_socketInit( int32_t socket, int32_t port, SSL *ssl, int32_t inputBufferSize, int32_t outputBufferSize, bool inputMutex, bool outputMutex ) {
     CS_PMUTEX_PROTECT_GLOBAL( sockets, &socketsMutex ) {
         sockets = CS_slabInit( "SOCKETS", sizeof( struct CS_Socket ), 64, sizeof( void * ) );

@@ -69,6 +69,8 @@ bool test_socket(void) {
         CS_serverKill( testServer );
     }
 
+    CS_socketTeardownAll();
+
     return testCount !=
            testSucceeded;
 }

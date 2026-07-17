@@ -28,7 +28,10 @@ struct CS_SqlBackend *CS_sqlInit( const struct CS_SqlBackendDefinition *definiti
 }
 
 bool CS_sqlClose( struct CS_SqlBackend *backend ) {
-    return backend->backendDefinition->kill( backend );
+    if( !backend ) return true;
+    bool returnValue = backend->backendDefinition->kill( backend );
+    CS_free(backend);
+    return returnValue;
 }
 
 const struct CS_SqlResponse *CS_sqlQuery( struct CS_SqlBackend *backend, const struct CS_String *query ) {
@@ -105,7 +108,9 @@ static bool _sqliteKill( struct CS_SqlBackend *backend ) {
     if( !backend ) return true;
     if( backend->backendData ) {
         struct _sqliteInfo *info = (struct _sqliteInfo *)backend->backendData;
-        sqlite3_close( info->connection );
+        if( sqlite3_close( info->connection ) != SQLITE_OK ) {
+            return true;
+        }
         CS_free( backend->backendData );
     }
     return false;
@@ -198,6 +203,7 @@ static struct CS_SqlResponse *_sqliteRunSql( struct CS_SqlBackend *backend, cons
                 break;
         }
     }
+    sqlite3_finalize(statement);
     return returnValue;
 }
 

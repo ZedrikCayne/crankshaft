@@ -162,6 +162,7 @@ bool test_pipe(void) {
         CS_pipeClose(fileOut2);
         CS_pipeFree(fileOut2);
 
+
         struct CS_Pipe *pipeIn1 = CS_pipeCreate( CS_PIPE_FILE_IN, BIG_BUFF_SIZE, &tempFileIn1 );
         CS_FAIL_ON_NULL( pipeIn1, "Failed to create input pipe.", "Pipe create fail." );
         struct CS_Pipe *pipeIn2 = CS_pipeCreate( CS_PIPE_FILE_IN, SMALL_BUFF_SIZE, &tempFileIn2 );
@@ -226,7 +227,15 @@ bool test_pipe(void) {
         CS_PP_defaultFree( destBits2 );
         CS_PP_defaultFree( destBits3 );
         CS_PP_defaultFree( destBits4 );
+        CS_PP_defaultFree(sourceBits3);
+        CS_PP_defaultFree(sourceBits4);
     }
+
+    for( i = 0; i < NUM_BUFFS; ++i ) {
+        CS_free(tbuffs[i]);
+    }
+    CS_free(tbuffs);
+    CS_free(tsizes);
 
     CS_pipeDestroyPipes();
 

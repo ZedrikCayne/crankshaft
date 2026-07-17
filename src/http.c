@@ -9,6 +9,7 @@
 #include <openssl/err.h>
 #include <pthread.h>
 #include <errno.h>
+#include <stdint.h>
 
 #include <crankshaft/tempbuff.h>
 #include <crankshaft/alloc.h>
@@ -16,12 +17,13 @@
 #include <crankshaft/mime.h>
 #include <crankshaft/http.h>
 #include <crankshaft/slaballoc.h>
+#include <crankshaft/linearalloc.h>
 #include <crankshaft/util.h>
 #include <crankshaft/network.h>
 #include <crankshaft/ssl.h>
 #include <crankshaft/util.h>
 #include <crankshaft/compress.h>
-#include <stdint.h>
+#include <crankshaft/pipe.h>
 
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #define _CONNECT 0x404f4e00
@@ -50,17 +52,19 @@ static pthread_mutex_t slabAllocMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static struct CS_RequestReply *privateGetReply() {
     CS_PMUTEX_PROTECT_GLOBAL( requestSlabAlloc, &slabAllocMutex ) {
-        requestSlabAlloc = CS_slabInit( "Request Reply Slab", sizeof(struct CS_RequestReply), 100, 8 );
+        requestSlabAlloc = CS_slabInit( "Request Reply Slab", sizeof(struct CS_RequestReply), 100, sizeof(void*) );
         pthread_mutex_unlock( &slabAllocMutex );
         if( requestSlabAlloc == NULL ) return NULL;
     }
     struct CS_RequestReply *returnValue =  CS_slabTake(requestSlabAlloc);
     memset(returnValue,0,sizeof(struct CS_RequestReply));
+    returnValue->allocator = CS_linearInit( 8192 );
     return returnValue;
 }
 
 static void privateReturnReply( struct CS_RequestReply *toReturn ) {
     if( requestSlabAlloc == NULL ) return;
+    if( toReturn->allocator ) CS_linearFree( toReturn->allocator );
     CS_slabReturn(requestSlabAlloc, toReturn);
 }
 
@@ -103,7 +107,7 @@ enum {
     REPLY_HEADER_DONE
 };
 
-#define SET_STRING(_WHICH) CS_stringInitReferenceCstring(&(_WHICH),startOfToken,currentPoint-startOfToken)
+#define SET_STRING(_WHICH) CS_stringInitLinearCopyCstring(&(_WHICH),startOfToken,currentPoint-startOfToken,replyToParse->allocator)
 
 static int32_t privateParseReply( struct CS_RequestReply *replyToParse ) {
     int32_t sizeOfReply = CS_PP_dataSize( replyToParse->buffer );
@@ -828,6 +832,7 @@ struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
         CS_LOG_ERROR("CS_httpMakeRequest() OOM getting a reply" );
         return NULL;
     }
+    CS_linearReset(returnValue->allocator);
     address = CS_stringTempCstring(&tempAddress);
     struct addrinfo *addrInfos = CS_networkLookupAddress( address, portNum );
     //Lookup already has a log with it.
@@ -841,7 +846,7 @@ struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
 
     char prefix = '?';
     //In case we've put query parameters on the uri already.
-    if( rest.length != 0 && CS_stringStrstr(&rest, &CS_STRING("?")) ) prefix = '&';
+    if( rest.length != 0 && CS_stringTempStrstr(&rest, &CS_STRING("?")) ) prefix = '&';
             
     if( rest.length == 0 ) rest = CS_STRING("/");
 
@@ -982,8 +987,8 @@ static int32_t privateDecompressReply( struct CS_RequestReply *reply ) {
     const struct CS_String *contentEncoding = CS_httpReplyHeader( reply, &CS_STRING("Content-Encoding") );
     if( contentEncoding == NULL ) return 0;
     
-    bool isGzip = CS_stringStrstr( contentEncoding, &CS_STRING("gzip") ) != NULL;
-    bool isDeflate = CS_stringStrstr( contentEncoding, &CS_STRING("deflate") ) != NULL;
+    bool isGzip = CS_stringTempStrstr( contentEncoding, &CS_STRING("gzip") ) != NULL;
+    bool isDeflate = CS_stringTempStrstr( contentEncoding, &CS_STRING("deflate") ) != NULL;
     
     if( !isGzip && !isDeflate ) return 0;
     
@@ -1102,7 +1107,7 @@ struct CS_RequestReply *CS_httpMakeRequest( int32_t methodEnum,
     //we're going to probably need more and to 'fix' our data so everything in the buffer
     //is actual data.
     const struct CS_String *encodingHeader = CS_httpReplyHeader( returnValue, &CS_STRING("Transfer-Encoding") );
-    if( encodingHeader && CS_stringStrstr( encodingHeader, &CS_STRING("chunked") ) ) {
+    if( encodingHeader && CS_stringTempStrstr( encodingHeader, &CS_STRING("chunked") ) ) {
         returnValue->chunked = true;
         returnValue->chunkCRLFStillPresent = false;
         returnValue->chunkedBytesOffset = -CS_PP_dataSize( returnValue->buffer );
@@ -1157,7 +1162,7 @@ void CS_httpCloseRequest( struct CS_RequestReply *toReturn ) {
 
 const struct CS_String *CS_httpReplyHeader( struct CS_RequestReply *reply, const struct CS_String *header ) {
     for( int32_t i = 0; i < reply->numReplyHeaders; ++i ) {
-        if( CS_stringStrstr( header, &reply->replyHeaders[ i ].header) )
+        if( CS_stringTempStrstr( header, &reply->replyHeaders[ i ].header) )
             return &reply->replyHeaders[ i ].values;
     }
     return NULL;
@@ -1169,8 +1174,253 @@ void CS_httpCleanupReplies() {
     requestSlabAlloc = NULL;
     pthread_mutex_unlock( &slabAllocMutex );
 }
+
 struct CS_PushPullBuffer *CS_httpGetReplyBuffer( struct CS_RequestReply *reply ) {
     if( !reply ) return NULL;
     if( reply->decompressedBuffer ) return reply->decompressedBuffer;
     return reply->buffer;
 }
+
+//Pipeline stuff
+enum {
+    CHUNK_DETERMINE_SIZE,
+    CHUNK_SIZE_HEX,
+    CHUNK_POST_SIZE_CR,
+    CHUNK_POST_SIZE_LF,
+    CHUNK_DATA,
+    CHUNK_POST_DATA_CR,
+    CHUNK_POST_DATA_LF,
+    CHUNK_DONE
+};
+
+#define MAX_CHUNK_SIZE_LENGTH 8
+//Six bytes of hex digits and a CR/LF fit in 8 bytes
+#define MAX_CHUNK_SIZE_BYTES 0xFFFFFF
+
+struct decode_chunk_data {
+    int32_t chunkState;
+    int32_t accumulator;
+    int32_t currentChunkOffset;
+};
+struct encode_chunk_data {
+    int32_t chunkState;
+    int32_t wantedChunkSize;
+    int32_t chunkSize;
+    int32_t currentLength;
+    int32_t currentChunkOffset;
+    char currentChunkChars[MAX_CHUNK_SIZE_LENGTH];
+};
+static int32_t _decode_chunk( struct CS_Pipe *currentSection ) {
+    struct decode_chunk_data *chunkData = (struct decode_chunk_data *)currentSection->pipeData;
+    struct CS_PushPullBuffer *inBuff = CS_pipeNearestInBuffer( currentSection );
+    int32_t currentMoved = 0;
+    while( CS_PP_dataSize( inBuff ) > 0 ) {
+        char *start = CS_PP_startOfData(inBuff);
+        char *current = start;
+        char *end = CS_PP_endOfData(inBuff);
+        switch( chunkData->chunkState ) {
+            case CHUNK_SIZE_HEX:
+            {
+                int accumulator = chunkData->accumulator;
+                while( CS_PP_dataSize(inBuff) > 0 ) {
+                    int currentNibble = hexDigitToInt(current);
+                    if( currentNibble < 0 ) return -1;
+                    CS_PP_write( inBuff, 1 );
+                    accumulator <<= 4;
+                    accumulator += currentNibble;
+                    ++current;
+                    if( *current == CR ) {
+                        break;
+                    }
+                }
+                chunkData->accumulator = accumulator;
+                if( current < end ) {
+                    if( *current == CR ) chunkData->chunkState = CHUNK_POST_SIZE_CR;
+                    else return -1;
+                    ++current;
+                    CS_PP_write( inBuff, 1 );
+                } else {
+                    break;
+                }
+            }
+            break;
+            case CHUNK_POST_SIZE_CR:
+            {
+                if( CS_PP_dataSize(inBuff) > 0 ) {
+                    if( *current == LF ) chunkData->chunkState = CHUNK_DATA;
+                    else return -1;
+                    //The contents of the buffer are now real data.
+                    CS_PP_write( inBuff, 1 );
+                    //If we actually accumulated zero, declare us empty and return
+                    if( chunkData->accumulator == 0 ) {
+                        currentSection->statusFlags |= CS_PIPE_STATUS_EMPTY;
+                        return currentMoved;
+                    }
+                    ++current;
+                } else {
+                    break;
+                }
+            }
+            case CHUNK_DATA:
+            {
+                int32_t chunkRemaining = chunkData->accumulator - chunkData->currentChunkOffset;
+                if( chunkRemaining == 0 ) {
+                    if( *current == CR ) {
+                        chunkData->chunkState = CHUNK_POST_DATA_CR;
+                        CS_PP_write(inBuff,1);
+                    } else {
+                        return -1;
+                    }
+                } else {
+                    int32_t lastMoved = CS_PP_moveBufferExplicit( inBuff, currentSection->buffer, chunkRemaining );
+                    if( lastMoved < 0 ) return -1;
+
+                    currentMoved += lastMoved;
+                    chunkData->currentChunkOffset += lastMoved;
+                }
+            }
+            break;
+            case CHUNK_POST_DATA_CR:
+            {
+                if( CS_PP_dataSize( inBuff ) > 0 ) {
+                    if( *current == LF ) {
+                        CS_PP_write(inBuff,1);
+                        chunkData->accumulator = 0;
+                        chunkData->currentChunkOffset = 0;
+                        chunkData->chunkState = CHUNK_SIZE_HEX;
+                    } else {
+                        return -1;
+                    }
+                }
+            }
+            break;
+        }
+    }
+    return currentMoved;
+}
+static bool _close_decode_chunk( struct CS_Pipe *currentSection ) {
+    struct decode_chunk_data *chunkData = (struct decode_chunk_data *)currentSection->pipeData;
+    if( chunkData ) CS_free( chunkData );
+    return false;
+}
+static bool _create_decode_chunk( struct CS_Pipe *currentSection, const void *initial ) {
+    struct decode_chunk_data *chunkData = CS_allocZero(sizeof(struct decode_chunk_data));
+    chunkData->chunkState = CHUNK_SIZE_HEX;
+    currentSection->pipeData = chunkData;
+    return currentSection->pipeData == NULL;
+}
+
+static int32_t _encode_chunk( struct CS_Pipe *currentSection ) {
+    struct encode_chunk_data *chunkData = (struct encode_chunk_data *)currentSection->pipeData;
+    struct CS_PushPullBuffer *inBuff = CS_pipeNearestInBuffer( currentSection );
+    int32_t bytesMoved = 0;
+    while( CS_PP_dataSize( inBuff ) >= 0 ) {
+        int32_t currentDataSize = CS_PP_dataSize(inBuff);
+        switch( chunkData->chunkState ) {
+            //Figure out the size of our current chunk. Max it out at the length
+            //of our input buffer.
+            case CHUNK_DETERMINE_SIZE:
+            {
+                int32_t nextChunkSize = currentDataSize < chunkData->wantedChunkSize?currentDataSize:chunkData->wantedChunkSize;
+                int32_t numChars = snprintf(chunkData->currentChunkChars,sizeof(chunkData->currentChunkChars),"%x%c%c",nextChunkSize,CR,LF);
+                if( numChars > MAX_CHUNK_SIZE_LENGTH ) {
+                    return -1;
+                }
+                chunkData->chunkSize = nextChunkSize;
+                chunkData->currentLength = numChars;
+                chunkData->currentChunkOffset = 0;
+                chunkData->chunkState = CHUNK_SIZE_HEX;
+            }
+            case CHUNK_SIZE_HEX:
+            {
+                int32_t bytesPutInBuffer = CS_PP_readFromBuffer(currentSection->buffer, chunkData->currentChunkChars + chunkData->currentChunkOffset, chunkData->currentLength - chunkData->currentChunkOffset );
+                if( bytesPutInBuffer < 0 ) return -1;
+                bytesMoved += bytesPutInBuffer;
+                chunkData->currentChunkOffset += bytesPutInBuffer;
+                //Couldn't write the whole data size + CRLF. Turn around try again.
+                if( chunkData->currentLength - chunkData->currentChunkOffset > 0 ) {
+                    return bytesMoved;
+                }
+                //End case..we've run out of data...set ourselves empty and EOF.
+                if( chunkData->chunkSize == 0 ) {
+                    chunkData->chunkState = CHUNK_DONE;
+                    break;
+                } else {
+                    chunkData->currentChunkOffset = 0;
+                    chunkData->currentLength = chunkData->chunkSize;
+                    chunkData->chunkState = CHUNK_DATA;
+                }
+            }
+            case CHUNK_DATA:
+            {
+                if( CS_pipeEmpty(currentSection->in) ) return -1;
+                int32_t bytesPutInBuffer = CS_PP_moveBufferExplicit(inBuff, currentSection->buffer, chunkData->currentLength - chunkData->currentChunkOffset );
+                if( bytesPutInBuffer < 0 ) return -1;
+                bytesMoved += bytesPutInBuffer;
+                chunkData->currentChunkOffset += bytesPutInBuffer;
+                if( chunkData->currentLength - chunkData->currentChunkOffset > 0 ) {
+                    return bytesMoved;
+                }
+                chunkData->currentLength = 2;
+                chunkData->currentChunkOffset = 0;
+                chunkData->currentChunkChars[0] = CR;
+                chunkData->currentChunkChars[1] = LF;
+                chunkData->chunkState = CHUNK_POST_DATA_CR;
+            }
+            case CHUNK_POST_DATA_CR:
+            {
+                int32_t bytesPutInBuffer = CS_PP_readFromBuffer(currentSection->buffer, chunkData->currentChunkChars + chunkData->currentChunkOffset, chunkData->currentLength - chunkData->currentChunkOffset );
+                if( bytesPutInBuffer < 0 ) return -1;
+                bytesMoved += bytesPutInBuffer;
+                chunkData->currentChunkOffset += bytesPutInBuffer;
+                //Couldn't write the CRLF. Turn around try again.
+                if( chunkData->currentLength - chunkData->currentChunkOffset > 0 ) {
+                    return bytesMoved;
+                }
+                chunkData->currentChunkOffset = 0;
+                chunkData->currentLength = chunkData->chunkSize;
+                chunkData->chunkState = CHUNK_DETERMINE_SIZE;
+            }
+            break;
+            case CHUNK_DONE:
+                return bytesMoved;
+        }
+    }
+    return bytesMoved;
+}
+static bool _close_encode_chunk( struct CS_Pipe *currentSection ) {
+    struct encode_chunk_data *chunkData = (struct encode_chunk_data *)currentSection->pipeData;
+    if( chunkData ) CS_free( chunkData );
+    return false;
+}
+static bool _create_encode_chunk( struct CS_Pipe *currentSection, const void *initial ) {
+    int32_t initialSize = initial?*(int32_t *)initial:0;
+    struct encode_chunk_data *chunkData = CS_allocZero(sizeof(struct encode_chunk_data));
+    chunkData->chunkState = CHUNK_DETERMINE_SIZE;
+    if( initialSize == 0 ) initialSize = currentSection->buffer->size - 16;
+    chunkData->wantedChunkSize = initialSize;
+    currentSection->pipeData = chunkData;
+    return currentSection->pipeData == NULL;
+}
+
+static int32_t _copy_chunk( struct CS_Pipe *currentSection ) {
+    struct decode_chunk_data *chunkData = (struct decode_chunk_data *)currentSection->pipeData;
+    return chunkData == NULL;
+}
+static bool _close_copy_chunk( struct CS_Pipe *currentSection ) {
+    struct decode_chunk_data *chunkData = (struct decode_chunk_data *)currentSection->pipeData;
+    if( chunkData ) CS_free( chunkData );
+    return false;
+}
+static bool _create_copy_chunk( struct CS_Pipe *currentSection, const void *initial ) {
+    struct decode_chunk_data *chunkData = CS_allocZero(sizeof(struct decode_chunk_data));
+    currentSection->pipeData = chunkData;
+    return currentSection->pipeData == NULL;
+}
+
+const static struct CS_PipeDefinition _CS_PIPE_CHUNK_ENCODE = {0,_encode_chunk,_close_encode_chunk,_create_encode_chunk};
+const struct CS_PipeDefinition *CS_PIPE_CHUNK_ENCODE = &_CS_PIPE_CHUNK_ENCODE;
+const static struct CS_PipeDefinition _CS_PIPE_CHUNK_DECODE = {0,_decode_chunk,_close_decode_chunk,_create_decode_chunk};
+const struct CS_PipeDefinition *CS_PIPE_CHUNK_DECODE = &_CS_PIPE_CHUNK_DECODE;
+const static struct CS_PipeDefinition _CS_PIPE_CHUNK_COPY = {0,_copy_chunk,_close_copy_chunk,_create_copy_chunk};
+const struct CS_PipeDefinition *CS_PIPE_CHUNK_COPY = &_CS_PIPE_CHUNK_COPY;

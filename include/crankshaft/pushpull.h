@@ -85,6 +85,7 @@ bool CS_PP_toothpaste( struct CS_PushPullBuffer *buffer, int32_t nBytes );
 
 //Moves as much as possible from the source to the destination.
 int32_t CS_PP_moveBuffer( struct CS_PushPullBuffer *source, struct CS_PushPullBuffer *destination );
+int32_t CS_PP_moveBufferExplicit( struct CS_PushPullBuffer *source, struct CS_PushPullBuffer *destination, int32_t max );
 
 #define CS_PP_printf(PPbuff,...) CS_PP_read(PPbuff,snprintf((char*)CS_PP_endOfData(PPbuff),CS_PP_bufferRemaining(PPbuff),__VA_ARGS__));
 

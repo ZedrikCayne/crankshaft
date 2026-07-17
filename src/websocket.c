@@ -55,7 +55,7 @@ static bool privateIsWSUpgradeRequest( struct CS_ClientInfo *clientInfo ) {
     const struct CS_String *connection = CS_serverGetRequestHeader( clientInfo, &CS_STRING("Connection") );
     const struct CS_String *upgrade = CS_serverGetRequestHeader( clientInfo, &CS_STRING("Upgrade") );
     //The source buffers on this are at least a few hundred bytes long..
-    return ( connection && CS_stringStrstr( connection, &CS_STRING("Upgrade") ) != NULL &&
+    return ( connection && CS_stringTempStrstr( connection, &CS_STRING("Upgrade") ) != NULL &&
              upgrade && CS_stringStrncmp( &CS_STRING("websocket"), upgrade, 9 ) == 0 );
 }
 //Peek into the request info

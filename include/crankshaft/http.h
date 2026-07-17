@@ -2,11 +2,11 @@
 #define __crankshafthttpdoth__
 #include <stdbool.h>
 #include <openssl/ssl.h>
+#include <stdint.h>
 
 #include <crankshaft/pushpull.h>
 #include <crankshaft/stringbuilder.h>
 #include <crankshaft/string.h>
-#include <stdint.h>
 
 /********************************************************************
  *
@@ -18,6 +18,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern const struct CS_PipeDefinition *CS_PIPE_CHUNK_ENCODE;
+extern const struct CS_PipeDefinition *CS_PIPE_CHUNK_DECODE;
 
 enum CS_HttpMethods {
     CS_HTTP_METHOD_ANY = -1,
@@ -127,7 +130,11 @@ struct CS_RequestReply {
     bool chunked;
     bool chunkCRLFStillPresent;
     int32_t chunkedBytesOffset;
+    //Copy the values into the linear allocator on getting the
+    //reply as we might cycle the buffer during decompression
+    //and lose the values.
     struct CS_RequestHeader replyHeaders[MAX_REPLY_HEADERS];
+    struct CS_LinearAllocator *allocator;
     struct CS_PushPullBuffer *buffer;
     struct CS_PushPullBuffer *decompressedBuffer;
 };

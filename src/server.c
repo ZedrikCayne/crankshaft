@@ -389,6 +389,8 @@ bool CS_serverKill( struct CS_WebServer *server ) {
     while( server->threadRunning ) {
         sleep(1);
     }
+    CS_cstringFree( server->defaultFileServingPath );
+    CS_cstringFree( server->defaultFileServingFile );
     CS_slabFree(server->replyStack);
     CS_free(server);
     return false;
@@ -1091,7 +1093,7 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
     int32_t compressedLength = 0;
     const struct CS_String *acceptEncoding = CS_serverGetRequestHeader(info, &CS_STRING("Accept-Encoding") );
 
-    if (acceptEncoding && CS_stringStrstr(acceptEncoding, &CS_STRING("gzip") ) && 
+    if (acceptEncoding && CS_stringTempStrstr(acceptEncoding, &CS_STRING("gzip") ) && 
         reply->outputBuffer != NULL && reply->outputLength > 128) {
         
         bool shouldCompress = false;
@@ -1103,11 +1105,11 @@ bool CS_serverDoReply( struct CS_ClientInfo *info, struct CS_Reply *reply ) {
         }
 
         if (contentType) {
-            if (CS_stringStrstr(contentType, &CS_STRING("text/") ) || 
-                CS_stringStrstr(contentType, &CS_STRING("application/json") ) ||
-                CS_stringStrstr(contentType, &CS_STRING("application/javascript") ) ||
-                CS_stringStrstr(contentType, &CS_STRING("application/xml") ) ||
-                CS_stringStrstr(contentType, &CS_STRING("image/svg+xml") ) ) {
+            if (CS_stringTempStrstr(contentType, &CS_STRING("text/") ) || 
+                CS_stringTempStrstr(contentType, &CS_STRING("application/json") ) ||
+                CS_stringTempStrstr(contentType, &CS_STRING("application/javascript") ) ||
+                CS_stringTempStrstr(contentType, &CS_STRING("application/xml") ) ||
+                CS_stringTempStrstr(contentType, &CS_STRING("image/svg+xml") ) ) {
                 shouldCompress = true;
             }
         } else {

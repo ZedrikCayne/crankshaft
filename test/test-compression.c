@@ -67,7 +67,7 @@ bool test_compression() {
     if( reply ) {
         encoding = CS_httpReplyHeader( reply, &CS_STRING("Content-Encoding") );
         
-        CS_FAIL_ON_TRUE( encoding != NULL && CS_stringStrstr( encoding, &CS_STRING("gzip") ), "Expecting no encoding.", "Got %s", CS_stringTempCstring(encoding) );
+        CS_FAIL_ON_TRUE( encoding != NULL && CS_stringTempStrstr( encoding, &CS_STRING("gzip") ), "Expecting no encoding.", "Got %s", CS_stringTempCstring(encoding) );
 
         CS_FAIL_ON_TRUE( CS_PP_dataSize( reply->buffer ) != 1024, "Expecting 1024 bytes", "Got %d",CS_PP_dataSize(reply->buffer) );
 

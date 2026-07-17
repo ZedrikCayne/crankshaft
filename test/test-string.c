@@ -126,9 +126,9 @@ bool test_string(void) {
         }
         for( int32_t j = 0; j < nLen; ++j ) {
             char * result = strstr( randCStrings[i], cStrings[j] );
-            const struct CS_String* reResult = CS_stringStrstr( randStrings[i], newStrings[j] );
+            const struct CS_String* reResult = CS_stringTempStrstr( randStrings[i], newStrings[j] );
             int32_t out1, out2;
-            CS_FAIL_ON_FALSE( sameOffset(randCStrings[i], result, randStrings[i]->data, reResult?reResult->data:NULL, &out1, &out2 ), "CS_stringStrstr()", "Failed on %d %d with %d %d", i, j, out1, out2 );
+            CS_FAIL_ON_FALSE( sameOffset(randCStrings[i], result, randStrings[i]->data, reResult?reResult->data:NULL, &out1, &out2 ), "CS_stringTempStrstr()", "Failed on %d %d with %d %d", i, j, out1, out2 );
             CS_stringFree(reResult);
         }
     }
@@ -142,6 +142,8 @@ bool test_string(void) {
         CS_stringFree( randStrings[i] );
         CS_free( randCStrings[i] );
     }
+    CS_free(randStrings);
+    CS_free(randCStrings);
 
     const struct CS_String *tokenReturn;
     const char *saveptr = NULL;

@@ -21,6 +21,7 @@ bool CS_pipeInitPipes( int32_t initialPipes ) {
 bool CS_pipeDestroyPipes( void ) {
     if( globalPipes ) {
         CS_slabFree( globalPipes );
+        globalPipes = NULL;
     }
     return false;
 }
@@ -40,6 +41,7 @@ struct CS_Pipe *CS_pipeCreate( const struct CS_PipeDefinition *pipeType,
             if( returnValue->buffer == NULL ) {
                 goto ERR_PIPE;
             }
+            returnValue->flags |= CS_PIPE_FLAG_OWN_BUFFER;
         }
         if( pipeType->pipeCreate && pipeType->pipeCreate( returnValue, pipeData ) ) {
             goto ERR_INIT;
@@ -84,8 +86,8 @@ struct CS_Pipe *privateFront( struct CS_Pipe *anyStage ) {
 
 //If we are set empty, or if we don't have a buffer and any previous
 //step is empty, we are empty.
-bool privateEmpty( struct CS_Pipe *anyStage ) {
-    struct CS_Pipe *currentStage = anyStage;
+bool CS_pipeEmpty( struct CS_Pipe *thisStage ) {
+    struct CS_Pipe *currentStage = thisStage;
     while(true) {
         if( currentStage == NULL ) return true;
         if( currentStage->buffer && (currentStage->statusFlags & CS_PIPE_STATUS_EMPTY) ) return true;
@@ -97,9 +99,11 @@ bool privateEmpty( struct CS_Pipe *anyStage ) {
     }
 }
 
+
 //Wander back and find the nearest 'in' buffer. (Stages might not have their
 //own buffer and just rely on a previous buffer... 
-static struct CS_PushPullBuffer *nearestInBuffer( struct CS_Pipe *currentSection ) {
+struct CS_PushPullBuffer *CS_pipeNearestInBuffer( const struct CS_Pipe *currentSection ) {
+    if( currentSection == NULL ) return NULL;
     while( currentSection->in && 
           (currentSection->in->buffer == NULL) )
         currentSection = currentSection->in;
@@ -107,8 +111,9 @@ static struct CS_PushPullBuffer *nearestInBuffer( struct CS_Pipe *currentSection
     return currentSection->in->buffer;
 }
 
+
 static struct CS_PushPullBuffer *copyFromNearest( struct CS_Pipe *currentSection ) {
-    struct CS_PushPullBuffer *nearest = nearestInBuffer( currentSection );
+    struct CS_PushPullBuffer *nearest = CS_pipeNearestInBuffer( currentSection );
     struct CS_PushPullBuffer *returnValue = nearest;
     if( currentSection->buffer ) {
         returnValue = currentSection->buffer;
@@ -134,13 +139,13 @@ int32_t CS_pipeProcess( struct CS_Pipe *anyStage ) {
         //If our buffer is empty, and the next previous step is empty, we
         //must be empty.
         if( currentPipe->buffer && CS_PP_dataSize( currentPipe->buffer ) == 0 &&
-            privateEmpty( currentPipe->in ) ) {
+            CS_pipeEmpty( currentPipe->in ) ) {
             currentPipe->statusFlags |= CS_PIPE_STATUS_EMPTY;
         }
         //If we are the end of the pipe...and our previous state is empty
         //And we don't process anything (ie: we're holding a buffer) we are 'EMPTY'
         //if our previous stuff is empty so loops will end.
-        if( currentPipe->pipeProcess == NULL && currentPipe->next == NULL && privateEmpty( currentPipe->in ) ) {
+        if( currentPipe->pipeProcess == NULL && currentPipe->next == NULL && CS_pipeEmpty( currentPipe->in ) ) {
             currentPipe->statusFlags |= CS_PIPE_STATUS_EMPTY;
         }
         currentPipe = currentPipe->next;
@@ -164,7 +169,10 @@ int32_t CS_pipeClose( struct CS_Pipe *anyStage ) {
     struct CS_Pipe *currentPipe = anyStage;
     while( currentPipe->in ) currentPipe = currentPipe->in;
     while( currentPipe ) {
-        if( currentPipe->pipeClose ) currentPipe->pipeClose( currentPipe );
+        if( currentPipe->pipeClose &&
+            !(currentPipe->statusFlags & CS_PIPE_STATUS_CLOSED) ) {
+            currentPipe->pipeClose( currentPipe );
+        }
         currentPipe->statusFlags |= CS_PIPE_STATUS_CLOSED;
         currentPipe = currentPipe->next;
     }
@@ -172,11 +180,19 @@ int32_t CS_pipeClose( struct CS_Pipe *anyStage ) {
 }
 
 int32_t CS_pipeFree( struct CS_Pipe *anyStage ) {
+    CS_pipeClose(anyStage);
     struct CS_Pipe *currentPipe = anyStage;
+    struct CS_Pipe *lastPipe = NULL;
     while( currentPipe && currentPipe->in ) currentPipe = currentPipe->in;
     while( currentPipe ) {
-        if( currentPipe->buffer && (currentPipe->flags&CS_PIPE_FLAG_OWN_BUFFER)) CS_PP_defaultFree(currentPipe->buffer);
+        lastPipe = NULL;
+        if( !(currentPipe->statusFlags & CS_PIPE_STATUS_FREE ) ) {
+            if( currentPipe->buffer && (currentPipe->flags&CS_PIPE_FLAG_OWN_BUFFER)) CS_PP_defaultFree(currentPipe->buffer);
+            currentPipe->statusFlags |= CS_PIPE_STATUS_FREE;
+            lastPipe = currentPipe;
+        }
         currentPipe = currentPipe->next;
+        if( lastPipe ) CS_slabReturn( globalPipes, lastPipe );
     }
     return 0;
 }
@@ -356,7 +372,7 @@ static void cs_zfree(voidpf opaque, voidpf address) {
 static int32_t driveZlib( struct CS_Pipe *currentSection, bool compress ) {
     struct compress_pipe_state *state = (struct compress_pipe_state *)currentSection->pipeData;
     if( !state ) return -1;
-    struct CS_PushPullBuffer *inBuff = nearestInBuffer( currentSection );
+    struct CS_PushPullBuffer *inBuff = CS_pipeNearestInBuffer( currentSection );
 
     //If we can't push out... continue down the pipe so hopefully someone will.
     //empty our buffer.
@@ -369,7 +385,7 @@ static int32_t driveZlib( struct CS_Pipe *currentSection, bool compress ) {
     long out_before = state->stream->total_out;
     long in_before = state->stream->total_in;
 
-    bool inEmpty = privateEmpty(currentSection->in);
+    bool inEmpty = CS_pipeEmpty(currentSection->in);
 
     int32_t flushFlag = inEmpty?Z_FINISH:Z_NO_FLUSH;
     int32_t zStatus = 0;
@@ -445,6 +461,7 @@ static bool destroyCompression( struct CS_Pipe *currentSection, bool compress, b
             } else {
                 inflateEnd(state->stream);
             }
+            CS_free( state->stream );
             state->stream = NULL;
         }
         CS_free( currentSection->pipeData );

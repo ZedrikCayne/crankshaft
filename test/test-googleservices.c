@@ -29,6 +29,8 @@ bool test_googleservices(void) {
         CS_SB_free(sb);
     }
 
+    CS_jwtkeychainTeardown();
+
     return testCount !=
            testSucceeded;
 }

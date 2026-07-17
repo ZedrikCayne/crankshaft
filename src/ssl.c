@@ -11,10 +11,10 @@
 static bool initedSSL = false;
 static bool killCalled = false;
 
-static SSL_CTX *gSSL_CTX;
-static SSL_CTX *gSSL_TLSV1_CTX;
-static EVP_PKEY *ss_pkey;
-static X509 *ss_X509;
+static SSL_CTX *gSSL_CTX = NULL;
+static SSL_CTX *gSSL_TLSV1_CTX = NULL;
+static EVP_PKEY *ss_pkey = NULL;
+static X509 *ss_X509 = NULL;
 
 bool CS_sslInit( const char *keyFile, const char *certFile, const char *selfSignHostname ) {
     if( killCalled )
@@ -32,12 +32,20 @@ bool CS_sslInit( const char *keyFile, const char *certFile, const char *selfSign
         gSSL_TLSV1_CTX = SSL_CTX_new( TLS_method() );
         SSL_CTX_set_security_level( gSSL_TLSV1_CTX, 0 );
         SSL_CTX_set_options(gSSL_CTX, SSL_OP_NO_TICKET);
+        SSL_CTX_set_options(gSSL_TLSV1_CTX, SSL_OP_NO_TICKET);
         SSL_CTX_set_session_cache_mode(gSSL_CTX, SSL_SESS_CACHE_OFF);
+        SSL_CTX_set_session_cache_mode(gSSL_TLSV1_CTX, SSL_SESS_CACHE_OFF);
         if( !selfSignHostname && keyFile && certFile ) {
             if( SSL_CTX_use_certificate_chain_file( gSSL_CTX, certFile ) <= 0 ) {
                 return true;
             }
+            if( SSL_CTX_use_certificate_chain_file( gSSL_TLSV1_CTX, certFile ) ) {
+                return true;
+            }
             if( SSL_CTX_use_PrivateKey_file( gSSL_CTX, keyFile, SSL_FILETYPE_PEM) <= 0 ) {
+                return true;
+            }
+            if( SSL_CTX_use_PrivateKey_file( gSSL_TLSV1_CTX, keyFile, SSL_FILETYPE_PEM) <= 0 ) {
                 return true;
             }
         }
@@ -64,7 +72,9 @@ bool CS_sslInit( const char *keyFile, const char *certFile, const char *selfSign
             X509_set_issuer_name(ss_X509, name);
             X509_sign( ss_X509, ss_pkey, EVP_sha256() );
             SSL_CTX_use_certificate( gSSL_CTX, ss_X509 );
+            SSL_CTX_use_certificate( gSSL_TLSV1_CTX, ss_X509 );
             SSL_CTX_use_PrivateKey( gSSL_CTX, ss_pkey );
+            SSL_CTX_use_PrivateKey( gSSL_TLSV1_CTX, ss_pkey );
          }
 
         initedSSL = true;
@@ -77,6 +87,16 @@ bool CS_sslKill() {
         return true;
     killCalled = true;
     if( initedSSL ) {
+        if( ss_pkey ) {
+            EVP_PKEY_free( ss_pkey );
+            ss_pkey = NULL;
+        }
+        if( ss_X509 ) {
+            X509_free( ss_X509 );
+            ss_X509 = NULL;
+        }
+        SSL_CTX_free(gSSL_CTX);
+        SSL_CTX_free(gSSL_TLSV1_CTX);
         OPENSSL_cleanup();
         initedSSL = false;
     }

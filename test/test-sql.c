@@ -35,7 +35,7 @@ bool test_sql(void) {
         if( response ) {
             CS_sqlReturnResponse(response);
         }
-        CS_sqlClose(sqlite);
+        CS_FAIL_ON_TRUE( CS_sqlClose(sqlite), "Closing the db", "Returned an error!" );
     }
 
 

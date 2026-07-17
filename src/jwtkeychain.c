@@ -46,7 +46,7 @@ static struct CS_StorageItem *privateWebCache( const struct CS_Cache *cache, con
 
     const struct CS_String *cacheControlHeader = CS_httpReplyHeader( reply, &CS_STRING("cache-control") );
     if( cacheControlHeader != NULL ) {
-        const struct CS_String *maxAge = CS_stringStrstr( cacheControlHeader, &CS_STRING("max-age") );
+        const struct CS_String *maxAge = CS_stringTempStrstr( cacheControlHeader, &CS_STRING("max-age") );
         if( maxAge != NULL ) {
             const char *savePtr;
             const struct CS_String *equals = CS_stringTempStrtok( maxAge, &CS_STRING("="), &savePtr );
@@ -71,7 +71,7 @@ bool CS_jwtkeychainInit(const struct CS_Storage *backingStorage) {
 
     webCache = CS_cacheCreate( backingStorage, privateWebCache, NULL, NULL );
 
-    if( !webCache ) return NULL;
+    if( !webCache ) return true;
 
     keyIdToEVP_PKEY = CS_HASHTABLE_STRING_VOID( 64, CS_HASHTABLE_FLAG_MUTEX | CS_HASHTABLE_FLAG_VERY_PEDANTIC );
 
@@ -84,8 +84,18 @@ bool CS_jwtkeychainInit(const struct CS_Storage *backingStorage) {
 }
 
 bool CS_jwtkeychainTeardown() {
+    if( keyIdToEVP_PKEY ) {
+        CS_hashtableGrabMutex(keyIdToEVP_PKEY);
+        CS_HASHTABLE_ITER(keyIdToEVP_PKEY,entry) {
+            if( entry->value ) EVP_PKEY_free( (EVP_PKEY*)entry->value);
+        }
+
+        CS_hashtableReleaseMutex(keyIdToEVP_PKEY);
+        CS_hashtableFree(keyIdToEVP_PKEY);
+        keyIdToEVP_PKEY = NULL;
+    }
+
     if( !webCache ) return true;
-    
     return CS_cacheDestroy( webCache );
 }
 
@@ -169,6 +179,8 @@ bool CS_jwtkeychainFetchPublicKeys( const char *urlToFetchKeysFrom ) {
                 }
                 OSSL_PARAM_BLD_free( param_builder );
             }
+            BN_free( bn );
+            BN_free( be );
         }
     }
 

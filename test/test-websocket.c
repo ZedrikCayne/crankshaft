@@ -25,11 +25,9 @@ bool test_websocket(void) {
     //Tests go here:
     unsigned char outgoingHash[ SHA_DIGEST_LENGTH ];
     const char *combined = CS_tempBuffSnprintf( 128, "%s%s", testThing, wsAcceptConcat );
-    CS_LOG_VERBOSE( "Combined: %s", combined );
     int32_t length = strlen( combined );
     SHA1( (const unsigned char*)combined, length, outgoingHash );
     const char *encoded = CS_base64EncodeTemp( outgoingHash, SHA_DIGEST_LENGTH, NULL );
-    CS_LOG_VERBOSE( "Encoded: %s", encoded );
     CS_FAIL_ON_FALSE( strncmp( encoded, outputThing, strlen(outputThing) ) == 0, "Match output.", "Wanted \n%s\n%s", outputThing, encoded );
 
 
