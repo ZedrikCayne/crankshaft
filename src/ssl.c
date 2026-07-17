@@ -39,13 +39,7 @@ bool CS_sslInit( const char *keyFile, const char *certFile, const char *selfSign
             if( SSL_CTX_use_certificate_chain_file( gSSL_CTX, certFile ) <= 0 ) {
                 return true;
             }
-            if( SSL_CTX_use_certificate_chain_file( gSSL_TLSV1_CTX, certFile ) ) {
-                return true;
-            }
             if( SSL_CTX_use_PrivateKey_file( gSSL_CTX, keyFile, SSL_FILETYPE_PEM) <= 0 ) {
-                return true;
-            }
-            if( SSL_CTX_use_PrivateKey_file( gSSL_TLSV1_CTX, keyFile, SSL_FILETYPE_PEM) <= 0 ) {
                 return true;
             }
         }
@@ -72,9 +66,7 @@ bool CS_sslInit( const char *keyFile, const char *certFile, const char *selfSign
             X509_set_issuer_name(ss_X509, name);
             X509_sign( ss_X509, ss_pkey, EVP_sha256() );
             SSL_CTX_use_certificate( gSSL_CTX, ss_X509 );
-            SSL_CTX_use_certificate( gSSL_TLSV1_CTX, ss_X509 );
             SSL_CTX_use_PrivateKey( gSSL_CTX, ss_pkey );
-            SSL_CTX_use_PrivateKey( gSSL_TLSV1_CTX, ss_pkey );
          }
 
         initedSSL = true;
