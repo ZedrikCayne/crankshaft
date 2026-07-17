@@ -373,6 +373,7 @@ static int32_t driveZlib( struct CS_Pipe *currentSection, bool compress ) {
     struct compress_pipe_state *state = (struct compress_pipe_state *)currentSection->pipeData;
     if( !state ) return -1;
     struct CS_PushPullBuffer *inBuff = CS_pipeNearestInBuffer( currentSection );
+    if( !inBuff ) return -1;
 
     //If we can't push out... continue down the pipe so hopefully someone will.
     //empty our buffer.
@@ -522,3 +523,51 @@ static const struct CS_PipeDefinition _CS_PIPE_GUNZIP = {
     0, _gunzip, _gunzip_close, _gunzip_create
 };
 const struct CS_PipeDefinition *CS_PIPE_GUNZIP = &_CS_PIPE_GUNZIP;
+
+struct limited_pipe_data {
+    bool movedAll;
+    int32_t currentBytesTransferred;
+    int32_t maxBytesTransferred;
+};
+static int32_t _limited( struct CS_Pipe *currentSection ) {
+    struct limited_pipe_data *pipeData = (struct limited_pipe_data *)currentSection->pipeData;
+    struct CS_PushPullBuffer *inBuff = CS_pipeNearestInBuffer( currentSection );
+    if( !inBuff ) return -1;
+    int32_t bytesMoved = 0;
+    if( CS_PP_dataSize(inBuff) > 0 && !pipeData->movedAll ) {
+        int32_t sizeIn = CS_PP_dataSize(inBuff);
+        int32_t roomOut = CS_PP_bufferRemaining(currentSection->buffer);
+        int32_t maxBytes = pipeData->maxBytesTransferred - pipeData->currentBytesTransferred;
+        int32_t toMove = sizeIn;
+        if( roomOut < toMove ) toMove = roomOut;
+        if( maxBytes < toMove ) toMove = maxBytes;
+        bytesMoved = CS_PP_moveBufferExplicit( inBuff, currentSection->buffer, toMove );
+        pipeData->currentBytesTransferred += bytesMoved;
+        pipeData->movedAll = pipeData->currentBytesTransferred >= pipeData->maxBytesTransferred;
+    }
+    //Set ourself empty. We shouldn't go back to the previous bit even after this.
+    if( CS_PP_dataSize(currentSection->buffer) == 0 ) {
+        if( pipeData->movedAll ) currentSection->statusFlags |= CS_PIPE_STATUS_EMPTY;
+    }
+    return bytesMoved;
+}
+static bool _limited_close( struct CS_Pipe *currentSection ) {
+    struct limited_pipe_data *pipeData = (struct limited_pipe_data *)currentSection->pipeData;
+    if( pipeData ) CS_free(pipeData);
+    return pipeData == NULL;
+}
+static bool _limited_create( struct CS_Pipe *currentSection, const void *initialPipeData ) {
+    if( initialPipeData == NULL ) return true;
+    int32_t wantedPipeSize = *(CS_PipeLimitedData*)initialPipeData;
+    if( wantedPipeSize == 0 ) return true;
+    currentSection->pipeData = CS_allocZero(sizeof(struct limited_pipe_data));
+    if( currentSection->pipeData ) {
+        struct limited_pipe_data *pipeData = (struct limited_pipe_data *)currentSection->pipeData;
+        pipeData->maxBytesTransferred = wantedPipeSize;
+    }
+    return currentSection->pipeData == NULL;
+}
+static const struct CS_PipeDefinition _CS_PIPE_LIMITED = {
+    0, _limited, _limited_close, _limited_create
+};
+const struct CS_PipeDefinition *CS_PIPE_LIMITED = &_CS_PIPE_LIMITED;

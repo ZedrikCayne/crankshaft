@@ -136,6 +136,11 @@ extern const struct CS_PipeDefinition *CS_PIPE_GUNZIP;
 //Null pipe. Copies from the in side to its buffer.
 extern const struct CS_PipeDefinition *CS_PIPE_NULL;
 
+//Null pipe with a limited copy. (Will stop reading from the in
+//side after n bytes. Input data is a pointer to an int32_t
+extern const struct CS_PipeDefinition *CS_PIPE_LIMITED;
+typedef int32_t CS_PipeLimitedData;
+
 //Global init and kill for pipe storage
 bool CS_pipeInitPipes( int32_t initialPipes );
 bool CS_pipeDestroyPipes( void );

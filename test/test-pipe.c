@@ -73,12 +73,16 @@ bool test_pipe(void) {
         struct CS_Pipe *source2 = CS_pipeCreate( CS_PIPE_NULL, 0, NULL );
         struct CS_Pipe *source3 = CS_pipeCreate( CS_PIPE_NULL, 0, NULL );
         struct CS_Pipe *source4 = CS_pipeCreate( CS_PIPE_NULL, 0, NULL );
+        struct CS_Pipe *source5 = CS_pipeCreate( CS_PIPE_NULL, 0, NULL );
         struct CS_Pipe *dest1 = CS_pipeCreate( CS_PIPE_NULL, 0, NULL );
         struct CS_Pipe *dest2 = CS_pipeCreate( CS_PIPE_NULL, 0, NULL );
         struct CS_Pipe *dest3 = CS_pipeCreate( CS_PIPE_NULL, 0, NULL );
         struct CS_Pipe *dest4 = CS_pipeCreate( CS_PIPE_NULL, 0, NULL );
+        struct CS_Pipe *dest5 = CS_pipeCreate( CS_PIPE_NULL, 0, NULL );
         struct CS_Pipe *fileOut1 = CS_pipeCreate( CS_PIPE_FILE_OUT, 0, &tempFileOut1 );
         struct CS_Pipe *fileOut2 = CS_pipeCreate( CS_PIPE_FILE_OUT, SMALL_BUFF_SIZE, &tempFileOut2 );
+        int32_t limitedSize = tsizes[i] / 2;
+        struct CS_Pipe *limited = CS_pipeCreate( CS_PIPE_LIMITED, SMALL_BUFF_SIZE, &limitedSize );
         struct CS_Pipe *compress1 = CS_pipeCreate( CS_PIPE_DEFLATE, COMPRESS_BUFF_SIZE, NULL );
         struct CS_Pipe *compress2 = CS_pipeCreate( CS_PIPE_GZIP, COMPRESS_BUFF_SIZE, NULL );
         struct CS_Pipe *inflate1 = CS_pipeCreate( CS_PIPE_INFLATE, COMPRESS_BUFF_SIZE, NULL );
@@ -87,18 +91,22 @@ bool test_pipe(void) {
         struct CS_PushPullBuffer *sourceBits2 = CS_PP_onStaticBuffer( tsizes[i], tbuffs[i] );
         struct CS_PushPullBuffer *sourceBits3 = CS_PP_onStaticBuffer( tsizes[i], tbuffs[i] );
         struct CS_PushPullBuffer *sourceBits4 = CS_PP_onStaticBuffer( tsizes[i], tbuffs[i] );
+        struct CS_PushPullBuffer *sourceBits5 = CS_PP_onStaticBuffer( tsizes[i], tbuffs[i] );
         struct CS_PushPullBuffer *destBits1 = CS_PP_defaultAlloc( BIG_BUFF_SIZE );
         struct CS_PushPullBuffer *destBits2 = CS_PP_defaultAlloc( BIG_BUFF_SIZE );
         struct CS_PushPullBuffer *destBits3 = CS_PP_defaultAlloc( BIG_BUFF_SIZE );
         struct CS_PushPullBuffer *destBits4 = CS_PP_defaultAlloc( BIG_BUFF_SIZE );
+        struct CS_PushPullBuffer *destBits5 = CS_PP_defaultAlloc( BIG_BUFF_SIZE );
         CS_FAIL_ON_NULL( sourceBits1, "Push pull buffer available", "Nope" );
         CS_FAIL_ON_NULL( sourceBits2, "Push pull buffer available", "Nope" );
         CS_FAIL_ON_NULL( sourceBits3, "Push pull buffer available", "Nope" );
         CS_FAIL_ON_NULL( sourceBits4, "Push pull buffer available", "Nope" );
+        CS_FAIL_ON_NULL( sourceBits5, "Push pull buffer available", "Nope" );
         CS_FAIL_ON_NULL( destBits1, "Push pull buffer available", "Nope" );
         CS_FAIL_ON_NULL( destBits2, "Push pull buffer available", "Nope" );
         CS_FAIL_ON_NULL( destBits3, "Push pull buffer available", "Nope" );
         CS_FAIL_ON_NULL( destBits4, "Push pull buffer available", "Nope" );
+        CS_FAIL_ON_NULL( destBits5, "Push pull buffer available", "Nope" );
         if( sourceBits1 ) {
             source1->buffer = sourceBits1;
         } else {
@@ -119,6 +127,11 @@ bool test_pipe(void) {
         } else {
             continue;
         }
+        if( sourceBits5 ) {
+            source5->buffer = sourceBits5;
+        } else {
+            continue;
+        }
         if( destBits1 ) {
             dest1->buffer = destBits1;
         } else {
@@ -136,6 +149,11 @@ bool test_pipe(void) {
         }
         if( destBits4 ) {
             dest4->buffer = destBits4;
+        } else {
+            continue;
+        }
+        if( destBits5 ) {
+            dest5->buffer = destBits5;
         } else {
             continue;
         }
@@ -210,25 +228,43 @@ bool test_pipe(void) {
                 break;
             }
         }
+        currentVal = 0;
+        accumulatedSize = 0;
+        CS_FAIL_ON_TRUE(CS_pipeHook(source5, limited), "Should hook.", "Did not!" );
+        CS_FAIL_ON_TRUE(CS_pipeHook(limited, dest5 ), "Should hook.", "Did not!" );
+        while( true ) {
+            currentVal = CS_pipeProcess( dest5 );
+            if( currentVal > 0 ) accumulatedSize += currentVal;
+            if( CS_pipeDoneOrError( dest5 ) ) {
+                CS_FAIL_ON_FALSE( accumulatedSize == limitedSize, "Accumulated size should be half the input size.", "Got %d instead of %d", accumulatedSize, limitedSize );
+                break;
+            }
+        }
         
         CS_FAIL_ON_FALSE( memcmp( tbuffs[i], CS_PP_startOfData( destBits1 ), tsizes[i] ) == 0, "Bytes read in should match original buffer.", "Did not!" );
         CS_FAIL_ON_FALSE( memcmp( tbuffs[i], CS_PP_startOfData( destBits2 ), tsizes[i] ) == 0, "Bytes read in should match original buffer.", "Did not!" );
         CS_FAIL_ON_FALSE( memcmp( tbuffs[i], CS_PP_startOfData( destBits3 ), tsizes[i] ) == 0, "Bytes read in should match original buffer.", "Did not!" );
         CS_FAIL_ON_FALSE( memcmp( tbuffs[i], CS_PP_startOfData( destBits4 ), tsizes[i] ) == 0, "Bytes read in should match original buffer.", "Did not!" );
+        CS_FAIL_ON_FALSE( memcmp( tbuffs[i], CS_PP_startOfData( destBits5 ), limitedSize ) == 0, "Bytes read in should match original buffer.", "Did not!" );
+        CS_FAIL_ON_FALSE( CS_PP_dataSize( destBits5 ) == limitedSize, "Size of the output buffer should match limited size.", "%d did not match %d", CS_PP_dataSize(destBits5), limitedSize );
         CS_pipeClose( dest1 );
         CS_pipeClose( dest2 );
         CS_pipeClose( dest3 );
         CS_pipeClose( dest4 );
+        CS_pipeClose( dest5 );
         CS_pipeFree( dest1 );
         CS_pipeFree( dest2 );
         CS_pipeFree( dest3 );
         CS_pipeFree( dest4 );
+        CS_pipeFree( dest5 );
         CS_PP_defaultFree( destBits1 );
         CS_PP_defaultFree( destBits2 );
         CS_PP_defaultFree( destBits3 );
         CS_PP_defaultFree( destBits4 );
+        CS_PP_defaultFree( destBits5 );
         CS_PP_defaultFree(sourceBits3);
         CS_PP_defaultFree(sourceBits4);
+        CS_PP_defaultFree(sourceBits5);
     }
 
     for( i = 0; i < NUM_BUFFS; ++i ) {
