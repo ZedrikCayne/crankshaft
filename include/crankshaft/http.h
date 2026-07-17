@@ -19,8 +19,12 @@
 extern "C" {
 #endif
 
+//Chunk encode/decode pipelines
 extern const struct CS_PipeDefinition *CS_PIPE_CHUNK_ENCODE;
 extern const struct CS_PipeDefinition *CS_PIPE_CHUNK_DECODE;
+//Chunk copy pipeline. Copies the whole thing but stops
+//when it is done.
+extern const struct CS_PipeDefinition *CS_PIPE_CHUNK_COPY;
 
 enum CS_HttpMethods {
     CS_HTTP_METHOD_ANY = -1,

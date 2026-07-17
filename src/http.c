@@ -1210,47 +1210,52 @@ struct encode_chunk_data {
     int32_t currentChunkOffset;
     char currentChunkChars[MAX_CHUNK_SIZE_LENGTH];
 };
-static int32_t _decode_chunk( struct CS_Pipe *currentSection ) {
+static int32_t _decode_chunk_copyall(struct CS_Pipe *currentSection, bool copyAll ) {
     struct decode_chunk_data *chunkData = (struct decode_chunk_data *)currentSection->pipeData;
     struct CS_PushPullBuffer *inBuff = CS_pipeNearestInBuffer( currentSection );
     int32_t currentMoved = 0;
-    while( CS_PP_dataSize( inBuff ) > 0 ) {
+    while( CS_PP_dataSize( inBuff ) > 0 && (copyAll?CS_PP_bufferRemaining(currentSection->buffer):1) > 0 ) {
         char *start = CS_PP_startOfData(inBuff);
         char *current = start;
         char *end = CS_PP_endOfData(inBuff);
+        int32_t leftInDestination = copyAll?CS_PP_bufferRemaining(currentSection->buffer):1;
         switch( chunkData->chunkState ) {
             case CHUNK_SIZE_HEX:
             {
                 int accumulator = chunkData->accumulator;
-                while( CS_PP_dataSize(inBuff) > 0 ) {
+                while( current < end && leftInDestination > 0 ) {
+                    if( *current == CR ) {
+                        chunkData->chunkState = CHUNK_POST_SIZE_CR;
+                        ++current;
+                        break;
+                    }
                     int currentNibble = hexDigitToInt(current);
                     if( currentNibble < 0 ) return -1;
-                    CS_PP_write( inBuff, 1 );
                     accumulator <<= 4;
                     accumulator += currentNibble;
                     ++current;
-                    if( *current == CR ) {
-                        break;
-                    }
+                    if( copyAll ) --leftInDestination;
                 }
                 chunkData->accumulator = accumulator;
-                if( current < end ) {
-                    if( *current == CR ) chunkData->chunkState = CHUNK_POST_SIZE_CR;
-                    else return -1;
-                    ++current;
-                    CS_PP_write( inBuff, 1 );
+                //Copy from in to out
+                if( copyAll ) {
+                    currentMoved += CS_PP_moveBufferExplicit(inBuff,currentSection->buffer,current - start);
                 } else {
-                    break;
+                    CS_PP_write(inBuff, current - start);
                 }
             }
             break;
             case CHUNK_POST_SIZE_CR:
             {
-                if( CS_PP_dataSize(inBuff) > 0 ) {
+                if( current < end && leftInDestination > 0 ) {
                     if( *current == LF ) chunkData->chunkState = CHUNK_DATA;
                     else return -1;
                     //The contents of the buffer are now real data.
-                    CS_PP_write( inBuff, 1 );
+                    if( copyAll ) {
+                        currentMoved += CS_PP_moveBufferExplicit(inBuff,currentSection->buffer,1);
+                    } else {
+                        CS_PP_write( inBuff, 1 );
+                    }
                     //If we actually accumulated zero, declare us empty and return
                     if( chunkData->accumulator == 0 ) {
                         currentSection->statusFlags |= CS_PIPE_STATUS_EMPTY;
@@ -1267,7 +1272,11 @@ static int32_t _decode_chunk( struct CS_Pipe *currentSection ) {
                 if( chunkRemaining == 0 ) {
                     if( *current == CR ) {
                         chunkData->chunkState = CHUNK_POST_DATA_CR;
-                        CS_PP_write(inBuff,1);
+                        if( copyAll ) {
+                            currentMoved += CS_PP_moveBufferExplicit(inBuff,currentSection->buffer,1);
+                        } else {
+                            CS_PP_write( inBuff, 1 );
+                        }
                     } else {
                         return -1;
                     }
@@ -1282,9 +1291,13 @@ static int32_t _decode_chunk( struct CS_Pipe *currentSection ) {
             break;
             case CHUNK_POST_DATA_CR:
             {
-                if( CS_PP_dataSize( inBuff ) > 0 ) {
+                if( start < end && leftInDestination > 0 ) {
                     if( *current == LF ) {
-                        CS_PP_write(inBuff,1);
+                        if( copyAll ) {
+                            currentMoved += CS_PP_moveBufferExplicit(inBuff,currentSection->buffer,1);
+                        } else {
+                            CS_PP_write( inBuff, 1 );
+                        }
                         chunkData->accumulator = 0;
                         chunkData->currentChunkOffset = 0;
                         chunkData->chunkState = CHUNK_SIZE_HEX;
@@ -1297,6 +1310,9 @@ static int32_t _decode_chunk( struct CS_Pipe *currentSection ) {
         }
     }
     return currentMoved;
+}
+static int32_t _decode_chunk( struct CS_Pipe *currentSection ) {
+    return _decode_chunk_copyall(currentSection, false);
 }
 static bool _close_decode_chunk( struct CS_Pipe *currentSection ) {
     struct decode_chunk_data *chunkData = (struct decode_chunk_data *)currentSection->pipeData;
@@ -1404,23 +1420,12 @@ static bool _create_encode_chunk( struct CS_Pipe *currentSection, const void *in
 }
 
 static int32_t _copy_chunk( struct CS_Pipe *currentSection ) {
-    struct decode_chunk_data *chunkData = (struct decode_chunk_data *)currentSection->pipeData;
-    return chunkData == NULL;
-}
-static bool _close_copy_chunk( struct CS_Pipe *currentSection ) {
-    struct decode_chunk_data *chunkData = (struct decode_chunk_data *)currentSection->pipeData;
-    if( chunkData ) CS_free( chunkData );
-    return false;
-}
-static bool _create_copy_chunk( struct CS_Pipe *currentSection, const void *initial ) {
-    struct decode_chunk_data *chunkData = CS_allocZero(sizeof(struct decode_chunk_data));
-    currentSection->pipeData = chunkData;
-    return currentSection->pipeData == NULL;
+    return _decode_chunk_copyall(currentSection,true);
 }
 
 const static struct CS_PipeDefinition _CS_PIPE_CHUNK_ENCODE = {0,_encode_chunk,_close_encode_chunk,_create_encode_chunk};
 const struct CS_PipeDefinition *CS_PIPE_CHUNK_ENCODE = &_CS_PIPE_CHUNK_ENCODE;
 const static struct CS_PipeDefinition _CS_PIPE_CHUNK_DECODE = {0,_decode_chunk,_close_decode_chunk,_create_decode_chunk};
 const struct CS_PipeDefinition *CS_PIPE_CHUNK_DECODE = &_CS_PIPE_CHUNK_DECODE;
-const static struct CS_PipeDefinition _CS_PIPE_CHUNK_COPY = {0,_copy_chunk,_close_copy_chunk,_create_copy_chunk};
+const static struct CS_PipeDefinition _CS_PIPE_CHUNK_COPY = {0,_copy_chunk,_close_decode_chunk,_create_decode_chunk};
 const struct CS_PipeDefinition *CS_PIPE_CHUNK_COPY = &_CS_PIPE_CHUNK_COPY;

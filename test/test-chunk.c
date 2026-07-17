@@ -39,13 +39,13 @@ bool test_chunk(void) {
     if( input ) {
         input->buffer = pp;
         struct CS_Pipe *decode = CS_pipeCreate( CS_PIPE_CHUNK_DECODE, 4096, NULL );
-        CS_FAIL_ON_NULL( decode, "Null output pipe.", "Faile" );
+        CS_FAIL_ON_NULL( decode, "Null output pipe.", "Fail." );
         if( decode ) {
             CS_FAIL_ON_TRUE(CS_pipeHook(input, decode), "Hook input to decode", "Fail");
             struct CS_Pipe *output = CS_pipeCreate( CS_PIPE_NULL, 4096, NULL );
-            CS_FAIL_ON_NULL( output, "Null output pipe.", "Faile" );
+            CS_FAIL_ON_NULL( output, "Null output pipe.", "Fail." );
             if( output ) {
-                CS_FAIL_ON_TRUE(CS_pipeHook(decode, output), "Hook decode to output", "Fail");
+                CS_FAIL_ON_TRUE(CS_pipeHook(decode, output), "Hook decode to output", "Fail.");
                 while( !CS_pipeDoneOrError( output ) ) CS_pipeProcess(output);
                 CS_FAIL_ON_FALSE( memcmp(decoded0, CS_PP_startOfData(output->buffer), strlen(decoded0) ) == 0, "Check encoded vs decodes.", "Failed." );
             }
@@ -96,9 +96,11 @@ bool test_chunk(void) {
         out->buffer = &ppOut;
         int32_t wantedBuffSize = 440;
         struct CS_Pipe *encode = CS_pipeCreate(CS_PIPE_CHUNK_ENCODE, SMALL_BUFF_SIZE, &wantedBuffSize );
+        struct CS_Pipe *copy = CS_pipeCreate(CS_PIPE_CHUNK_COPY, SMALL_BUFF_SIZE, NULL );
         struct CS_Pipe *decode = CS_pipeCreate(CS_PIPE_CHUNK_DECODE, SMALL_BUFF_SIZE, NULL );
         CS_pipeHook(in, encode);
-        CS_pipeHook(encode, decode);
+        CS_pipeHook(encode, copy );
+        CS_pipeHook(copy, decode);
         CS_pipeHook(decode, out);
         while( !CS_pipeDoneOrError( decode ) ) CS_pipeProcess(decode);
         CS_FAIL_ON_FALSE( CS_PP_dataSize(&ppOut) == tsizes[i], "Check sizes.", "%d:%d", CS_PP_dataSize(&ppOut), tsizes[i] );
