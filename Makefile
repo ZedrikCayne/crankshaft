@@ -70,7 +70,7 @@ debug: $(BINOUT)-test
 
 #test: CFLAGS:=-DCRANKSHAFT_NO_LOGS $(CFLAGS)
 #test: CFLAGS:=-DCS_ALLOC_USE_MALLOC $(CFLAGS)
-#test: CFLAGS:=-DCS_ALLOC_TRACKING $(CFLAGS)
+#test: CFLAGS:=-Wno-use-after-free -DCS_ALLOC_TRACKING $(CFLAGS)
 test: CFLAGS:=-DCS_TEST_SKIP_TESTTEST $(CFLAGS)
 test: CFLAGS:=-DCS_AUTOTEST_ENABLED $(CFLAGS)
 test: sqlite test/autogen-test.cpp $(OBJECTS_DIR) $(BINOUT)-test

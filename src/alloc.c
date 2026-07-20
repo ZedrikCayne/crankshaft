@@ -9,6 +9,7 @@
 #include <crankshaft/slaballoc.h>
 #include <crankshaft/hashtable.h>
 #include <crankshaft/logger.h>
+#include <crankshaft/tempbuff.h>
 #include <stdint.h>
 
 //Hash table functions for storing the extra data for tracking
@@ -19,7 +20,7 @@ struct CS_AllocInfo {
 };
 
 static pthread_mutex_t trackingSystemMutex = PTHREAD_MUTEX_INITIALIZER;
-static CS_SlabAllocator *trackingSystemSlabAllocator = NULL;
+static struct CS_SlabAllocator *trackingSystemSlabAllocator = NULL;
 static struct CS_HashTable *trackingSystemHashTable = NULL;
 static uint32_t trackingFlags = 0;
 
@@ -47,6 +48,9 @@ static int32_t entryInit(struct CS_HashTable *table, struct CS_HashTableEntry *e
 static int32_t entryRemove(struct CS_HashTable *table, struct CS_HashTableEntry *entry) {
     return 0;
 }
+static const char *keyToTempString(struct CS_HashTable *table, const struct CS_HashTableEntry *entry) {
+    return CS_tempBuffSnprintf( 32, "%p", entry->fullKey );
+}
 static int32_t cleanup(struct CS_HashTable *table) {
     return 0;
 }
@@ -59,7 +63,7 @@ int32_t CS_allocSystemTracker(int32_t concurrentTrackingSlots, uint32_t flags) {
     if( trackingSystemSlabAllocator ) return 1;
     trackingFlags = flags;
 
-    trackingSystemHashTable = CS_hashtableCreateCustom( concurrentTrackingSlots, CS_HASHTABLE_FLAG_VERY_PEDANTIC|CS_HASHTABLE_FLAG_MALLOC, NULL, keyHash, keyCompare, entryInit, entryRemove, cleanup );
+    trackingSystemHashTable = CS_hashtableCreateCustom( concurrentTrackingSlots, CS_HASHTABLE_FLAG_VERY_PEDANTIC|CS_HASHTABLE_FLAG_MALLOC, NULL, keyHash, keyCompare, entryInit, entryRemove, keyToTempString, cleanup );
 
     if( trackingSystemHashTable == NULL ) return 1;
     memset( TOP, 0, sizeof(TOP) );
@@ -132,18 +136,20 @@ static bool track(const void *pointer, int32_t size, const char *file, int32_t l
 static struct CS_AllocInfo *untrack(const void *pointer) {
     
     struct CS_AllocInfo *returnValue = (struct CS_AllocInfo *)CS_hashtableRemove( trackingSystemHashTable, pointer );
+    if( returnValue == CS_HASHTABLE_ERROR )
+        returnValue = NULL;
     if( returnValue ) {
         currentlyAllocated -= returnValue->size;
     }
     return returnValue;
 }
 
-static void returnInfo(struct CS_AllocInfo *old,const void *pointer) {
+static void returnInfo(struct CS_AllocInfo *old,const void *pointer,const char *file, int32_t line) {
     if( !old ) {
-        CS_LOG_WARN_IF( trackingFlags&CS_ALLOC_FLAG_LOG_ERRORS, "We were not tracking %p", pointer);
+        CS_LOG_WARN_IF( trackingFlags&CS_ALLOC_FLAG_LOG_ERRORS, "We were not tracking %p free'd at %s %d", pointer, file, line );
     } else {
         if( CS_slabReturn( trackingSystemSlabAllocator, old ) ) {
-            CS_LOG_WARN_IF( trackingFlags&CS_ALLOC_FLAG_LOG_ERRORS, "Somehow a tracking item was not allocated in our slab allocator..this is bad.");
+            CS_LOG_WARN_IF( trackingFlags&CS_ALLOC_FLAG_LOG_ERRORS, "Somehow a tracking item was not allocated in our slab allocator..this is bad. %s %d", file, line);
         }
     }
 }
@@ -166,7 +172,7 @@ static void trackFree(const void *freeMe, const char *file, int32_t line) {
             CS_LOG_WARN("Memory free'd from not the same file that alloc'd it. %s %d vs %s %d.", old->file, old->line, file, line);
         }
     }
-    returnInfo( old, freeMe );
+    returnInfo( old, freeMe, file, line );
     free((void*)freeMe);
     RELEASE_MUTEX();
 }
@@ -181,7 +187,7 @@ static void *trackRealloc(const void *reallocMe, uint32_t size, const char *file
                 CS_LOG_WARN("Memory realloc'd from not the same file that alloc'd it. %s %d vs %s %d.", old->file, old->line, file, line);
             }
         }
-        returnInfo( old, reallocMe );
+        returnInfo( old, reallocMe, file, line );
     }
     if( returnValue ) {
         track(returnValue, size, file, line);
