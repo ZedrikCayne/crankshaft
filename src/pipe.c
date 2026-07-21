@@ -31,6 +31,10 @@ struct CS_Pipe *CS_pipeCreate( const struct CS_PipeDefinition *pipeType,
                                int32_t bufferSize,
                                void *pipeData ) {
     if( !globalPipes ) return NULL;
+    if( pipeType->pipeFlags & CS_PIPE_FLAG_NO_BUFFER && bufferSize ) {
+        CS_LOG_ERROR("Trying to create a pipe that will initialize its own buffer with a requested buffer size")
+        return NULL;
+    }
     struct CS_Pipe *returnValue = CS_slabTakeZero(globalPipes);
     if( returnValue ) {
         returnValue->flags = pipeType->pipeFlags;

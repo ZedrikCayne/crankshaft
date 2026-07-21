@@ -55,6 +55,9 @@
  * Pipe has 'OWN_BUFFER': The pipe 'owns' the buffer and should free
  *                        it via the default means when done.
  *
+ * Pipe has 'NO_BUFFER':  When creating the pipe, you may not specify
+ *                        a buffer size. The creator will set it.
+ *
  * Functions which operate on 'anyStage' will return a cumulative
  * value. (Flags or'd together etc)
  * Functions which operate on 'thisStage' operate on the indicated
@@ -76,6 +79,7 @@ extern "C" {
 #define CS_PIPE_FLAG_NOBLOCK        0x00000002
 #define CS_PIPE_FLAG_OWN_BUFFER     0x00000004
 #define CS_PIPE_FLAG_OWN_DATA       0x00000008
+#define CS_PIPE_FLAG_NO_BUFFER      0x00000010
 
 #define CS_PIPE_BAD_RECONNECT       ((struct CS_Pipe *)-1)
 
