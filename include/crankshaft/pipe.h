@@ -58,6 +58,9 @@
  * Pipe has 'NO_BUFFER':  When creating the pipe, you may not specify
  *                        a buffer size. The creator will set it.
  *
+ * Pipe has 'REQUIRE_BUFFER': When creating the pipe, you need to specify
+ *                        a buffer size, or give it an explicit buffer.
+ *
  * Functions which operate on 'anyStage' will return a cumulative
  * value. (Flags or'd together etc)
  * Functions which operate on 'thisStage' operate on the indicated
@@ -80,6 +83,8 @@ extern "C" {
 #define CS_PIPE_FLAG_OWN_BUFFER     0x00000004
 #define CS_PIPE_FLAG_OWN_DATA       0x00000008
 #define CS_PIPE_FLAG_NO_BUFFER      0x00000010
+#define CS_PIPE_FLAG_REQUIRE_BUFFER 0x00000020
+#define CS_PIPE_FLAG_REQUIRE_DATA   0x00000100
 
 #define CS_PIPE_BAD_RECONNECT       ((struct CS_Pipe *)-1)
 
@@ -152,6 +157,9 @@ bool CS_pipeDestroyPipes( void );
 struct CS_Pipe *CS_pipeCreate( const struct CS_PipeDefinition *pipeType,
                                int32_t bufferSize,
                                void *pipeData );
+struct CS_Pipe *CS_pipeCreateWithBuffer( const struct CS_PipeDefinition *pipeType,
+                                         struct CS_PushPullBuffer *buffer,
+                                         void *pipeData );
 int32_t CS_pipeProcess( struct CS_Pipe *anyStage );
 int32_t CS_pipeStatus( struct CS_Pipe *anyStage );
 int32_t CS_pipeClose( struct CS_Pipe *anyStage );

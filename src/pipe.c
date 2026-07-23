@@ -26,7 +26,38 @@ bool CS_pipeDestroyPipes( void ) {
     return false;
 }
 
+struct CS_Pipe *privateCreate( const struct CS_PipeDefinition *pipeType, int32_t pipeFlags, struct CS_PushPullBuffer *buffer, void *pipeData ) {
+    struct CS_Pipe *returnValue = CS_slabTakeZero(globalPipes);
+    if( returnValue ) {
+        returnValue->flags = pipeType->pipeFlags | pipeFlags;
+        returnValue->pipeProcess = pipeType->pipeProcess;
+        returnValue->pipeClose = pipeType->pipeClose;
+        returnValue->buffer = buffer;
+        if( pipeType->pipeCreate && pipeType->pipeCreate( returnValue, pipeData ) ) {
+            CS_slabReturn(globalPipes,returnValue);
+            return NULL;
+        }
+    }
+    return returnValue;
+}
 
+struct CS_Pipe *CS_pipeCreateWithBuffer( const struct CS_PipeDefinition *pipeType,
+                                         struct CS_PushPullBuffer *buffer,
+                                         void *pipeData ) {
+    if( pipeType->pipeFlags & CS_PIPE_FLAG_NO_BUFFER && buffer ) {
+        CS_LOG_ERROR("Trying to create a pipe that will initialize its own buffer with a buffer")
+        return NULL;
+    }
+    if( pipeType->pipeFlags & CS_PIPE_FLAG_REQUIRE_BUFFER && buffer == NULL ) {
+        CS_LOG_ERROR("Trying to create a pipe that requires a buffer while specifying a NULL buffer.");
+        return NULL;
+    }
+    if( pipeType->pipeFlags & CS_PIPE_FLAG_REQUIRE_DATA && pipeData == NULL ) {
+        CS_LOG_ERROR("Trying to create a pipe that requires initial data with a NULL pipeData");
+        return NULL;
+    }
+    return privateCreate(pipeType, 0, buffer, pipeData);
+}
 struct CS_Pipe *CS_pipeCreate( const struct CS_PipeDefinition *pipeType,
                                int32_t bufferSize,
                                void *pipeData ) {
@@ -35,28 +66,26 @@ struct CS_Pipe *CS_pipeCreate( const struct CS_PipeDefinition *pipeType,
         CS_LOG_ERROR("Trying to create a pipe that will initialize its own buffer with a requested buffer size")
         return NULL;
     }
-    struct CS_Pipe *returnValue = CS_slabTakeZero(globalPipes);
-    if( returnValue ) {
-        returnValue->flags = pipeType->pipeFlags;
-        returnValue->pipeProcess = pipeType->pipeProcess;
-        returnValue->pipeClose = pipeType->pipeClose;
-        if( bufferSize > 0 ) {
-            returnValue->buffer = CS_PP_defaultAlloc(bufferSize);
-            if( returnValue->buffer == NULL ) {
-                goto ERR_PIPE;
-            }
-            returnValue->flags |= CS_PIPE_FLAG_OWN_BUFFER;
-        }
-        if( pipeType->pipeCreate && pipeType->pipeCreate( returnValue, pipeData ) ) {
-            goto ERR_INIT;
-        }
+    if( pipeType->pipeFlags & CS_PIPE_FLAG_REQUIRE_BUFFER && bufferSize == 0 ) {
+        CS_LOG_ERROR("Trying to create a pipe that requires a buffer while specifying a zero size.");
+        return NULL;
     }
+    if( pipeType->pipeFlags & CS_PIPE_FLAG_REQUIRE_DATA && pipeData == NULL ) {
+        CS_LOG_ERROR("Trying to create a pipe that requires initial data with a NULL pipeData");
+        return NULL;
+    }
+
+    int32_t extraFlags = 0;
+    struct CS_PushPullBuffer *buffer = NULL;
+    if( bufferSize > 0 ) {
+        buffer = CS_PP_defaultAlloc(bufferSize);
+        if( buffer == NULL ) return NULL;
+        extraFlags = CS_PIPE_FLAG_OWN_BUFFER;
+    }
+
+    struct CS_Pipe *returnValue = privateCreate( pipeType, extraFlags, buffer, pipeData );
+    if( returnValue == NULL && buffer ) CS_PP_defaultFree(buffer);
     return returnValue;
-ERR_INIT:
-    if( returnValue->buffer && (returnValue->flags&CS_PIPE_FLAG_OWN_BUFFER)) CS_PP_defaultFree(returnValue->buffer);
-ERR_PIPE:
-    if( returnValue ) CS_slabReturn( globalPipes, returnValue );
-    return NULL;
 }
 
 struct CS_Pipe *privateFront( struct CS_Pipe *anyStage ) {
@@ -224,6 +253,8 @@ bool CS_pipeDoneOrError( struct CS_Pipe *anyStage ) {
     while( currentPipe->in ) {
         currentPipe = currentPipe->in;
         if( currentPipe->statusFlags & CS_PIPE_STATUS_ERROR ) return true;
+        //Early out here, we've hit an 'empty' section of pipe. No need to go further
+        //back.
         if( currentPipe->statusFlags & CS_PIPE_STATUS_EMPTY ) return false;
     }
     return false;
@@ -280,11 +311,11 @@ static bool _file_close( struct CS_Pipe *currentSection ) {
 }
 
 static const struct CS_PipeDefinition _CS_PIPE_FILE_IN = {
-    0,_file_in,_file_close,_file_create
+    CS_PIPE_FLAG_REQUIRE_BUFFER|CS_PIPE_FLAG_REQUIRE_DATA,_file_in,_file_close,_file_create
 };
 const struct CS_PipeDefinition *CS_PIPE_FILE_IN = &_CS_PIPE_FILE_IN;
 static const struct CS_PipeDefinition _CS_PIPE_FILE_OUT = {
-    0,_file_out,_file_close,_file_create
+    CS_PIPE_FLAG_REQUIRE_DATA,_file_out,_file_close,_file_create
 };
 const struct CS_PipeDefinition *CS_PIPE_FILE_OUT = &_CS_PIPE_FILE_OUT;
 
@@ -312,11 +343,11 @@ static bool _socket_close( struct CS_Pipe *currentSection ) {
 }
 
 static const struct CS_PipeDefinition _CS_PIPE_SOCKET_IN = {
-    0, _socket_in, _socket_close, _socket_create
+    CS_PIPE_FLAG_REQUIRE_BUFFER|CS_PIPE_FLAG_REQUIRE_DATA, _socket_in, _socket_close, _socket_create
 };
 const struct CS_PipeDefinition *CS_PIPE_SOCKET_IN = &_CS_PIPE_SOCKET_IN;
 static const struct CS_PipeDefinition _CS_PIPE_SOCKET_OUT = {
-    0, _socket_out, _socket_close, _socket_create
+    CS_PIPE_FLAG_REQUIRE_DATA, _socket_out, _socket_close, _socket_create
 };
 const struct CS_PipeDefinition *CS_PIPE_SOCKET_OUT = &_CS_PIPE_SOCKET_OUT;
 
@@ -344,11 +375,11 @@ static bool _ssl_close( struct CS_Pipe *currentSection ) {
 }
 
 static const struct CS_PipeDefinition _CS_PIPE_SSL_IN = {
-    0, _ssl_in, _ssl_close, _ssl_create
+    CS_PIPE_FLAG_REQUIRE_BUFFER|CS_PIPE_FLAG_REQUIRE_DATA, _ssl_in, _ssl_close, _ssl_create
 };
 const struct CS_PipeDefinition *CS_PIPE_SSL_IN = &_CS_PIPE_SSL_IN;
 static const struct CS_PipeDefinition _CS_PIPE_SSL_OUT = {
-    0, _ssl_out, _ssl_close, _ssl_create
+    CS_PIPE_FLAG_REQUIRE_DATA, _ssl_out, _ssl_close, _ssl_create
 };
 const struct CS_PipeDefinition *CS_PIPE_SSL_OUT = &_CS_PIPE_SSL_OUT;
 
@@ -501,12 +532,12 @@ static bool _gunzip_close( struct CS_Pipe *currentSection ) {
 }
 
 static const struct CS_PipeDefinition _CS_PIPE_INFLATE = {
-    0, _inflate, _inflate_close, _inflate_create
+    CS_PIPE_FLAG_REQUIRE_BUFFER, _inflate, _inflate_close, _inflate_create
 };
 const struct CS_PipeDefinition *CS_PIPE_INFLATE = &_CS_PIPE_INFLATE;
 
 static const struct CS_PipeDefinition _CS_PIPE_DEFLATE = {
-    0, _deflate, _compress_close, _compress_create
+    CS_PIPE_FLAG_REQUIRE_BUFFER, _deflate, _compress_close, _compress_create
 };
 
 static int32_t _gzip( struct CS_Pipe *currentSection ) {
@@ -515,7 +546,7 @@ static int32_t _gzip( struct CS_Pipe *currentSection ) {
 
 const struct CS_PipeDefinition *CS_PIPE_DEFLATE = &_CS_PIPE_DEFLATE;
 static const struct CS_PipeDefinition _CS_PIPE_GZIP = {
-    0, _gzip, _gzip_close, _gzip_create
+    CS_PIPE_FLAG_REQUIRE_BUFFER, _gzip, _gzip_close, _gzip_create
 };
 
 static int32_t _gunzip( struct CS_Pipe *currentSection ) {
@@ -524,7 +555,7 @@ static int32_t _gunzip( struct CS_Pipe *currentSection ) {
 
 const struct CS_PipeDefinition *CS_PIPE_GZIP = &_CS_PIPE_GZIP;
 static const struct CS_PipeDefinition _CS_PIPE_GUNZIP = {
-    0, _gunzip, _gunzip_close, _gunzip_create
+    CS_PIPE_FLAG_REQUIRE_BUFFER, _gunzip, _gunzip_close, _gunzip_create
 };
 const struct CS_PipeDefinition *CS_PIPE_GUNZIP = &_CS_PIPE_GUNZIP;
 
@@ -561,7 +592,6 @@ static bool _limited_close( struct CS_Pipe *currentSection ) {
     return pipeData == NULL;
 }
 static bool _limited_create( struct CS_Pipe *currentSection, const void *initialPipeData ) {
-    if( initialPipeData == NULL ) return true;
     int32_t wantedPipeSize = *(CS_PipeLimitedData*)initialPipeData;
     if( wantedPipeSize == 0 ) return true;
     currentSection->pipeData = CS_allocZero(sizeof(struct limited_pipe_data));
@@ -572,6 +602,6 @@ static bool _limited_create( struct CS_Pipe *currentSection, const void *initial
     return currentSection->pipeData == NULL;
 }
 static const struct CS_PipeDefinition _CS_PIPE_LIMITED = {
-    0, _limited, _limited_close, _limited_create
+    CS_PIPE_FLAG_REQUIRE_BUFFER|CS_PIPE_FLAG_REQUIRE_DATA, _limited, _limited_close, _limited_create
 };
 const struct CS_PipeDefinition *CS_PIPE_LIMITED = &_CS_PIPE_LIMITED;

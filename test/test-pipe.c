@@ -38,6 +38,10 @@ bool test_pipe(void) {
     //Tests go here:
     char **tbuffs = CS_allocZero( NUM_BUFFS * sizeof(char *) );
     int32_t *tsizes = CS_allocZero( NUM_BUFFS * sizeof(int32_t) );
+    
+    struct CS_PipeDefinition def = {0};
+    struct CS_PipeDefinition defNoBuff = {CS_PIPE_FLAG_NO_BUFFER,NULL,NULL,NULL};
+    struct CS_PipeDefinition defBuff = {CS_PIPE_FLAG_REQUIRE_BUFFER,NULL,NULL,NULL};
 
     CS_pipeInitPipes( 32 );
 
@@ -48,6 +52,52 @@ bool test_pipe(void) {
         if( tbuffs ) CS_free( tbuffs );
         return true;
     }
+
+    struct CS_Pipe *testPipe = NULL;
+    struct CS_PushPullBuffer *testBuffer = CS_PP_defaultAlloc( 128 );
+
+    CS_FAIL_ON_NULL( testBuffer, "Create a test buffer.", "Failed." );
+
+    testPipe = CS_pipeCreateWithBuffer( &def, testBuffer, NULL );
+    CS_FAIL_ON_NULL( testPipe, "Create a null pipe with a test buffer.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+    testPipe = CS_pipeCreateWithBuffer( &def, NULL, NULL );
+    CS_FAIL_ON_NULL( testPipe, "Create a null pipe with a NULL test buffer.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+    testPipe = CS_pipeCreate( &def, 0, NULL );
+    CS_FAIL_ON_NULL( testPipe, "Create a null pipe with a zero for a buffer size.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+    testPipe = CS_pipeCreate( &def, 34, NULL );
+    CS_FAIL_ON_NULL( testPipe, "Create a null pipe with a non-zero for a buffer size.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+
+    testPipe = CS_pipeCreateWithBuffer( &defNoBuff, testBuffer, NULL );
+    CS_FAIL_ON_NOT_NULL( testPipe, "Create a no buffer pipe with a test buffer.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+    testPipe = CS_pipeCreateWithBuffer( &defNoBuff, NULL, NULL );
+    CS_FAIL_ON_NULL( testPipe, "Create a noBuffer pipe with a NULL test buffer.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+    testPipe = CS_pipeCreate( &defNoBuff, 0, NULL );
+    CS_FAIL_ON_NULL( testPipe, "Create a noBuffer pipe with a zero for a buffer size.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+    testPipe = CS_pipeCreate( &defNoBuff, 34, NULL );
+    CS_FAIL_ON_NOT_NULL( testPipe, "Create a noBuffer pipe with a non-zero for a buffer size.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+
+    testPipe = CS_pipeCreateWithBuffer( &defBuff, testBuffer, NULL );
+    CS_FAIL_ON_NULL( testPipe, "Create a buffer pipe with a test buffer.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+    testPipe = CS_pipeCreateWithBuffer( &defBuff, NULL, NULL );
+    CS_FAIL_ON_NOT_NULL( testPipe, "Create a buffer pipe with a NULL test buffer.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+    testPipe = CS_pipeCreate( &defBuff, 0, NULL );
+    CS_FAIL_ON_NOT_NULL( testPipe, "Create a buffer pipe with a zero for a buffer size.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+    testPipe = CS_pipeCreate( &defBuff, 34, NULL );
+    CS_FAIL_ON_NULL( testPipe, "Create a buffer pipe with a non-zero for a buffer size.", "Failed." );
+    if( testPipe ) CS_pipeFree( testPipe );
+
+    if( testBuffer ) CS_PP_defaultFree( testBuffer );
 
     int32_t i;
 
