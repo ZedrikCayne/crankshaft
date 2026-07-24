@@ -246,6 +246,45 @@ struct CS_Pipe *CS_pipeReconnect( struct CS_Pipe *in, struct CS_Pipe *out) {
     return returnValue;
 }
 
+bool CS_pipeBreak( struct CS_Pipe *section ) {
+    if( !section ) return true;
+    if( section->in ) {
+        section->in->next = NULL;
+        section->in = NULL;
+    }
+    if( section->next ) {
+        section->next->in = NULL;
+        section->next = NULL;
+    }
+    return false;
+}
+
+bool CS_pipeBreakIn( struct CS_Pipe *section ) {
+    if( !section ) return true;
+    if( !section->in ) return true;
+    section->in->next = NULL;
+    section->in = NULL;
+    return false;
+}
+
+bool CS_pipeBreakOut( struct CS_Pipe *section ) {
+    if( !section ) return true;
+    if( !section->next ) return true;
+    section->next->in = NULL;
+    section->next = NULL;
+    return false;
+}
+
+bool CS_pipeDisconnect( struct CS_Pipe *in, struct CS_Pipe *out ) {
+    if( !in ) return true;
+    if( !out ) return true;
+    if( in->next != out ) return true;
+    if( out->in != in ) return true;
+    in->next = NULL;
+    out->in = NULL;
+    return false;
+}
+
 bool CS_pipeDoneOrError( struct CS_Pipe *anyStage ) {
     struct CS_Pipe *currentPipe = anyStage;
     while( currentPipe->next ) currentPipe = currentPipe->next;

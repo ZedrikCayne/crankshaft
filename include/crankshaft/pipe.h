@@ -166,7 +166,11 @@ int32_t CS_pipeClose( struct CS_Pipe *anyStage );
 int32_t CS_pipeFree( struct CS_Pipe *anyStage );
 bool CS_pipeEmpty( struct CS_Pipe *thisStage );
 bool CS_pipeHook( struct CS_Pipe *in, struct CS_Pipe *out );
-struct CS_Pipe *CS_pipeReconnect( struct CS_Pipe *in, struct CS_Pipe *out);
+bool CS_pipeBreak( struct CS_Pipe *section );
+bool CS_pipeBreakIn( struct CS_Pipe *section );
+bool CS_pipeBreakOut( struct CS_Pipe *section );
+bool CS_pipeDisconnect( struct CS_Pipe *in, struct CS_Pipe *out );
+struct CS_Pipe *CS_pipeReconnect( struct CS_Pipe *in, struct CS_Pipe *out );
 bool CS_pipeDoneOrError( struct CS_Pipe *anyStage );
 struct CS_PushPullBuffer *CS_pipeNearestInBuffer( const struct CS_Pipe *currentSection );
 
