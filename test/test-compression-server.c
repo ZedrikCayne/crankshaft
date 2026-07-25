@@ -19,7 +19,7 @@ extern bool test_compression_server(void);
 static int32_t testCount = 0;
 static int32_t testSucceeded = 0;
 
-static bool large_response_handler(struct CS_ClientInfo *info) {
+static bool large_response_handler(struct CS_RequestInfo *info) {
     // Create a large text response that is highly compressible
     int32_t size = 10000;
     char *data = CS_alloc(size);

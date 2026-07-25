@@ -22,13 +22,13 @@ static void dcCallback( struct CS_ClientInfo *info ) {
     info->persistentData = NULL;
 }
 
-static bool grundle( struct CS_ClientInfo *info ) {
-    info->disconnectCallback = dcCallback;
-    info->persistentData = testData;
+static bool grundle( struct CS_RequestInfo *info ) {
+    info->clientInfo->disconnectCallback = dcCallback;
+    info->clientInfo->persistentData = testData;
     return false;
 }
-static bool grundle2( struct CS_ClientInfo *info ) {
-    if( info->persistentData != testData )
+static bool grundle2( struct CS_RequestInfo *info ) {
+    if( info->clientInfo->persistentData != testData )
         return true;
     return false;
 }

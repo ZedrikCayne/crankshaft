@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-static bool compressed_route( struct CS_ClientInfo *info ) {
+static bool compressed_route( struct CS_RequestInfo *info ) {
     char *bigData = (char *)CS_alloc( 1024 );
     memset( bigData, 'A', 1024 );
     struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_TXT, bigData, 1024 );

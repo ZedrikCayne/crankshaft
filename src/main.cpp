@@ -148,9 +148,9 @@ void dcCallback( struct CS_ClientInfo *info ) {
     CS_LOG_TRACE("Disconnecting.");
 }
 
-bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt, const struct CS_String *csrf );
-bool loginPageReturn( struct CS_ClientInfo *info );
-bool cookieFilter( struct CS_ClientInfo *info ) {
+bool jwtInfoReturn( struct CS_RequestInfo *info, const struct CS_Jwt *jwt, const struct CS_String *csrf );
+bool loginPageReturn( struct CS_RequestInfo *info );
+bool cookieFilter( struct CS_RequestInfo *info ) {
     /*const char *cookieValue = CS_serverGetRequestCookie( info, "session" );
     if( cookieValue != NULL ) {
         CS_LOG_TRACE("session cookie set %s", cookieValue );
@@ -159,7 +159,7 @@ bool cookieFilter( struct CS_ClientInfo *info ) {
     return loginPageReturn(info);
 }
 
-bool googleLogin( struct CS_ClientInfo *info ) {
+bool googleLogin( struct CS_RequestInfo *info ) {
     const struct CS_String g_csrf_token_string = CS_STRING("g_csrf_token");
     const struct CS_String *g_csrf_header = CS_serverGetRequestCookie(info, &g_csrf_token_string);
     if( !g_csrf_header ) {
@@ -198,14 +198,14 @@ bool googleLogin( struct CS_ClientInfo *info ) {
     return returnValue;
 }
 
-bool fudge( struct CS_ClientInfo *info ) {
-    if( info->disconnectCallback == NULL ) {
-        info->disconnectCallback = dcCallback;
+bool fudge( struct CS_RequestInfo *info ) {
+    if( info->clientInfo->disconnectCallback == NULL ) {
+        info->clientInfo->disconnectCallback = dcCallback;
     }
     return CS_serverDiagnostic200(info);
 }
 
-bool websocket( struct CS_ClientInfo *info ) {
+bool websocket( struct CS_RequestInfo *info ) {
     if ( CS_WS_requestWantsWebsocket(info) ) {
         struct CS_WebSocket *gws = CS_WS_create( info, NULL );
         struct CS_WebSocketFrame *returnFrame = NULL;
@@ -260,12 +260,12 @@ ERROR_CLOSE:
     return true;
 }
 
-bool doQuit( struct CS_ClientInfo *info ) {
+bool doQuit( struct CS_RequestInfo *info ) {
     GotInterrupt = true;
     return CS_serverDiagnostic200(info);
 }
 
-bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt, const CS_String *csrf ) {
+bool jwtInfoReturn( struct CS_RequestInfo *info, const struct CS_Jwt *jwt, const CS_String *csrf ) {
     struct CS_HtmlNode *root = CS_htmlCreateRoot("html",2048);
     struct CS_HtmlNode *head = CS_htmlAddContainerAfter( root, "head" );
     struct CS_HtmlNode *meta = CS_htmlAddContainerAfter( head, "meta" );
@@ -311,7 +311,7 @@ bool jwtInfoReturn( struct CS_ClientInfo *info, const struct CS_Jwt *jwt, const 
     return true;
 }
 
-bool loginPageReturn( struct CS_ClientInfo *info ) {
+bool loginPageReturn( struct CS_RequestInfo *info ) {
     struct CS_HtmlNode *root = CS_htmlCreateRoot("html",2048);
     struct CS_HtmlNode *head = CS_htmlAddContainerAfter( root, "head" );
     struct CS_HtmlNode *meta = CS_htmlAddContainerAfter( head, "meta" );
@@ -331,7 +331,7 @@ bool loginPageReturn( struct CS_ClientInfo *info ) {
     if( host == NULL ) host = CS_stringTempCopyCstring(localhost, -1);
     CS_htmlAddAttribute( div, "data-login_uri",
            CS_tempBuffSnprintf( 1024, "http%s://%s/googlelogin", 
-               info->ssl?"s":"", CS_stringTempCstring(host) ) );
+               info->clientInfo->ssl?"s":"", CS_stringTempCstring(host) ) );
     CS_htmlAddAttribute( div, "data-auto_prompt", "false" );
     div = CS_htmlAddContainerAfter( body, "div" );
     CS_htmlAddAttribute( div, "class", "g_id_signin" );

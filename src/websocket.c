@@ -51,21 +51,21 @@ void *CS_WS_getApplicationData( struct CS_WebSocket *ws ) {
     return ws->applicationData;
 }
 
-static bool privateIsWSUpgradeRequest( struct CS_ClientInfo *clientInfo ) {
-    const struct CS_String *connection = CS_serverGetRequestHeader( clientInfo, &CS_STRING("Connection") );
-    const struct CS_String *upgrade = CS_serverGetRequestHeader( clientInfo, &CS_STRING("Upgrade") );
+static bool privateIsWSUpgradeRequest( struct CS_RequestInfo *info ) {
+    const struct CS_String *connection = CS_serverGetRequestHeader( info, &CS_STRING("Connection") );
+    const struct CS_String *upgrade = CS_serverGetRequestHeader( info, &CS_STRING("Upgrade") );
     //The source buffers on this are at least a few hundred bytes long..
     return ( connection && CS_stringTempStrstr( connection, &CS_STRING("Upgrade") ) != NULL &&
              upgrade && CS_stringStrncmp( &CS_STRING("websocket"), upgrade, 9 ) == 0 );
 }
 //Peek into the request info
-bool CS_WS_requestWantsWebsocket( struct CS_ClientInfo *clientInfo ) {
-    return privateIsWSUpgradeRequest( clientInfo );
+bool CS_WS_requestWantsWebsocket( struct CS_RequestInfo *requestInfo ) {
+    return privateIsWSUpgradeRequest( requestInfo );
 }
 
 static const char *wsAcceptConcat = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *applicationData ) {
-    if( !privateIsWSUpgradeRequest( clientInfo ) ) {
+struct CS_WebSocket *CS_WS_create( struct CS_RequestInfo *requestInfo, void *applicationData ) {
+    if( !privateIsWSUpgradeRequest( requestInfo ) ) {
         return NULL;
     }
     struct CS_WebSocket *returnValue = CS_allocZero( sizeof( struct CS_WebSocket ) );
@@ -79,12 +79,12 @@ struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *appli
         goto ERR_CREATE;
     }
 
-    returnValue->clientInfo = clientInfo;
+    returnValue->clientInfo = requestInfo->clientInfo;
     returnValue->applicationData = applicationData;
 
-    struct CS_Reply *reply = CS_serverCreateReply( clientInfo, CS_RESPONSE_101, CS_MIME_DO_NOT_SET, NULL, 0 );
+    struct CS_Reply *reply = CS_serverCreateReply( requestInfo, CS_RESPONSE_101, CS_MIME_DO_NOT_SET, NULL, 0 );
     if( reply ) {
-        const struct CS_String *incomingKey = CS_serverGetRequestHeader( clientInfo, &CS_STRING("Sec-WebSocket-Key") );
+        const struct CS_String *incomingKey = CS_serverGetRequestHeader( requestInfo, &CS_STRING("Sec-WebSocket-Key") );
         CS_serverSetReplyHeader( reply, &CS_STRING("Upgrade"), &CS_STRING("websocket") );
         CS_serverSetReplyHeader( reply, &CS_STRING("Connection"), &CS_STRING("Upgrade") );
         if( incomingKey ) {
@@ -95,7 +95,7 @@ struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *appli
             const char *encoded = CS_base64EncodeTemp( outgoingHash, SHA_DIGEST_LENGTH, NULL );
             CS_serverSetReplyHeader( reply, &CS_STRING("Sec-WebSocket-Accept"),  CS_stringTempCopyCstring(encoded,-1) );
         }
-        CS_serverDoReply( clientInfo, reply );
+        CS_serverDoReply( requestInfo, reply );
     } else {
         goto ERR_CREATE;
     }

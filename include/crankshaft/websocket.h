@@ -73,8 +73,8 @@ struct CS_WebSocketFrame {
 
 struct CS_WebSocket;
 //Peek into the request info
-bool CS_WS_requestWantsWebsocket( struct CS_ClientInfo *clientInfo );
-struct CS_WebSocket *CS_WS_create( struct CS_ClientInfo *clientInfo, void *applicationData );
+bool CS_WS_requestWantsWebsocket( struct CS_RequestInfo *clientInfo );
+struct CS_WebSocket *CS_WS_create( struct CS_RequestInfo *clientInfo, void *applicationData );
 struct CS_ClientInfo *CS_WS_destroy( struct CS_WebSocket *ws );
 void *CS_WS_getApplicationData( struct CS_WebSocket *ws );
 void CS_WS_close( struct CS_WebSocket *ws, int32_t closeCode );
