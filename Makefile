@@ -79,6 +79,13 @@ test: sqlite test/autogen-test.cpp $(OBJECTS_DIR) $(BINOUT)-test
 test/%.cpp:
 	scripts/gentest
 
+
+testloud: CFLAGS:=-DCS_TEST_SKIP_TESTTEST $(CFLAGS)
+testloud: CFLAGS:=-DCS_AUTOTEST_ENABLED $(CFLAGS)
+testloud: sqlite test/autogen-test.cpp $(OBJECTS_DIR) $(BINOUT)-test
+	./$(BINOUT)-test --test 
+
+
 leaks:
 	leaks --outputGraph=$(BINOUT)-test-leaks.graph --atExit -- ./$(BINOUT)-test --test --trace
 	leaks $(BINOUT)-test-leaks.graph

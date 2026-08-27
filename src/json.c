@@ -975,7 +975,7 @@ static int32_t unquotePrivate( char *output, char *inputString, int32_t len ) {
                     break;
                 default:
                     CS_LOG_ERROR("Error unquoting json, bad \\ character '%c'", *sourceBuffer);
-                    return true;
+                    return -1;
             }
         } else {
             *outputBuffer = *sourceBuffer;

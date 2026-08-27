@@ -208,22 +208,16 @@ int32_t CS_stringStrcasecmp( const struct CS_String *left, const struct CS_Strin
 }
 
 int32_t CS_stringStrncasecmp( const struct CS_String *left, const struct CS_String *right, int32_t maxLength ) {
-    int32_t diffcmp = 0;
-    const char *lC, *rC;
     int32_t maxLen = maxLength;
-    if( maxLen < 0 ) maxLen = 0x7FFFFFF;
+    if( maxLen < 0 ) maxLen = 0x7FFFFFFF;
     if( maxLen > left->length ) maxLen = left->length;
     if( maxLen > right->length ) maxLen = right->length;
-    lC = left->data; rC = right->data;
     for( int32_t i = 0; i < maxLen; ++i ) {
-        diffcmp = *lC - *rC;
-        if( diffcmp != 0 ) {
-            if( *lC < 'a' || *lC > 'z' || *rC < 'a' || *rC > 'z' ) return diffcmp;
-            char leftCap = (*lC >= 'a' || *lC <= 'z')?(*lC)-32:*lC;
-            char rightCap = (*rC >= 'a' || *rC <= 'z')?(*rC)-32:*rC;
-            diffcmp = leftCap - rightCap;
-            if( diffcmp != 0 ) return diffcmp;
-        }
+        int32_t lC = left->data[i];
+        int32_t rC = right->data[i];
+        if( lC >= 'a' && lC <= 'z' ) lC -= 32;
+        if( rC >= 'a' && rC <= 'z' ) rC -= 32;
+        if( lC != rC ) return lC - rC;
     }
     //If we got to here... one or the other of the strings was shorter than the other and less than the passed in length
     if( maxLength < 0 || maxLen < maxLength ) {
@@ -512,7 +506,7 @@ int32_t CS_stringStrchr( const struct CS_String *haystack, char needle ) {
 }
 
 int32_t CS_stringStrrchr( const struct CS_String *haystack, char needle ) {
-    for( int32_t i = haystack->length; i >= 0; --i ) {
+    for( int32_t i = haystack->length - 1; i >= 0; --i ) {
         if( needle == haystack->data[i] ) return i;
     }
     return -1;

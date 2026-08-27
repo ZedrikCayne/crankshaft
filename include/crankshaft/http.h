@@ -149,6 +149,7 @@ int32_t CS_httpStringToMethodEnum( const struct CS_String *methodString );
 const char *CS_httpMethodEnumToCstring( int32_t methodEnum );
 const char *CS_httpResponseEnumToCstring( int32_t responseEnum );
 int32_t CS_httpResponseEnumToCode( int32_t responseEnum );
+int32_t CS_httpResponseCodeToEnum( int32_t code );
 bool CS_httpUrlDecodeInPlace( struct CS_String *toDecode );
 struct CS_String *CS_httpUrlDecodeTemp( const struct CS_String *doDecode ); 
 struct CS_String *CS_httpUrlEncodeTemp( const struct CS_String *toEncode );

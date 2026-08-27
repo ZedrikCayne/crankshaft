@@ -167,7 +167,7 @@ int32_t CS_pipeProcess( struct CS_Pipe *anyStage ) {
         }
         if( returnValue < 0 ) {
             currentPipe->statusFlags |= CS_PIPE_STATUS_ERROR;
-            if( currentPipe->flags | CS_PIPE_FLAG_FRAGILE ) return -1;
+            if( currentPipe->flags & CS_PIPE_FLAG_FRAGILE ) return -1;
         }
         //If our buffer is empty, and the next previous step is empty, we
         //must be empty.
