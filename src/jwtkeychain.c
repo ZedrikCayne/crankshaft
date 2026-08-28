@@ -96,7 +96,9 @@ bool CS_jwtkeychainTeardown() {
     }
 
     if( !webCache ) return true;
-    return CS_cacheDestroy( webCache );
+    bool returnValue = CS_cacheDestroy( webCache );
+    webCache = NULL;
+    return returnValue;
 }
 
 bool CS_jwtkeychainFetchPublicKeys( const char *urlToFetchKeysFrom ) {
@@ -185,7 +187,7 @@ bool CS_jwtkeychainFetchPublicKeys( const char *urlToFetchKeysFrom ) {
     }
 
     CS_jsonFree(keysJson);
-    return false;
+    return returnValue;
 }
 
 EVP_PKEY *CS_jwtkeychainGetKey( const char *keyId ) {

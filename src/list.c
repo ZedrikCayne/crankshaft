@@ -149,7 +149,7 @@ void privateInsertBefore( struct CS_List *list, struct ListItem *what, struct Li
 }
 
 bool CS_listRemove( struct CS_List *list, const struct CS_ListItem *const_item ) {
-    if( !list || !const_item ) return NULL;
+    if( !list || !const_item ) return true;
     bool returnValue = privateRemove( list, (struct ListItem *)const_item );
     privateReturnListItem( list, (struct ListItem *)const_item );
     return returnValue;

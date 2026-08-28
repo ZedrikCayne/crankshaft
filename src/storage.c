@@ -575,8 +575,8 @@ static struct CS_List *privateSqliteList(const struct CS_Storage *storage) {
     struct CS_List *returnList = CS_listCreate( 1024 );
     if( returnList != NULL ) {
         while( sqlite3_step( sqliteData->list ) == SQLITE_ROW ) {
-            const void *key = sqlite3_column_blob( sqliteData->get, 0 );
-            uint32_t keySize = sqlite3_column_bytes( sqliteData->get, 0 );
+            const void *key = sqlite3_column_blob( sqliteData->list, 0 );
+            uint32_t keySize = sqlite3_column_bytes( sqliteData->list, 0 );
             CS_listPushTail( returnList, key, keySize );
         }
     }

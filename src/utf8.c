@@ -202,8 +202,8 @@ int32_t CS_utf8FromInt( int32_t codePoint, char *out, int32_t length ) {
     }                                                                         // 5 = 0101
     if( codePoint <= 0x0007FF ) {                                             // 6 = 0110
         if( length < 2 ) return -1;                                           // 7 = 0111
-        *(out + 0) = (char)( 0x0000C0 | ( (0x00003F & codePoint) >>  6 ));    // 8 = 1000
-        *(out + 1) = (char)( 0x000080 | ( (0x0007C0 & codePoint) >>  0 ));    // 9 = 1001
+        *(out + 0) = (char)( 0x0000C0 | ( (0x0007C0 & codePoint) >>  6 ));    // 8 = 1000
+        *(out + 1) = (char)( 0x000080 | ( (0x00003F & codePoint) >>  0 ));    // 9 = 1001
         return 2;                                                             // A = 1010
     }                                                                         // B = 1011
     if( codePoint <= 0x00FFFF ) {                                             // C = 1100
@@ -233,8 +233,8 @@ int32_t CS_utf8Length( const char *checkMe ) {
     if( (toCheck & 0xF8) == 0xF0 ) returnValue = 4;
     else if( (toCheck & 0xF0) == 0xE0 ) returnValue = 3;
     else if( (toCheck & 0xE0) == 0xC0 ) returnValue = 2;
-    for( int32_t i = 1; i < returnValue + 1; ++i ) {
-        if( (checkMe[i] & 0xB0) != 0x80 ) return -1;
+    for( int32_t i = 1; i < returnValue; ++i ) {
+        if( (checkMe[i] & 0xC0) != 0x80 ) return -1;
     }
     return returnValue;
 }

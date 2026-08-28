@@ -267,10 +267,9 @@ bool CS_PP_removeChunk( struct CS_PushPullBuffer *buffer, int32_t offset, int32_
 bool CS_PP_makeRoom( struct CS_PushPullBuffer *buffer ) {
     int32_t nBytesToMove = buffer->currentWriteOffset;
     if( nBytesToMove == 0 ) return true;
-    //memmove( buffer->buff,
-             //buffer->buff + nBytesToMove,
-             //nBytesToMove );
-    MOVE(buffer,0,nBytesToMove);
+    memmove( buffer->buff,
+             buffer->buff + nBytesToMove,
+             buffer->currentReadOffset - nBytesToMove );
     buffer->currentWriteOffset = 0;
     buffer->currentReadOffset -= nBytesToMove;
     return false;
@@ -279,7 +278,7 @@ bool CS_PP_makeRoom( struct CS_PushPullBuffer *buffer ) {
 char *CS_PP_findChar( struct CS_PushPullBuffer *buffer, char needle ) {
     char *in = buffer->buff + buffer->currentWriteOffset;
     char *end = buffer->buff + buffer->currentReadOffset;
-    while( in < end && *in++ != needle );
+    while( in < end && *in != needle ) ++in;
     return in==end?NULL:in;
 }
 

@@ -57,7 +57,7 @@ static void resetItems( struct CS_SlabAllocator *slab ) {
             struct SlabAllocItem *next = (i+1>=count)?NULL:ALLOC_ITEM(slabToReset,i+1);
             current->next = next;
         }
-        slab->head = ALLOC_ITEM(slab,0);
+        slabToReset->head = ALLOC_ITEM(slabToReset,0);
         slabToReset = nextSlab;
     }
 }

@@ -1597,7 +1597,7 @@ struct CS_JsonNode *CS_jsonNodeToUnquoted( struct CS_JsonNode *in, bool followTr
                 }
                 if( newInteger == LLONG_MIN || newInteger == LLONG_MAX ) {
                     if( errno == ERANGE ) {
-                        CS_LOG_WARN( "Attempt to parse an integer is going to over/underflow." );
+                        CS_LOG_INFO( "Attempt to parse an integer is going to over/underflow." );
                         return NULL;
                     }
                 }

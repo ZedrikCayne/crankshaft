@@ -23,12 +23,12 @@ const char *CS_argsParse(int32_t argc, char **argv, struct CS_ArgTable *argTable
                         switch( currentElement->what ) {
                             case CS_INT_ARG:
                                 ++i;
-                                if( i > argc ) return argErr1;
+                                if( i >= argc ) return argErr1;
                                 *((int32_t*)currentElement->out) = atoi(argv[i]);
                                 break;
                             case CS_STRING_ARG:
                                 ++i;
-                                if( i > argc ) return argErr1;
+                                if( i >= argc ) return argErr1;
                                 *((char**)currentElement->out) = argv[i];
                                 break;
                             case CS_BOOL_ARG:
