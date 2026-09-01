@@ -1272,7 +1272,7 @@ int32_t CS_serverWriteOutputBuffer( struct CS_ClientInfo *info ) {
         CS_PP_writeToFile( info->output, info->clientSocket );
 }
 
-struct CS_RequestInfo *CS_serverParseRequest( struct CS_ClientInfo *info ) {
+struct CS_RequestInfo *CS_serverParseIncomingRequest( struct CS_ClientInfo *info ) {
     struct CS_RequestInfo *requestInfo = privateGetRequest(info);
 
     int32_t size = parseRequest(info,requestInfo);
