@@ -293,7 +293,7 @@ struct CS_Socket *CS_socketBind(int32_t port, bool ipv6, bool wantSSL) {
     return returnValue;
 
 ERR_SSL:
-    SSL_free( newSSL );
+    if( newSSL ) SSL_free( newSSL );
 
 ERR_SOCK:
     close(listenSocket);
