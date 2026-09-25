@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <openssl/ssl.h>
@@ -146,6 +147,23 @@ struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int3
 
     if( returnValue->socket < 0 || connectValue != 0 )
         goto CLEANUP_CONNECT;
+
+    int keepalive = 1;
+    socklen_t keepaliveLength = sizeof(keepalive);
+    if( setsockopt( returnValue->socket, SOL_SOCKET, SO_KEEPALIVE, &keepalive, keepaliveLength ) == 0 ) {
+        int idlestart = 60;
+        socklen_t idlestartLength = sizeof(idlestart);
+        if( setsockopt( returnValue->socket, IPPROTO_TCP, TCP_KEEPIDLE, &idlestart, idlestartLength ) == 0 ) {
+            int interval = 15;
+            socklen_t intervalLength = sizeof(interval);
+            if( setsockopt( returnValue->socket, IPPROTO_TCP, TCP_KEEPINTVL, &interval, intervalLength ) == 0 ) {
+                int keepcount = 3;
+                socklen_t keepcountLength = sizeof(keepcount);
+                setsockopt( returnValue->socket, IPPROTO_TCP, TCP_KEEPCNT, &keepcount, keepcountLength );
+            }
+        }
+    }
+
 
     returnValue->ssl = NULL;
     if( wantSSL ) {
