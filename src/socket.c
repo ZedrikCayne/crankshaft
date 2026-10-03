@@ -91,7 +91,7 @@ struct CS_Socket *CS_socketInit( int32_t socket, int32_t port, SSL *ssl, int32_t
     }
     if( outputBufferSize > 0 ) {
         returnValue->output = CS_PP_defaultAlloc( outputBufferSize );
-        if( returnValue->buffer == NULL ) goto ERROR_INIT;
+        if( returnValue->output == NULL ) goto ERROR_INIT;
     }
 
     if( inputMutex ) returnValue->inputMutex = CS_mutexTakeNamed("sock input mutex");
@@ -111,7 +111,10 @@ struct CS_Socket *CS_socketConnect( char *address, bool noInternalNetworks, int3
     if( returnValue == NULL ) return NULL;
     //Lookup address
     struct addrinfo *addrInfos = CS_networkLookupAddress( address, port );
-    if( addrInfos == NULL ) return NULL;
+    if( addrInfos == NULL ) {
+        CS_socketDestroy( returnValue );
+        return NULL;
+    }
 
     //Cycle the infos
     struct addrinfo *addrInfoIter = addrInfos;

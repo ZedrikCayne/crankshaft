@@ -49,12 +49,30 @@ static bool privateReturnThread( struct CS_Thread *thread ) {
     return CS_slabReturn( threadSlabs, thread );
 }
 
+//Threads are fire and forget, so each one cleans up after itself on exit.
+//Remove ourselves from the tracking list, then return our own storage.
+static void privateFreeFinishedThread( struct CS_Thread *thread ) {
+    if( !thread ) return;
+    pthread_mutex_lock( &threadMutex );
+    if( trackedThreads ) {
+        CS_LIST_ITER( trackedThreads, current ) {
+            if( current->what == (const void *)thread ) {
+                CS_listRemove( trackedThreads, current );
+                break;
+            }
+        }
+    }
+    pthread_mutex_unlock( &threadMutex );
+    privateReturnThread( thread );
+}
+
 static void *threadDriver( void *context ) {
     struct CS_Thread *thread = (struct CS_Thread *)context;
     thread->threadStateEnum = CS_THREAD_START;
     if( thread->cycle( thread, thread->threadStateEnum, thread->context ) ) {
         //Returning true on start means error.
         thread->threadStateEnum = CS_THREAD_ERROR;
+        privateFreeFinishedThread( thread );
         pthread_exit(NULL);
         return NULL;
     }
@@ -69,6 +87,7 @@ static void *threadDriver( void *context ) {
         thread->threadStateEnum = CS_THREAD_ERROR;
     }
     thread->threadStateEnum = CS_THREAD_STOPPED;
+    privateFreeFinishedThread( thread );
     pthread_exit(NULL);
     return NULL;
 }

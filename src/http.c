@@ -841,7 +841,10 @@ struct CS_RequestReply *CS_httpStartRequest( int32_t methodEnum,
     address = CS_stringTempCstring(&tempAddress);
     struct addrinfo *addrInfos = CS_networkLookupAddress( address, portNum );
     //Lookup already has a log with it.
-    if( addrInfos == NULL ) return NULL;
+    if( addrInfos == NULL ) {
+        if( returnValue && !reuse ) CS_httpCloseRequest( returnValue );
+        return NULL;
+    }
 
     struct CS_StringBuilder *sb = CS_SB_create( INITIAL_STRING_BUILDER_SIZE );
     if( sb == NULL ) {

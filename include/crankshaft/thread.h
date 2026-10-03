@@ -33,10 +33,12 @@
  * CS_THREAD_STOP. If it returns true it'll be put into
  * CS_THREAD_ERROR, otherwise the thread will hit CS_THREAD_STOPPED.
  *
- * Threads will remain until reaped or explicitly returned.
+ * Threads are fire and forget. When a thread stops (or errors) it
+ * removes itself from tracking and returns its own storage, so no
+ * caller side cleanup is needed. CS_threadReturn is kept for API
+ * compatibility and does nothing.
  *
- * (Attempting to return a not stopped thread will scream and not
- * actually return it.)
+ * (Do not use the thread handle once the thread has stopped.)
  *
  ********************************************************************/
 #ifdef __cplusplus
