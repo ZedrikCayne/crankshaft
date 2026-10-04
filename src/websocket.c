@@ -44,6 +44,7 @@ struct CS_WebSocket {
     struct CS_SlabAllocator *frameAllocator;
     struct CS_WebSocketFrame *currentIncomingFrame;
     struct CS_WebSocketFrame *currentOutgoingFrame;
+    struct CS_Mutex *frameWriteMutex;
     void *applicationData;
 };
 
@@ -78,6 +79,11 @@ struct CS_WebSocket *CS_WS_create( struct CS_RequestInfo *requestInfo, void *app
         CS_LOG_ERROR("OOM creating frame stack.");
         goto ERR_CREATE;
     }
+    returnValue->frameWriteMutex = CS_mutexTakeNamed("WebSocketWrite");
+    if( returnValue->frameWriteMutex == NULL ) {
+        CS_LOG_ERROR("Could not create the websocket write mutex.");
+        goto ERR_CREATE;
+    }
 
     returnValue->clientInfo = requestInfo->clientInfo;
     returnValue->applicationData = applicationData;
@@ -103,6 +109,7 @@ struct CS_WebSocket *CS_WS_create( struct CS_RequestInfo *requestInfo, void *app
     return returnValue;
 ERR_CREATE:
     if( returnValue ) {
+        if( returnValue->frameWriteMutex ) CS_mutexReturn( returnValue->frameWriteMutex );
         if( returnValue->frameAllocator ) CS_slabFree( returnValue->frameAllocator );
         CS_free( returnValue );
     }
@@ -111,6 +118,7 @@ ERR_CREATE:
 
 struct CS_ClientInfo *CS_WS_destroy( struct CS_WebSocket *ws ) {
     struct CS_ClientInfo *clientInfo = ws->clientInfo;
+    if( ws->frameWriteMutex ) CS_mutexReturn( ws->frameWriteMutex );
     CS_slabFree( ws->frameAllocator );
     CS_free( ws );
     return clientInfo;
@@ -154,9 +162,10 @@ struct CS_WebSocketFrame *CS_WS_getEmptyFrame( struct CS_WebSocket *ws ){
 }
 
 bool CS_WS_returnFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame ) {
-    if( ws == NULL || ws->frameAllocator || frame == NULL )
+    if( ws == NULL || ws->frameAllocator == NULL || frame == NULL )
         return true;
     if( frame->payload ) CS_free( frame->payload );
+    frame->payload = NULL;
     return CS_slabReturn( ws->frameAllocator, frame );
 }
 
@@ -182,10 +191,16 @@ bool CS_WS_returnFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame
  *********************************************************************/
 //Parse incoming frame off of the open websocket.
 struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
-    int32_t bytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
+    int32_t bytesRead;
 
-    if( bytesRead < 0 ) {
-        return NULL;
+    while( CS_PP_dataSize( ws->clientInfo->buffer ) < 2 ) {
+        bytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
+        if( bytesRead < 0 ) {
+            return NULL;
+        }
+        if( bytesRead == 0 && CS_PP_dataSize( ws->clientInfo->buffer ) == 0 ) {
+            return NULL;
+        }
     }
 
     struct CS_WebSocketFrame *frame = CS_WS_getEmptyFrame( ws );
@@ -210,20 +225,35 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
     frame->payloadLength = (current & 0x7F);
 
     CS_PP_write( ws->clientInfo->buffer, 2 );
+    //Consuming the header can reset the buffer, so re-find the data start.
+    top = (unsigned char*)CS_PP_startOfData( ws->clientInfo->buffer );
 
     if( frame->payloadLength == 127 ) {
         goto ERROR_READING;
     }
 
     if( frame->payloadLength == 126 ) {
-        current = (unsigned long)*++top;
+        if( CS_PP_dataSize( ws->clientInfo->buffer ) < 2 ) {
+            bytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
+            if( bytesRead < 0 || (bytesRead == 0 && CS_PP_dataSize( ws->clientInfo->buffer ) < 2) ) {
+                goto ERROR_READING;
+            }
+        }
+        top = (unsigned char*)CS_PP_startOfData( ws->clientInfo->buffer );
+        current = (unsigned long)*top++;
         frame->payloadLength = (current) << 8;
-        current = (unsigned long)*++top;
+        current = (unsigned long)*top++;
         frame->payloadLength += current;
         CS_PP_write( ws->clientInfo->buffer, 2 );
     }
 
     if( frame->mask ) {
+        if( CS_PP_dataSize( ws->clientInfo->buffer ) < CS_WS_NUM_MASK_BYTES ) {
+            bytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
+            if( bytesRead < 0 || (bytesRead == 0 && CS_PP_dataSize( ws->clientInfo->buffer ) < CS_WS_NUM_MASK_BYTES) ) {
+                goto ERROR_READING;
+            }
+        }
         if( CS_PP_writeToBuffer( ws->clientInfo->buffer, frame->maskBytes, CS_WS_NUM_MASK_BYTES ) < CS_WS_NUM_MASK_BYTES ) {
             goto ERROR_READING;
         }
@@ -238,21 +268,26 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
 
     while( numBytesTransferred < frame->payloadLength ) {
         int32_t numBytesAvailable = CS_PP_dataSize( ws->clientInfo->buffer );
-        if( numBytesAvailable > frame->payloadLength ) numBytesAvailable = frame->payloadLength;
+        int32_t numBytesRemaining = frame->payloadLength - numBytesTransferred;
+        if( numBytesAvailable > numBytesRemaining ) numBytesAvailable = numBytesRemaining;
         if( frame->mask ) {
             char *current = CS_PP_startOfData( ws->clientInfo->buffer );
             for( int32_t currentXfer = 0; currentXfer < numBytesAvailable; ++currentXfer ) {
-                ((char*)frame->payload)[ numBytesTransferred ] = current[ numBytesTransferred ] ^ frame->maskBytes[ numBytesTransferred % CS_WS_NUM_MASK_BYTES ];
+                ((char*)frame->payload)[ numBytesTransferred ] = current[ currentXfer ] ^ frame->maskBytes[ numBytesTransferred % CS_WS_NUM_MASK_BYTES ];
                 ++numBytesTransferred;
             }
             CS_PP_write( ws->clientInfo->buffer, numBytesAvailable );
         } else {
             numBytesTransferred += CS_PP_writeToBuffer( ws->clientInfo->buffer, (char*)frame->payload + numBytesTransferred, numBytesAvailable );
         }
-        //Do we have enough, suck in moreif we don't.
+        //Do we have enough, suck in more if we don't.
         if( numBytesTransferred < frame->payloadLength ) {
             int32_t numBytesRead = CS_serverFillIncomingBuffer( ws->clientInfo );
             if( numBytesRead < 0 ) {
+                goto ERROR_READING;
+            }
+            //A zero return with an empty buffer means the remote end hung up.
+            if( numBytesRead == 0 && CS_PP_dataSize( ws->clientInfo->buffer ) == 0 ) {
                 goto ERROR_READING;
             }
         }
@@ -261,7 +296,6 @@ struct CS_WebSocketFrame *CS_WS_nextIncomingFrame( struct CS_WebSocket *ws ) {
     return frame;
 ERROR_READING:
     if( frame != NULL ) {
-        if( frame->payload != NULL ) CS_free( frame->payload );
         CS_WS_returnFrame( ws, frame );
     }
     return NULL;
@@ -273,7 +307,20 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame, 
         return true;
     }
 
+    CS_mutexLock( ws->frameWriteMutex );
+
     struct CS_PushPullBuffer *pp = ws->clientInfo->output;
+
+    int32_t maxHeaderSize = 2 +
+        (frame->payloadLength <= 125?0:(frame->payloadLength <= 0x0000FFFF?2:8)) +
+        (frame->mask?CS_WS_NUM_MASK_BYTES:0);
+    while( CS_PP_bufferRemaining( pp ) < maxHeaderSize ) {
+        if( CS_serverWriteOutputBuffer( ws->clientInfo ) < 0 ) {
+            CS_WS_returnFrame( ws, frame );
+            CS_mutexUnlock( ws->frameWriteMutex );
+            return true;
+        }
+    }
 
     unsigned char temp = 0;
 
@@ -315,26 +362,32 @@ bool CS_WS_pushFrame( struct CS_WebSocket *ws, struct CS_WebSocketFrame *frame, 
         CS_PP_readFromBuffer( pp, frame->maskBytes, 4 );
     }
 
-    int32_t currentHeaderSize = CS_PP_dataSize( pp );
-    int32_t bytesTotallyTransferred = 0;
+    int32_t payloadOffset = 0;
 
-    while( bytesTotallyTransferred < (frame->payloadLength + currentHeaderSize) ) {
-        int32_t lastTransfer = 
+    while( payloadOffset < frame->payloadLength ) {
+        int32_t lastTransfer =
             CS_PP_readFromBuffer( pp,
-                         ((char*)frame->payload) + bytesTotallyTransferred,
-                         frame->payloadLength - bytesTotallyTransferred );
+                         ((char*)frame->payload) + payloadOffset,
+                         frame->payloadLength - payloadOffset );
         if( lastTransfer < 0 ) {
-            return true;
+            break;
         }
+        payloadOffset += lastTransfer;
         int32_t lastWriteToSocket = CS_serverWriteOutputBuffer( ws->clientInfo );
         if( lastWriteToSocket < 0 ) {
-            return true;
+            break;
         }
-        bytesTotallyTransferred += lastWriteToSocket;
+        //Should not happen on a blocking socket, but do not spin forever.
+        if( lastTransfer == 0 && lastWriteToSocket == 0 ) {
+            break;
+        }
     }
+    bool failed = ( payloadOffset < frame->payloadLength );
     CS_WS_returnFrame( ws, frame );
-
-    return false;
+    if( unlockWriteMutex ) {
+        CS_mutexUnlock( ws->frameWriteMutex );
+    }
+    return failed;
 }
 
 void CS_WS_close( struct CS_WebSocket *ws, int32_t closeCode ) {
