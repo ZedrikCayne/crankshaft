@@ -84,7 +84,7 @@ ONCE_MORE_UNTO_THE_BREACH:
     currentMax = remain = CS_SB_remain(buffer);
     if( maxAppend > 0 && currentMax > maxAppend ) currentMax = maxAppend;
     bytesNeeded = vsnprintf(buffer->buffer + buffer->currentHead, currentMax, fmt, apCpy );
-    if( (currentMax > remain ) && (bytesNeeded >= remain) ) {
+    if( bytesNeeded >= currentMax && !((maxAppend > 0) && (currentMax < remain)) ) {
         if( expandIfNeeded(buffer, bytesNeeded) ) return NULL;
         goto ONCE_MORE_UNTO_THE_BREACH;
     }

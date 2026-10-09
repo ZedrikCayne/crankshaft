@@ -17,6 +17,7 @@ static int32_t testSucceeded = 0;
 
 const char *tenChar = "1234567890";
 const char *twentyTwoChar = "1234567890123456789012";
+const char *thirtyOneChar = "1234567890123456789012345678901";
 const char *thirtyTwoChar = "12345678901234567890123456789012";
 const char *quickBrownFox = "The quick brown fox jumps over the lazy dog.";
 const char *quickBrownFoxThree = "TheTheThe";
@@ -49,6 +50,15 @@ bool test_stringbuilder(void) {
         CS_SB_snprintf( sb, 4, "%s", quickBrownFox );
         CS_SB_snprintf( sb, 4, "%s", quickBrownFox );
         CS_FAIL_ON_FALSE( strcmp( sb->buffer, quickBrownFoxThree ) == 0, "Printing the first 3 characters of the quick brown fox3 times in a row", "Oops! %s", CS_SB_desc(sb) );
+        CS_SB_free(sb);
+    }
+
+    sb = CS_SB_create( ORIGINAL_SIZE );
+    if( sb ) {
+        CS_SB_printf( sb, "%s", thirtyOneChar );
+        CS_SB_printf( sb, "%d", 1234567890 );
+        CS_FAIL_ON_FALSE( strlen( sb->buffer ) == 41, "Straddling printf should expand, not truncate.", "Got %s", CS_SB_desc(sb) );
+        CS_FAIL_ON_FALSE( memcmp( sb->buffer, thirtyOneChar, 31 ) == 0 && strcmp( sb->buffer + 31, "1234567890" ) == 0, "Straddling printf content intact.", "Got %s", CS_SB_desc(sb) );
         CS_SB_free(sb);
     }
 
